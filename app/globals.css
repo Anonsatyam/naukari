@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+:root {
+  /* Brand */
+  --color-primary: #3c44c2;
+  --color-primary-hover: #2f37a3;
+  --color-primary-tint: #eeeffb;
+  --color-primary-tint-2: #dcdef7;
+
+  /* Text */
+  --color-text-primary: #181b25;
+  --color-text-secondary: #5e6475;
+  --color-text-muted: #9298a8;
+
+  /* Surfaces */
+  --color-background: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-border: #e6e8ee;
+
+  /* Semantic */
+  --color-success: #157a45;
+  --color-success-tint: #e6f4ec;
+  --color-warning: #b25e09;
+  --color-warning-tint: #fdf1e2;
+  --color-danger: #c22b3c;
+  --color-danger-tint: #fbe9eb;
+
+  --radius-card: 14px;
+  --radius-control: 10px;
+
+  --font-system: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Noto Sans", sans-serif;
+}
+
+@theme inline {
+  --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-primary-tint: var(--color-primary-tint);
+  --color-primary-tint-2: var(--color-primary-tint-2);
+
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+
+  --color-background: var(--color-background);
+  --color-surface: var(--color-surface);
+  --color-border: var(--color-border);
+
+  --color-success: var(--color-success);
+  --color-success-tint: var(--color-success-tint);
+  --color-warning: var(--color-warning);
+  --color-warning-tint: var(--color-warning-tint);
+  --color-danger: var(--color-danger);
+  --color-danger-tint: var(--color-danger-tint);
+
+  --font-sans: var(--font-system);
+  --font-display: var(--font-system);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.container-page {
+  max-width: 1180px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .container-page {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
