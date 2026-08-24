@@ -20,7 +20,7 @@ export default function ClosingSoonExplorer() {
 
   return (
     <div className="container-page py-8">
-      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Closing Soon" }]} />
+      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Jobs Closing Soon" }]} />
 
       <div className="flex items-center gap-2">
         <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-danger-tint)] text-[var(--color-danger)]">
@@ -28,7 +28,7 @@ export default function ClosingSoonExplorer() {
         </span>
         <div>
           <h1 className="font-display text-2xl font-bold text-[var(--color-text-primary)]">
-            Closing Soon
+            Jobs Closing Soon
           </h1>
           <p className="text-sm text-[var(--color-text-secondary)]">
             Applications closing within the next 7 days

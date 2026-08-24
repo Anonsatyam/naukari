@@ -29,7 +29,7 @@ export default function Home() {
     <div>
       {/* Hero */}
       <section className="border-b border-[var(--color-border)] bg-white">
-        <div className="container-page py-14 md:py-20">
+        <div className="container-page py-10 md:py-12">
           <div className="mx-auto max-w-2xl text-center">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-primary-tint)] px-3 py-1 text-xs font-semibold text-[var(--color-primary)]">
               Bihar · verified from official sources
@@ -64,7 +64,7 @@ export default function Home() {
               </button>
             </form>
 
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+            {/* <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
               {["Police", "Teaching", "Banking", "Engineering", "Healthcare"].map((c) => (
                 <Link
                   key={c}
@@ -74,20 +74,20 @@ export default function Home() {
                   {c}
                 </Link>
               ))}
-            </div>
+            </div> */}
           </div>
         </div>
       </section>
 
       {/* Live stats strip */}
-      {/* <LiveStats stats={stats} /> */}
+      <LiveStats stats={stats} />
 
       {/* Closing soon */}
       {closingSoonJobs.length > 0 && (
         <section className="container-page py-10">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-xl font-bold text-[var(--color-text-primary)]">
-              Closing Soon
+              Jobs Closing Soon
             </h2>
             <Link
               href="/closing-soon"
