@@ -255,7 +255,7 @@ export default function PhotoResizerTool() {
   const withinRange = result ? resultKB >= target.minKB * 0.5 && resultKB <= target.maxKB : false;
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
+    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_360px]">
       <Card>
         {!loaded ? (
           <ImageDropzone

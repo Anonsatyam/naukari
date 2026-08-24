@@ -55,8 +55,12 @@ export default function ImageDropzone({
         ref={inputRef}
         type="file"
         accept="image/*"
-        className="hidden"
-        onChange={(e) => handleFiles(e.target.files)}
+        className="sr-only"
+        onChange={(e) => {
+          handleFiles(e.target.files);
+          // reset so re-selecting the same file still fires onChange
+          e.target.value = "";
+        }}
       />
     </div>
   );
