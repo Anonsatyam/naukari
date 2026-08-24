@@ -91,7 +91,7 @@ export default async function JobDetailPage({
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
         {/* Main content */}
-        <div className="space-y-6">
+        <div className="order-2 space-y-6 lg:order-1">
           <Section title="Important Dates" icon={<Calendar size={16} />}>
             <div className="divide-y divide-[var(--color-border)]">
               {job.importantDates.map((d) => (
@@ -225,7 +225,7 @@ export default async function JobDetailPage({
         </div>
 
         {/* Sidebar */}
-        <aside className="space-y-4 lg:sticky lg:top-24 lg:h-fit">
+        <aside className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-24 lg:h-fit">
           <Card>
             <ButtonLink href={job.officialApplyUrl} target="_blank" className="w-full">
               Apply Officially <ExternalLink size={14} />

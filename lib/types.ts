@@ -100,3 +100,13 @@ export interface BotDraft {
   extractedFields: Partial<Job>;
   confidence: "high" | "medium" | "low";
 }
+
+export interface HotUpdateItem {
+  type: "Job" | "Result" | "Admit Card";
+  href: string;
+  title: string;
+  organization: string;
+  category: string;
+  date: string;
+  isNew: boolean;
+}

@@ -1,4 +1,4 @@
-import { AdmitCardItem, BotDraft, Job, ResultItem, VacancyBreakdown, AgeRelaxationRow, ImportantLink } from "./types";
+import { AdmitCardItem, BotDraft, Job, ResultItem, VacancyBreakdown, AgeRelaxationRow, ImportantLink, HotUpdateItem } from "./types";
 
 export const categories = [
   "All",
@@ -602,4 +602,42 @@ export function getRelatedJobs(job: Job, limit: number = 3): Job[] {
   if (combined.length >= limit) return combined.slice(0, limit);
   const rest = jobs.filter((j) => j.id !== job.id && !combined.includes(j));
   return [...combined, ...rest].slice(0, limit);
+}
+
+// Merges jobs, results and admit cards into one recency-sorted feed —
+// the "Hot Right Now" mixed feed on the home page.
+export function getHotUpdates(limit: number = 8): HotUpdateItem[] {
+  const jobItems: HotUpdateItem[] = jobs.map((j) => ({
+    type: "Job",
+    href: `/jobs/${j.slug}`,
+    title: j.title,
+    organization: j.organization,
+    category: j.category,
+    date: j.publishedAt,
+    isNew: isRecent(j.publishedAt),
+  }));
+
+  const resultItems: HotUpdateItem[] = results.map((r) => ({
+    type: "Result",
+    href: `/results/${r.slug}`,
+    title: r.title,
+    organization: r.organization,
+    category: r.category,
+    date: r.resultDate,
+    isNew: isRecent(r.resultDate),
+  }));
+
+  const admitCardItems: HotUpdateItem[] = admitCards.map((a) => ({
+    type: "Admit Card",
+    href: `/admit-cards/${a.slug}`,
+    title: a.title,
+    organization: a.organization,
+    category: a.category,
+    date: a.releaseDate,
+    isNew: isRecent(a.releaseDate),
+  }));
+
+  return [...jobItems, ...resultItems, ...admitCardItems]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, limit);
 }

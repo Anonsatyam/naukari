@@ -2,9 +2,10 @@ import Link from "next/link";
 import { Search, ArrowRight } from "lucide-react";
 import JobCard from "@/components/JobCard";
 import ListItemCard from "@/components/ListItemCard";
-import LiveStats from "@/components/LiveStats";
+import HotUpdates from "@/components/HotUpdates";
+import RotatingStateName from "@/components/RotatingStateName";
 import { ButtonLink } from "@/components/Button";
-import { jobs, results, admitCards, isClosingSoon, isRecent } from "@/lib/mock-data";
+import { jobs, results, admitCards, isClosingSoon, isRecent, getHotUpdates } from "@/lib/mock-data";
 import { formatDate } from "@/lib/utils";
 
 export default function Home() {
@@ -18,25 +19,21 @@ export default function Home() {
   const latestAdmitCards = [...admitCards]
     .sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime())
     .slice(0, 3);
-
-  const stats = [
-    { label: "Live Jobs", value: jobs.length, icon: "briefcase" as const, href: "/jobs" },
-    { label: "Results Declared", value: results.length, icon: "trophy" as const, href: "/results" },
-    { label: "Admit Cards", value: admitCards.length, icon: "idCard" as const, href: "/admit-cards" },
-  ];
+  const hotUpdates = getHotUpdates(8);
 
   return (
     <div>
       {/* Hero */}
       <section className="border-b border-[var(--color-border)] bg-white">
-        <div className="container-page py-10 md:py-12">
+        <div className="container-page py-14 md:py-20">
           <div className="mx-auto max-w-2xl text-center">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-primary-tint)] px-3 py-1 text-xs font-semibold text-[var(--color-primary)]">
-              Bihar · verified from official sources
+              Verified from official sources
             </span>
             <h1 className="font-display mt-5 text-3xl font-extrabold leading-tight text-[var(--color-text-primary)] md:text-5xl">
-              Government jobs in Bihar,{" "}
-              <span className="text-[var(--color-primary)]">clearly explained.</span>
+              Government jobs in
+              <br />
+              <RotatingStateName className="text-[var(--color-primary)]" />
             </h1>
             <p className="mt-4 text-base leading-relaxed text-[var(--color-text-secondary)] md:text-lg">
               Structured job details, real search and filters, and a
@@ -63,31 +60,19 @@ export default function Home() {
                 Search Jobs
               </button>
             </form>
-
-            {/* <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-              {["Police", "Teaching", "Banking", "Engineering", "Healthcare"].map((c) => (
-                <Link
-                  key={c}
-                  href={`/jobs?category=${encodeURIComponent(c)}`}
-                  className="rounded-full border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
-                >
-                  {c}
-                </Link>
-              ))}
-            </div> */}
           </div>
         </div>
       </section>
 
-      {/* Live stats strip */}
-      <LiveStats stats={stats} />
+      {/* Hot Right Now — mixed feed of latest jobs, results, admit cards */}
+      <HotUpdates items={hotUpdates} />
 
       {/* Closing soon */}
       {closingSoonJobs.length > 0 && (
         <section className="container-page py-10">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-xl font-bold text-[var(--color-text-primary)]">
-              Jobs Closing Soon
+              Closing Soon
             </h2>
             <Link
               href="/closing-soon"
