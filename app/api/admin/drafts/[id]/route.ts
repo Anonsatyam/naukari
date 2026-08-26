@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const draft = getDraftById(id);
+  const draft = await getDraftById(id);
   if (!draft) {
     return NextResponse.json({ error: "Draft not found" }, { status: 404 });
   }

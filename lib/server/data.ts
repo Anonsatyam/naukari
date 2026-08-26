@@ -1,27 +1,20 @@
-import { getStore } from "./store";
-import { Job, ResultItem, AdmitCardItem, BotDraft, BotLogEntry } from "@/lib/types";
+import { getSupabasePublic, getSupabaseAdmin } from "./supabaseClient";
+import {
+  rowToJob,
+  jobToRow,
+  rowToResult,
+  resultToRow,
+  rowToAdmitCard,
+  admitCardToRow,
+  rowToDraft,
+  draftToRow,
+  rowToLogEntry,
+} from "./mappers";
+import { Job, ResultItem, AdmitCardItem, BotDraft, BotLogEntry, DraftType, HotUpdateItem } from "@/lib/types";
+import { isRecent, isClosingSoon, getApplicationEndDate } from "@/lib/dateHelpers";
 
-// ---- Shared helpers (now date-based on real "today", not the fixed mock date) ----
-
-export function isRecent(dateIso: string, withinDays: number = 5): boolean {
-  const date = new Date(dateIso).getTime();
-  const now = Date.now();
-  const diffDays = (now - date) / (1000 * 60 * 60 * 24);
-  return diffDays >= 0 && diffDays <= withinDays;
-}
-
-export function getApplicationEndDate(job: Job): string | undefined {
-  return job.importantDates.find((d) => d.label === "Application End")?.date;
-}
-
-export function isClosingSoon(job: Job): boolean {
-  const endDate = getApplicationEndDate(job);
-  if (!endDate) return false;
-  const end = new Date(endDate).getTime();
-  const now = Date.now();
-  const diffDays = (end - now) / (1000 * 60 * 60 * 24);
-  return diffDays >= 0 && diffDays <= 7;
-}
+// Re-exported so existing callers importing these from this module keep working.
+export { isRecent, isClosingSoon, getApplicationEndDate };
 
 function slugify(title: string): string {
   const base = title
@@ -32,7 +25,8 @@ function slugify(title: string): string {
   return base || `job-${Date.now()}`;
 }
 
-// ---- Public reads (published only) ----
+// ---- Public reads (published only — uses the publishable-key client,
+// so Row Level Security enforces this even if a query below had a bug) ----
 
 export interface JobFilters {
   q?: string;
@@ -41,136 +35,260 @@ export interface JobFilters {
   qualification?: string[];
 }
 
-export function getPublishedJobs(filters: JobFilters = {}): Job[] {
-  const { jobs } = getStore();
-  return jobs.filter((job) => {
-    if (job.status !== "published") return false;
+export async function getPublishedJobs(filters: JobFilters = {}): Promise<Job[]> {
+  const supabase = getSupabasePublic();
+  let query = supabase.from("jobs").select("*").eq("status", "published");
 
-    if (filters.q) {
-      const q = filters.q.toLowerCase();
-      const matches =
-        job.title.toLowerCase().includes(q) ||
-        job.organization.toLowerCase().includes(q) ||
-        job.department.toLowerCase().includes(q);
-      if (!matches) return false;
-    }
-    if (filters.category?.length && !filters.category.includes(job.category)) return false;
-    if (filters.department?.length && !filters.department.includes(job.department)) return false;
-    if (filters.qualification?.length && !filters.qualification.includes(job.qualification))
-      return false;
+  if (filters.q) {
+    const q = filters.q;
+    query = query.or(`title.ilike.%${q}%,organization.ilike.%${q}%,department.ilike.%${q}%`);
+  }
+  if (filters.category?.length) query = query.in("category", filters.category);
+  if (filters.department?.length) query = query.in("department", filters.department);
+  if (filters.qualification?.length) query = query.in("qualification", filters.qualification);
 
-    return true;
-  });
+  const { data, error } = await query.order("published_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(rowToJob);
 }
 
-export function getPublishedJobBySlug(slug: string): Job | undefined {
-  const { jobs } = getStore();
-  return jobs.find((j) => j.slug === slug && j.status === "published");
+export async function getPublishedJobBySlug(slug: string): Promise<Job | undefined> {
+  const supabase = getSupabasePublic();
+  const { data, error } = await supabase
+    .from("jobs")
+    .select("*")
+    .eq("slug", slug)
+    .eq("status", "published")
+    .maybeSingle();
+  if (error) throw error;
+  return data ? rowToJob(data) : undefined;
 }
 
-export function getRelatedJobs(job: Job, limit: number = 3): Job[] {
-  const { jobs } = getStore();
-  const published = jobs.filter((j) => j.id !== job.id && j.status === "published");
-  const sameCategory = published.filter((j) => j.category === job.category);
+export async function getRelatedJobs(job: Job, limit: number = 3): Promise<Job[]> {
+  const supabase = getSupabasePublic();
+
+  const { data: sameCategoryData, error: e1 } = await supabase
+    .from("jobs")
+    .select("*")
+    .eq("status", "published")
+    .eq("category", job.category)
+    .neq("id", job.id)
+    .limit(limit);
+  if (e1) throw e1;
+  const sameCategory = (sameCategoryData ?? []).map(rowToJob);
   if (sameCategory.length >= limit) return sameCategory.slice(0, limit);
-  const sameDepartment = published.filter(
-    (j) => j.department === job.department && !sameCategory.includes(j)
-  );
+
+  const excludeIds = [job.id, ...sameCategory.map((j) => j.id)];
+  const { data: sameDeptData, error: e2 } = await supabase
+    .from("jobs")
+    .select("*")
+    .eq("status", "published")
+    .eq("department", job.department)
+    .not("id", "in", `(${excludeIds.join(",")})`)
+    .limit(limit - sameCategory.length);
+  if (e2) throw e2;
+  const sameDepartment = (sameDeptData ?? []).map(rowToJob);
   const combined = [...sameCategory, ...sameDepartment];
   if (combined.length >= limit) return combined.slice(0, limit);
-  const rest = published.filter((j) => !combined.includes(j));
+
+  const combinedIds = [job.id, ...combined.map((j) => j.id)];
+  const { data: restData, error: e3 } = await supabase
+    .from("jobs")
+    .select("*")
+    .eq("status", "published")
+    .not("id", "in", `(${combinedIds.join(",")})`)
+    .limit(limit - combined.length);
+  if (e3) throw e3;
+  const rest = (restData ?? []).map(rowToJob);
+
   return [...combined, ...rest].slice(0, limit);
 }
 
-export function getResults(q?: string): ResultItem[] {
-  const { results } = getStore();
-  if (!q) return results;
-  const query = q.toLowerCase();
-  return results.filter(
-    (r) =>
-      r.title.toLowerCase().includes(query) ||
-      r.organization.toLowerCase().includes(query) ||
-      r.category.toLowerCase().includes(query)
-  );
+export async function getResults(q?: string): Promise<ResultItem[]> {
+  const supabase = getSupabasePublic();
+  let query = supabase.from("results").select("*");
+  if (q) query = query.or(`title.ilike.%${q}%,organization.ilike.%${q}%,category.ilike.%${q}%`);
+  const { data, error } = await query.order("result_date", { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(rowToResult);
 }
 
-export function getResultBySlug(slug: string): ResultItem | undefined {
-  const { results } = getStore();
-  return results.find((r) => r.slug === slug);
+export async function getResultBySlug(slug: string): Promise<ResultItem | undefined> {
+  const supabase = getSupabasePublic();
+  const { data, error } = await supabase.from("results").select("*").eq("slug", slug).maybeSingle();
+  if (error) throw error;
+  return data ? rowToResult(data) : undefined;
 }
 
-export function getAdmitCards(q?: string): AdmitCardItem[] {
-  const { admitCards } = getStore();
-  if (!q) return admitCards;
-  const query = q.toLowerCase();
-  return admitCards.filter(
-    (a) =>
-      a.title.toLowerCase().includes(query) ||
-      a.organization.toLowerCase().includes(query) ||
-      a.category.toLowerCase().includes(query)
-  );
+export async function getAdmitCards(q?: string): Promise<AdmitCardItem[]> {
+  const supabase = getSupabasePublic();
+  let query = supabase.from("admit_cards").select("*");
+  if (q) query = query.or(`title.ilike.%${q}%,organization.ilike.%${q}%,category.ilike.%${q}%`);
+  const { data, error } = await query.order("release_date", { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(rowToAdmitCard);
 }
 
-export function getAdmitCardBySlug(slug: string): AdmitCardItem | undefined {
-  const { admitCards } = getStore();
-  return admitCards.find((a) => a.slug === slug);
+export async function getAdmitCardBySlug(slug: string): Promise<AdmitCardItem | undefined> {
+  const supabase = getSupabasePublic();
+  const { data, error } = await supabase.from("admit_cards").select("*").eq("slug", slug).maybeSingle();
+  if (error) throw error;
+  return data ? rowToAdmitCard(data) : undefined;
 }
 
-// ---- Admin reads (all statuses) ----
+// ---- Admin reads/writes (service-role client — bypasses RLS) ----
 
-export function getAllJobsAdmin(): Job[] {
-  return getStore().jobs;
+export async function getAllJobsAdmin(): Promise<Job[]> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.from("jobs").select("*").order("updated_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(rowToJob);
 }
 
-export function getJobByIdAdmin(id: string): Job | undefined {
-  return getStore().jobs.find((j) => j.id === id);
+export async function getJobByIdAdmin(id: string): Promise<Job | undefined> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.from("jobs").select("*").eq("id", id).maybeSingle();
+  if (error) throw error;
+  return data ? rowToJob(data) : undefined;
 }
 
-export function setJobStatus(id: string, status: Job["status"]): Job | undefined {
-  const job = getStore().jobs.find((j) => j.id === id);
-  if (!job) return undefined;
-  job.status = status;
-  job.updatedAt = new Date().toISOString();
-  return job;
+export async function setJobStatus(id: string, status: Job["status"]): Promise<Job | undefined> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("jobs")
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  return data ? rowToJob(data) : undefined;
 }
 
-export function getPendingDrafts(): BotDraft[] {
-  return getStore().drafts.filter((d) => d.status === "pending");
+export async function getPendingDrafts(): Promise<BotDraft[]> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("bot_drafts")
+    .select("*")
+    .eq("status", "pending")
+    .order("detected_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(rowToDraft);
 }
 
-export function getAllDrafts(): BotDraft[] {
-  return getStore().drafts;
+export async function getAllDrafts(): Promise<BotDraft[]> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("bot_drafts")
+    .select("*")
+    .order("detected_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(rowToDraft);
 }
 
-export function getDraftById(id: string): BotDraft | undefined {
-  return getStore().drafts.find((d) => d.id === id);
+export async function getDraftById(id: string): Promise<BotDraft | undefined> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.from("bot_drafts").select("*").eq("id", id).maybeSingle();
+  if (error) throw error;
+  return data ? rowToDraft(data) : undefined;
 }
 
-export function rejectDraft(id: string): BotDraft | undefined {
-  const draft = getStore().drafts.find((d) => d.id === id);
-  if (!draft) return undefined;
-  draft.status = "rejected";
-  return draft;
+export async function rejectDraft(id: string): Promise<BotDraft | undefined> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("bot_drafts")
+    .update({ status: "rejected" })
+    .eq("id", id)
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  return data ? rowToDraft(data) : undefined;
 }
+
+export type ApprovedEntity =
+  | { type: "job"; entity: Job }
+  | { type: "result"; entity: ResultItem }
+  | { type: "admit_card"; entity: AdmitCardItem };
 
 /**
  * Approves a draft: merges the bot-extracted fields with whatever the
- * admin edited, fills in sensible defaults for anything still missing
- * (the current draft-review UI only edits a handful of core fields —
- * expanding it into a full structured editor is good follow-up work),
- * and publishes the result as a live Job.
+ * admin edited, fills in sensible defaults for anything still missing,
+ * and publishes the result as a live row — in whichever table matches
+ * the draft's type (job / result / admit_card).
  */
-export function approveDraft(id: string, edits: Partial<Job>): Job | undefined {
-  const store = getStore();
-  const draft = store.drafts.find((d) => d.id === id);
-  if (!draft) return undefined;
+export async function approveDraft(
+  id: string,
+  edits: Record<string, unknown>
+): Promise<ApprovedEntity | undefined> {
+  const supabase = getSupabaseAdmin();
 
-  const merged: Partial<Job> = { ...draft.extractedFields, ...edits };
+  const { data: draftRow, error: fetchError } = await supabase
+    .from("bot_drafts")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (fetchError) throw fetchError;
+  if (!draftRow) return undefined;
+  const draft = rowToDraft(draftRow);
+
+  const markApproved = async () => {
+    const { error } = await supabase.from("bot_drafts").update({ status: "approved" }).eq("id", id);
+    if (error) throw error;
+  };
+
+  if (draft.draftType === "result") {
+    const merged = { ...draft.extractedFields, ...edits } as Partial<ResultItem>;
+    const title = merged.title ?? draft.jobTitle;
+    const newResult: Partial<ResultItem> = {
+      slug: slugify(title),
+      title,
+      organization: merged.organization ?? draft.organization,
+      category: merged.category ?? "Administrative",
+      resultDate: merged.resultDate ?? new Date().toISOString().slice(0, 10),
+      officialLink: merged.officialLink ?? draft.sourceUrl,
+      sourceUrl: draft.sourceUrl,
+      summary: merged.summary ?? `${title} — see the official notification for full details.`,
+    };
+    const { data: inserted, error: insertError } = await supabase
+      .from("results")
+      .insert(resultToRow(newResult))
+      .select()
+      .single();
+    if (insertError) throw insertError;
+    await markApproved();
+    return { type: "result", entity: rowToResult(inserted) };
+  }
+
+  if (draft.draftType === "admit_card") {
+    const merged = { ...draft.extractedFields, ...edits } as Partial<AdmitCardItem>;
+    const title = merged.title ?? draft.jobTitle;
+    const now = new Date();
+    const defaultExamDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const newCard: Partial<AdmitCardItem> = {
+      slug: slugify(title),
+      title,
+      organization: merged.organization ?? draft.organization,
+      category: merged.category ?? "Administrative",
+      examDate: merged.examDate ?? defaultExamDate,
+      releaseDate: merged.releaseDate ?? now.toISOString().slice(0, 10),
+      officialLink: merged.officialLink ?? draft.sourceUrl,
+      sourceUrl: draft.sourceUrl,
+    };
+    const { data: inserted, error: insertError } = await supabase
+      .from("admit_cards")
+      .insert(admitCardToRow(newCard))
+      .select()
+      .single();
+    if (insertError) throw insertError;
+    await markApproved();
+    return { type: "admit_card", entity: rowToAdmitCard(inserted) };
+  }
+
+  // draftType === "job" (default, and the original Phase 3/4 behavior)
+  const merged = { ...draft.extractedFields, ...edits } as Partial<Job>;
   const title = merged.title ?? draft.jobTitle;
   const now = new Date().toISOString();
 
-  const job: Job = {
-    id: `job-${Date.now()}`,
+  const newJob: Partial<Job> = {
     slug: slugify(title),
     state: merged.state ?? "Bihar",
     title,
@@ -204,67 +322,150 @@ export function approveDraft(id: string, edits: Partial<Job>): Job | undefined {
     updatedAt: now,
   };
 
-  store.jobs.push(job);
-  draft.status = "approved";
-  return job;
+  const { data: insertedJob, error: insertError } = await supabase
+    .from("jobs")
+    .insert(jobToRow(newJob))
+    .select()
+    .single();
+  if (insertError) throw insertError;
+  await markApproved();
+  return { type: "job", entity: rowToJob(insertedJob) };
 }
 
 // ---- Bot ingestion ----
 
-export function draftExistsForSource(sourceUrl: string): boolean {
-  const { drafts, jobs } = getStore();
-  return (
-    drafts.some((d) => d.sourceUrl === sourceUrl) || jobs.some((j) => j.sourceUrl === sourceUrl)
-  );
+export async function draftExistsForSource(sourceUrl: string): Promise<boolean> {
+  const supabase = getSupabaseAdmin();
+
+  const { count: draftCount, error: draftError } = await supabase
+    .from("bot_drafts")
+    .select("id", { count: "exact", head: true })
+    .eq("source_url", sourceUrl);
+  if (draftError) throw draftError;
+  if ((draftCount ?? 0) > 0) return true;
+
+  const { count: jobCount, error: jobError } = await supabase
+    .from("jobs")
+    .select("id", { count: "exact", head: true })
+    .eq("source_url", sourceUrl);
+  if (jobError) throw jobError;
+  return (jobCount ?? 0) > 0;
 }
 
-export function createDraft(input: {
+export async function createDraft(input: {
   jobTitle: string;
   organization: string;
   sourceUrl: string;
   confidence: BotDraft["confidence"];
-  extractedFields: Partial<Job>;
-}): BotDraft {
-  const draft: BotDraft = {
-    id: `draft-${Date.now()}-${Math.round(Math.random() * 1000)}`,
-    jobTitle: input.jobTitle,
-    organization: input.organization,
-    sourceUrl: input.sourceUrl,
-    detectedAt: new Date().toISOString(),
-    status: "pending",
-    confidence: input.confidence,
-    extractedFields: input.extractedFields,
-  };
-  getStore().drafts.push(draft);
-  return draft;
+  draftType?: DraftType;
+  extractedFields: Record<string, unknown>;
+}): Promise<BotDraft> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("bot_drafts")
+    .insert(
+      draftToRow({
+        jobTitle: input.jobTitle,
+        organization: input.organization,
+        sourceUrl: input.sourceUrl,
+        detectedAt: new Date().toISOString(),
+        status: "pending",
+        confidence: input.confidence,
+        draftType: input.draftType ?? "job",
+        extractedFields: input.extractedFields,
+      })
+    )
+    .select()
+    .single();
+  if (error) throw error;
+  return rowToDraft(data);
 }
 
 // ---- Bot activity log ----
 
-export function addBotLogEntry(status: BotLogEntry["status"], message: string): BotLogEntry {
-  const entry: BotLogEntry = {
-    id: `log-${Date.now()}-${Math.round(Math.random() * 1000)}`,
-    timestamp: new Date().toISOString(),
-    status,
-    message,
-  };
-  getStore().botLog.unshift(entry);
-  // keep the log from growing unbounded in a long-running dev process
-  getStore().botLog.splice(200);
-  return entry;
+export async function addBotLogEntry(
+  status: BotLogEntry["status"],
+  message: string
+): Promise<BotLogEntry> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("bot_log")
+    .insert({ status, message })
+    .select()
+    .single();
+  if (error) throw error;
+  return rowToLogEntry(data);
 }
 
-export function getBotLog(limit: number = 10): BotLogEntry[] {
-  return getStore().botLog.slice(0, limit);
+export async function getBotLog(limit: number = 10): Promise<BotLogEntry[]> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("bot_log")
+    .select("*")
+    .order("timestamp", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []).map(rowToLogEntry);
 }
 
 // ---- Dashboard stats ----
 
-export function getAdminStats() {
-  const { jobs, drafts } = getStore();
+export async function getAdminStats() {
+  const supabase = getSupabaseAdmin();
+
+  const [{ count: pendingDrafts }, { count: publishedJobs }, { count: totalDrafts }] = await Promise.all([
+    supabase.from("bot_drafts").select("id", { count: "exact", head: true }).eq("status", "pending"),
+    supabase.from("jobs").select("id", { count: "exact", head: true }).eq("status", "published"),
+    supabase.from("bot_drafts").select("id", { count: "exact", head: true }),
+  ]);
+
   return {
-    pendingDrafts: drafts.filter((d) => d.status === "pending").length,
-    publishedJobs: jobs.filter((j) => j.status === "published").length,
-    totalDrafts: drafts.length,
+    pendingDrafts: pendingDrafts ?? 0,
+    publishedJobs: publishedJobs ?? 0,
+    totalDrafts: totalDrafts ?? 0,
   };
+}
+
+// ---- Home page "Hot Right Now" mixed feed ----
+
+export async function getHotUpdates(limit: number = 8): Promise<HotUpdateItem[]> {
+  const [jobs, results, admitCards] = await Promise.all([
+    getPublishedJobs(),
+    getResults(),
+    getAdmitCards(),
+  ]);
+
+  const jobItems: HotUpdateItem[] = jobs.map((j) => ({
+    type: "Job",
+    href: `/jobs/${j.slug}`,
+    title: j.title,
+    organization: j.organization,
+    category: j.category,
+    date: j.publishedAt,
+    isNew: isRecent(j.publishedAt),
+  }));
+
+  const resultItems: HotUpdateItem[] = results.map((r) => ({
+    type: "Result",
+    href: `/results/${r.slug}`,
+    title: r.title,
+    organization: r.organization,
+    category: r.category,
+    date: r.resultDate,
+    isNew: isRecent(r.resultDate),
+  }));
+
+  const admitCardItems: HotUpdateItem[] = admitCards.map((a) => ({
+    type: "Admit Card",
+    href: `/admit-cards/${a.slug}`,
+    title: a.title,
+    organization: a.organization,
+    category: a.category,
+    date: a.releaseDate,
+    isNew: isRecent(a.releaseDate),
+  }));
+
+  return [...jobItems, ...resultItems, ...admitCardItems]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, limit);
 }

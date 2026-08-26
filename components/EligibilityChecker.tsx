@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckCircle2, XCircle, Info, ShieldQuestion } from "lucide-react";
-import { jobs, qualifications } from "@/lib/mock-data";
+import { qualifications } from "@/lib/taxonomy";
 import { Job } from "@/lib/types";
 import { Button } from "./Button";
 import Card from "./Card";
@@ -86,20 +86,54 @@ function evaluate(
 }
 
 export default function EligibilityChecker({ initialJobId }: { initialJobId?: string }) {
-  const [jobId, setJobId] = useState(initialJobId ?? jobs[0].id);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [jobId, setJobId] = useState(initialJobId ?? "");
   const [qualification, setQualification] = useState("Graduate");
   const [age, setAge] = useState(25);
   const [hasBEd, setHasBEd] = useState(false);
   const [isDomicile, setIsDomicile] = useState(true);
   const [submitted, setSubmitted] = useState(false);
 
-  const job = jobs.find((j) => j.id === jobId) ?? jobs[0];
-  const needsBEd = job.eligibilityRules.some((r) => r.label === "B.Ed Requirement");
-  const needsDomicile = job.eligibilityRules.some((r) => r.label === "Domicile");
+  useEffect(() => {
+    fetch("/api/jobs")
+      .then((res) => res.json())
+      .then((data: { jobs: Job[] }) => {
+        setJobs(data.jobs);
+        if (!initialJobId && data.jobs.length > 0) {
+          setJobId(data.jobs[0].id);
+        }
+      })
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const results = submitted ? evaluate(job, { qualification, age, hasBEd, isDomicile }) : [];
+  const job = jobs.find((j) => j.id === jobId) ?? jobs[0];
+  const needsBEd = job?.eligibilityRules.some((r) => r.label === "B.Ed Requirement") ?? false;
+  const needsDomicile = job?.eligibilityRules.some((r) => r.label === "Domicile") ?? false;
+
+  const results = submitted && job ? evaluate(job, { qualification, age, hasBEd, isDomicile }) : [];
   const blockingResults = results.filter((r) => r.status !== "info");
   const overallEligible = blockingResults.every((r) => r.status === "pass");
+
+  if (loading) {
+    return (
+      <Card padding="p-10" className="text-center">
+        <p className="text-sm text-[var(--color-text-secondary)]">Loading jobs…</p>
+      </Card>
+    );
+  }
+
+  if (!job) {
+    return (
+      <Card padding="p-10" className="text-center">
+        <p className="text-sm font-semibold text-[var(--color-text-primary)]">No jobs available yet</p>
+        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+          Check back once jobs have been published.
+        </p>
+      </Card>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[380px_1fr]">

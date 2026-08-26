@@ -5,10 +5,24 @@ import ListItemCard from "@/components/ListItemCard";
 import HotUpdates from "@/components/HotUpdates";
 import RotatingStateName from "@/components/RotatingStateName";
 import { ButtonLink } from "@/components/Button";
-import { jobs, results, admitCards, isClosingSoon, isRecent, getHotUpdates } from "@/lib/mock-data";
+import { getPublishedJobs, getResults, getAdmitCards, getHotUpdates } from "@/lib/server/data";
+import { isClosingSoon, isRecent } from "@/lib/dateHelpers";
 import { formatDate } from "@/lib/utils";
 
-export default function Home() {
+// The home page shows "latest"/"hot" content computed live from the
+// database — never statically cache it, or visitors would see a
+// snapshot frozen from whenever the site was last built/deployed
+// instead of what's actually true right now.
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const [jobs, results, admitCards, hotUpdates] = await Promise.all([
+    getPublishedJobs(),
+    getResults(),
+    getAdmitCards(),
+    getHotUpdates(8),
+  ]);
+
   const closingSoonJobs = jobs.filter(isClosingSoon);
   const latestJobs = [...jobs]
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
@@ -19,7 +33,6 @@ export default function Home() {
   const latestAdmitCards = [...admitCards]
     .sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime())
     .slice(0, 3);
-  const hotUpdates = getHotUpdates(8);
 
   return (
     <div>
@@ -90,80 +103,86 @@ export default function Home() {
       )}
 
       {/* Latest jobs */}
-      <section className="container-page py-10">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-xl font-bold text-[var(--color-text-primary)]">
-            Latest Bihar Jobs
-          </h2>
-          <Link
-            href="/jobs"
-            className="inline-flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]"
-          >
-            View all <ArrowRight size={14} />
-          </Link>
-        </div>
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {latestJobs.map((job) => (
-            <JobCard key={job.id} job={job} />
-          ))}
-        </div>
-      </section>
+      {latestJobs.length > 0 && (
+        <section className="container-page py-10">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-xl font-bold text-[var(--color-text-primary)]">
+              Latest Bihar Jobs
+            </h2>
+            <Link
+              href="/jobs"
+              className="inline-flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]"
+            >
+              View all <ArrowRight size={14} />
+            </Link>
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {latestJobs.map((job) => (
+              <JobCard key={job.id} job={job} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Latest results */}
-      <section className="container-page py-10">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-xl font-bold text-[var(--color-text-primary)]">
-            Latest Results
-          </h2>
-          <Link
-            href="/results"
-            className="inline-flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]"
-          >
-            View all <ArrowRight size={14} />
-          </Link>
-        </div>
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {latestResults.map((r) => (
-            <ListItemCard
-              key={r.id}
-              href={`/results/${r.slug}`}
-              eyebrow={r.organization}
-              title={r.title}
-              category={r.category}
-              meta={`Declared ${formatDate(r.resultDate)}`}
-              isNew={isRecent(r.resultDate)}
-            />
-          ))}
-        </div>
-      </section>
+      {latestResults.length > 0 && (
+        <section className="container-page py-10">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-xl font-bold text-[var(--color-text-primary)]">
+              Latest Results
+            </h2>
+            <Link
+              href="/results"
+              className="inline-flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]"
+            >
+              View all <ArrowRight size={14} />
+            </Link>
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {latestResults.map((r) => (
+              <ListItemCard
+                key={r.id}
+                href={`/results/${r.slug}`}
+                eyebrow={r.organization}
+                title={r.title}
+                category={r.category}
+                meta={`Declared ${formatDate(r.resultDate)}`}
+                isNew={isRecent(r.resultDate)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Latest admit cards */}
-      <section className="container-page py-10">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-xl font-bold text-[var(--color-text-primary)]">
-            Latest Admit Cards
-          </h2>
-          <Link
-            href="/admit-cards"
-            className="inline-flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]"
-          >
-            View all <ArrowRight size={14} />
-          </Link>
-        </div>
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {latestAdmitCards.map((a) => (
-            <ListItemCard
-              key={a.id}
-              href={`/admit-cards/${a.slug}`}
-              eyebrow={a.organization}
-              title={a.title}
-              category={a.category}
-              meta={`Exam on ${formatDate(a.examDate)}`}
-              isNew={isRecent(a.releaseDate)}
-            />
-          ))}
-        </div>
-      </section>
+      {latestAdmitCards.length > 0 && (
+        <section className="container-page py-10">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-xl font-bold text-[var(--color-text-primary)]">
+              Latest Admit Cards
+            </h2>
+            <Link
+              href="/admit-cards"
+              className="inline-flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]"
+            >
+              View all <ArrowRight size={14} />
+            </Link>
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {latestAdmitCards.map((a) => (
+              <ListItemCard
+                key={a.id}
+                href={`/admit-cards/${a.slug}`}
+                eyebrow={a.organization}
+                title={a.title}
+                category={a.category}
+                meta={`Exam on ${formatDate(a.examDate)}`}
+                isNew={isRecent(a.releaseDate)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Eligibility CTA */}
       <section className="container-page pb-16">

@@ -1,5 +1,24 @@
 import { Candidate } from "./extract";
 
+export type DraftType = "job" | "result" | "admit_card";
+
+const ADMIT_CARD_KEYWORDS = ["admit card", "e-admit", "call letter", "hall ticket", "download admit"];
+const RESULT_KEYWORDS = ["result", "cut off", "cutoff", "merit list", "shortlist"];
+
+/**
+ * Rule-based classification of what kind of notification this is —
+ * a genuinely new job posting, a declared result, or a released admit
+ * card. This matters because each becomes a different kind of draft
+ * with a different approval flow and lands in a different public
+ * section of the site.
+ */
+export function classifyDraftType(title: string): DraftType {
+  const lower = title.toLowerCase();
+  if (ADMIT_CARD_KEYWORDS.some((kw) => lower.includes(kw))) return "admit_card";
+  if (RESULT_KEYWORDS.some((kw) => lower.includes(kw))) return "result";
+  return "job";
+}
+
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
   Police: ["police", "constable", "sub inspector", " si "],
   Teaching: ["teacher", "stet", "tet", "shikshak"],
@@ -31,6 +50,7 @@ export interface ExtractedDraft {
   organization: string;
   sourceUrl: string;
   confidence: "high" | "medium" | "low";
+  draftType: DraftType;
   extractedFields: {
     category?: string;
     qualification?: string;
@@ -38,6 +58,7 @@ export interface ExtractedDraft {
 }
 
 export function extractFields(candidate: Candidate, orgHint: string): ExtractedDraft {
+  const draftType = classifyDraftType(candidate.title);
   const category = guessFromKeywords(candidate.title, CATEGORY_KEYWORDS);
   const qualification = guessFromKeywords(candidate.title, QUALIFICATION_KEYWORDS);
   const fieldsFound = [category, qualification].filter(Boolean).length;
@@ -53,6 +74,7 @@ export function extractFields(candidate: Candidate, orgHint: string): ExtractedD
     organization: orgHint,
     sourceUrl: candidate.url,
     confidence,
+    draftType,
     extractedFields: {
       ...(category ? { category } : {}),
       ...(qualification ? { qualification } : {}),

@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AlarmClock } from "lucide-react";
-import { jobs, isClosingSoon } from "@/lib/mock-data";
+import { Job } from "@/lib/types";
+import { isClosingSoon } from "@/lib/dateHelpers";
 import { useTextFilter } from "@/lib/useTextFilter";
 import JobCard from "@/components/JobCard";
 import Breadcrumb from "@/components/Breadcrumb";
@@ -10,10 +11,20 @@ import SearchInput from "@/components/SearchInput";
 import Card from "@/components/Card";
 
 export default function ClosingSoonExplorer() {
-  const closingSoonJobs = jobs.filter(isClosingSoon);
+  const [allJobs, setAllJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/jobs")
+      .then((res) => res.json())
+      .then((data: { jobs: Job[] }) => setAllJobs(data.jobs))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const closingSoonJobs = allJobs.filter(isClosingSoon);
 
   const getSearchableText = useCallback(
-    (j: (typeof closingSoonJobs)[number]) => `${j.title} ${j.organization} ${j.department} ${j.category}`,
+    (j: Job) => `${j.title} ${j.organization} ${j.department} ${j.category}`,
     []
   );
   const { query, setQuery, filtered } = useTextFilter(closingSoonJobs, getSearchableText);
@@ -36,7 +47,7 @@ export default function ClosingSoonExplorer() {
         </div>
       </div>
 
-      {closingSoonJobs.length > 0 && (
+      {!loading && closingSoonJobs.length > 0 && (
         <SearchInput
           value={query}
           onChange={setQuery}
@@ -45,7 +56,11 @@ export default function ClosingSoonExplorer() {
         />
       )}
 
-      {closingSoonJobs.length === 0 ? (
+      {loading ? (
+        <Card padding="p-10" className="mt-8 text-center">
+          <p className="text-sm text-[var(--color-text-secondary)]">Loading jobs…</p>
+        </Card>
+      ) : closingSoonJobs.length === 0 ? (
         <Card padding="p-10" className="mt-8 border-dashed text-center">
           <p className="text-sm font-semibold text-[var(--color-text-primary)]">
             Nothing closing in the next 7 days

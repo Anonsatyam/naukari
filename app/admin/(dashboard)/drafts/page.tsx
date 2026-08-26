@@ -2,12 +2,19 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { getAllDrafts } from "@/lib/server/data";
 import { formatDate } from "@/lib/utils";
+import { BotDraft } from "@/lib/types";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
 
-export default function AdminDraftsPage() {
-  const botDrafts = getAllDrafts();
+const TYPE_LABELS: Record<BotDraft["draftType"], string> = {
+  job: "Job",
+  result: "Result",
+  admit_card: "Admit Card",
+};
+
+export default async function AdminDraftsPage() {
+  const botDrafts = await getAllDrafts();
 
   return (
     <div>
@@ -19,8 +26,9 @@ export default function AdminDraftsPage() {
       </p>
 
       <Card padding="p-0" className="mt-5 overflow-hidden">
-        <div className="hidden grid-cols-[1fr_140px_140px_100px] gap-4 border-b border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)] md:grid">
-          <span>Job</span>
+        <div className="hidden grid-cols-[1fr_90px_120px_120px_100px] gap-4 border-b border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)] md:grid">
+          <span>Title</span>
+          <span>Type</span>
           <span>Detected</span>
           <span>Confidence</span>
           <span>Status</span>
@@ -30,7 +38,7 @@ export default function AdminDraftsPage() {
             <Link
               key={draft.id}
               href={`/admin/drafts/${draft.id}`}
-              className="grid grid-cols-1 gap-2 px-4 py-4 hover:bg-[var(--color-background)] md:grid-cols-[1fr_140px_140px_100px] md:items-center md:gap-4"
+              className="grid grid-cols-1 gap-2 px-4 py-4 hover:bg-[var(--color-background)] md:grid-cols-[1fr_90px_120px_120px_100px] md:items-center md:gap-4"
             >
               <div className="min-w-0">
                 <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--color-text-primary)]">
@@ -39,6 +47,9 @@ export default function AdminDraftsPage() {
                 </p>
                 <p className="text-xs text-[var(--color-text-secondary)]">{draft.organization}</p>
               </div>
+              <span>
+                <Badge tone="primary">{TYPE_LABELS[draft.draftType]}</Badge>
+              </span>
               <span className="text-xs text-[var(--color-text-secondary)] md:text-sm">
                 {formatDate(draft.detectedAt)}
               </span>

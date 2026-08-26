@@ -6,7 +6,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const job = setJobStatus(id, "closed");
+  const job = await setJobStatus(id, "closed");
   if (!job) {
     return NextResponse.json({ error: "Job not found" }, { status: 404 });
   }

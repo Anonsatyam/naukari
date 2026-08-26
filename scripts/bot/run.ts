@@ -105,7 +105,9 @@ async function run() {
           skipped++;
         } else {
           created++;
-          console.log(`  ✓ [${source.name}] Draft created (${draftInput.confidence} confidence): ${candidate.title}`);
+          console.log(
+            `  ✓ [${source.name}] ${draftInput.draftType} draft created (${draftInput.confidence} confidence): ${candidate.title}`
+          );
         }
       }
     } catch (err) {

@@ -5,10 +5,10 @@ import { formatDate } from "@/lib/utils";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
 
-export default function AdminDashboardPage() {
-  const { pendingDrafts: pendingCount, publishedJobs: publishedCount } = getAdminStats();
-  const pendingDrafts = getPendingDrafts();
-  const botLog = getBotLog(6);
+export default async function AdminDashboardPage() {
+  const { pendingDrafts: pendingCount, publishedJobs: publishedCount } = await getAdminStats();
+  const pendingDrafts = await getPendingDrafts();
+  const botLog = await getBotLog(6);
 
   const stats = [
     { label: "Pending Drafts", value: pendingCount, icon: FileStack, tone: "warning" as const },

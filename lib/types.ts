@@ -90,6 +90,8 @@ export interface AdmitCardItem {
   sourceUrl: string;
 }
 
+export type DraftType = "job" | "result" | "admit_card";
+
 export interface BotDraft {
   id: string;
   jobTitle: string;
@@ -97,8 +99,9 @@ export interface BotDraft {
   sourceUrl: string;
   detectedAt: string;
   status: "pending" | "approved" | "rejected";
-  extractedFields: Partial<Job>;
   confidence: "high" | "medium" | "low";
+  draftType: DraftType;
+  extractedFields: Record<string, unknown>;
 }
 
 export interface HotUpdateItem {

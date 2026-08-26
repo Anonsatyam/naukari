@@ -6,7 +6,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const draft = rejectDraft(id);
+  const draft = await rejectDraft(id);
   if (!draft) {
     return NextResponse.json({ error: "Draft not found" }, { status: 404 });
   }

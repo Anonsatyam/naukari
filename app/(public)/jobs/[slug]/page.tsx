@@ -18,8 +18,22 @@ import { KeyValueRow, StatFact } from "@/components/KeyValueRow";
 import SourceVerified from "@/components/SourceVerified";
 import JobCard from "@/components/JobCard";
 
-export function generateStaticParams() {
-  return getPublishedJobs().map((job) => ({ slug: job.slug }));
+// Statically generated for speed/SEO, but re-checked against the
+// database every 5 minutes in the background so an admin edit or
+// unpublish doesn't stay stale until the next deploy.
+export const revalidate = 300;
+
+export async function generateStaticParams() {
+  try {
+    const jobs = await getPublishedJobs();
+    return jobs.map((job) => ({ slug: job.slug }));
+  } catch (err) {
+    // If Supabase is briefly unreachable at build time, degrade to zero
+    // statically pre-rendered job pages rather than failing the entire
+    // site's deployment — every page still renders correctly on-demand.
+    console.warn("generateStaticParams: could not fetch jobs at build time, skipping pre-render.", err);
+    return [];
+  }
 }
 
 export async function generateMetadata({
@@ -28,7 +42,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const job = getPublishedJobBySlug(slug);
+  const job = await getPublishedJobBySlug(slug);
   if (!job) return {};
   return {
     title: job.title,
@@ -42,13 +56,13 @@ export default async function JobDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const job = getPublishedJobBySlug(slug);
+  const job = await getPublishedJobBySlug(slug);
   if (!job) notFound();
 
   const endDate = getApplicationEndDate(job);
   const closingSoon = isClosingSoon(job);
   const remaining = endDate ? daysUntil(endDate) : null;
-  const relatedJobs = getRelatedJobs(job, 3);
+  const relatedJobs = await getRelatedJobs(job, 3);
 
   return (
     <div className="container-page py-8">

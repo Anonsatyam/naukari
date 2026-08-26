@@ -8,6 +8,6 @@ export async function GET(request: NextRequest) {
   const department = searchParams.getAll("department");
   const qualification = searchParams.getAll("qualification");
 
-  const jobs = getPublishedJobs({ q, category, department, qualification });
+  const jobs = await getPublishedJobs({ q, category, department, qualification });
   return NextResponse.json({ jobs });
 }

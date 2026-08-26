@@ -1,9 +1,9 @@
 import type { MetadataRoute } from "next";
-import { jobs, results, admitCards } from "@/lib/mock-data";
+import { getPublishedJobs, getResults, getAdmitCards } from "@/lib/server/data";
 
 const BASE_URL = "https://www.biharsarkarinaukri.example";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes = [
     "",
     "/jobs",
@@ -16,6 +16,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
     url: `${BASE_URL}${path}`,
     lastModified: new Date(),
   }));
+
+  // If the database is briefly unreachable while the sitemap is being
+  // generated, fall back to just the static routes rather than failing
+  // the whole request.
+  let jobs: Awaited<ReturnType<typeof getPublishedJobs>> = [];
+  let results: Awaited<ReturnType<typeof getResults>> = [];
+  let admitCards: Awaited<ReturnType<typeof getAdmitCards>> = [];
+  try {
+    [jobs, results, admitCards] = await Promise.all([getPublishedJobs(), getResults(), getAdmitCards()]);
+  } catch (err) {
+    console.warn("sitemap: could not fetch data, returning static routes only.", err);
+  }
 
   const jobRoutes = jobs.map((job) => ({
     url: `${BASE_URL}/jobs/${job.slug}`,

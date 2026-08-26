@@ -6,10 +6,10 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
-  const job = getPublishedJobBySlug(slug);
+  const job = await getPublishedJobBySlug(slug);
   if (!job) {
     return NextResponse.json({ error: "Job not found" }, { status: 404 });
   }
-  const relatedJobs = getRelatedJobs(job, 3);
+  const relatedJobs = await getRelatedJobs(job, 3);
   return NextResponse.json({ job, relatedJobs });
 }

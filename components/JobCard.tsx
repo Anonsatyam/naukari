@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight, Briefcase, Clock, Users } from "lucide-react";
 import { Job } from "@/lib/types";
 import { formatDate, daysUntil } from "@/lib/utils";
-import { getApplicationEndDate, isClosingSoon, isRecent } from "@/lib/mock-data";
+import { getApplicationEndDate, isClosingSoon, isRecent } from "@/lib/dateHelpers";
 import Badge from "./Badge";
 import WhatsAppShareButton from "./WhatsAppShareButton";
 

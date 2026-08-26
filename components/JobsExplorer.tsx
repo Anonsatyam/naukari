@@ -7,7 +7,7 @@ import JobCard from "./JobCard";
 import Breadcrumb from "./Breadcrumb";
 import SearchInput from "./SearchInput";
 import Card from "./Card";
-import { categories, departments, qualifications } from "@/lib/mock-data";
+import { categories, departments, qualifications } from "@/lib/taxonomy";
 import { Job } from "@/lib/types";
 import { cn } from "@/lib/utils";
 

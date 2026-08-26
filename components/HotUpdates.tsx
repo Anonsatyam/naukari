@@ -10,6 +10,8 @@ const typeTone: Record<HotUpdateItem["type"], "primary" | "neutral" | "warning">
 };
 
 export default function HotUpdates({ items }: { items: HotUpdateItem[] }) {
+  if (items.length === 0) return null;
+
   return (
     <section className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
       <div className="container-page py-8">

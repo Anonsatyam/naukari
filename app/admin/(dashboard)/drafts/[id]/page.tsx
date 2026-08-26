@@ -11,6 +11,12 @@ import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
 import { TextField } from "@/components/FormField";
 
+const TYPE_LABELS: Record<BotDraft["draftType"], string> = {
+  job: "Job",
+  result: "Result",
+  admit_card: "Admit Card",
+};
+
 export default function DraftReviewPage({
   params,
 }: {
@@ -23,10 +29,9 @@ export default function DraftReviewPage({
   const [loading, setLoading] = useState(true);
   const [notFoundState, setNotFoundState] = useState(false);
 
-  const [title, setTitle] = useState("");
-  const [organization, setOrganization] = useState("");
-  const [vacancies, setVacancies] = useState(0);
-  const [qualification, setQualification] = useState("");
+  // One generic field bag — which keys are shown/sent depends on draftType.
+  const [fields, setFields] = useState<Record<string, string>>({});
+  const setField = (key: string) => (value: string) => setFields((prev) => ({ ...prev, [key]: value }));
 
   const [decision, setDecision] = useState<"approved" | "rejected" | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -40,10 +45,32 @@ export default function DraftReviewPage({
       })
       .then((data: { draft: BotDraft }) => {
         setDraft(data.draft);
-        setTitle(data.draft.extractedFields.title ?? "");
-        setOrganization(data.draft.extractedFields.organization ?? "");
-        setVacancies(data.draft.extractedFields.totalVacancies ?? 0);
-        setQualification(data.draft.extractedFields.qualification ?? "");
+        const ex = data.draft.extractedFields as Record<string, unknown>;
+        const today = new Date().toISOString().slice(0, 10);
+
+        if (data.draft.draftType === "result") {
+          setFields({
+            title: String(ex.title ?? data.draft.jobTitle),
+            organization: String(ex.organization ?? data.draft.organization),
+            category: String(ex.category ?? ""),
+            resultDate: String(ex.resultDate ?? today),
+          });
+        } else if (data.draft.draftType === "admit_card") {
+          setFields({
+            title: String(ex.title ?? data.draft.jobTitle),
+            organization: String(ex.organization ?? data.draft.organization),
+            category: String(ex.category ?? ""),
+            examDate: String(ex.examDate ?? today),
+            releaseDate: String(ex.releaseDate ?? today),
+          });
+        } else {
+          setFields({
+            title: String(ex.title ?? data.draft.jobTitle),
+            organization: String(ex.organization ?? data.draft.organization),
+            totalVacancies: String(ex.totalVacancies ?? 0),
+            qualification: String(ex.qualification ?? ""),
+          });
+        }
       })
       .catch(() => setNotFoundState(true))
       .finally(() => setLoading(false));
@@ -53,10 +80,14 @@ export default function DraftReviewPage({
     setSubmitting(true);
     setError(null);
     try {
+      const body: Record<string, unknown> = { ...fields };
+      if (draft?.draftType === "job" && "totalVacancies" in fields) {
+        body.totalVacancies = Number(fields.totalVacancies) || 0;
+      }
       const res = await fetch(`/api/admin/drafts/${id}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, organization, totalVacancies: vacancies, qualification }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error("Approve failed");
       setDecision("approved");
@@ -108,11 +139,11 @@ export default function DraftReviewPage({
           <XCircle size={32} className="mx-auto text-[var(--color-danger)]" />
         )}
         <p className="mt-3 text-lg font-bold text-[var(--color-text-primary)]">
-          Draft {decision === "approved" ? "approved and published" : "rejected"}
+          {TYPE_LABELS[draft.draftType]} {decision === "approved" ? "approved and published" : "rejected"}
         </p>
         <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
           {decision === "approved"
-            ? "This job is now live on the public site."
+            ? "This is now live on the public site."
             : "This draft has been discarded and will not be published."}
         </p>
         <Button className="mt-5" onClick={() => router.push("/admin/drafts")}>
@@ -134,7 +165,10 @@ export default function DraftReviewPage({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-xl font-bold text-[var(--color-text-primary)]">Review Draft</h1>
+          <h1 className="font-display flex items-center gap-2 text-xl font-bold text-[var(--color-text-primary)]">
+            Review Draft
+            <Badge tone="primary">{TYPE_LABELS[draft.draftType]}</Badge>
+          </h1>
           <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
             Detected {formatDate(draft.detectedAt)} · Extraction confidence:{" "}
             <Badge tone={draft.confidence === "high" ? "success" : draft.confidence === "medium" ? "warning" : "danger"}>
@@ -145,32 +179,75 @@ export default function DraftReviewPage({
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px]">
-        {/* Editable fields */}
+        {/* Editable fields — vary by draft type */}
         <Card className="space-y-4">
-          <TextField label="Job Title" value={title} onChange={(e) => setTitle(e.target.value)} />
+          <TextField label="Title" value={fields.title ?? ""} onChange={(e) => setField("title")(e.target.value)} />
           <TextField
             label="Organization"
-            value={organization}
-            onChange={(e) => setOrganization(e.target.value)}
+            value={fields.organization ?? ""}
+            onChange={(e) => setField("organization")(e.target.value)}
           />
-          <div className="grid grid-cols-2 gap-4">
-            <TextField
-              label="Total Vacancies"
-              type="number"
-              value={vacancies}
-              onChange={(e) => setVacancies(Number(e.target.value) || 0)}
-            />
-            <TextField
-              label="Qualification"
-              value={qualification}
-              onChange={(e) => setQualification(e.target.value)}
-            />
-          </div>
+
+          {draft.draftType === "job" && (
+            <div className="grid grid-cols-2 gap-4">
+              <TextField
+                label="Total Vacancies"
+                type="number"
+                value={fields.totalVacancies ?? "0"}
+                onChange={(e) => setField("totalVacancies")(e.target.value)}
+              />
+              <TextField
+                label="Qualification"
+                value={fields.qualification ?? ""}
+                onChange={(e) => setField("qualification")(e.target.value)}
+              />
+            </div>
+          )}
+
+          {draft.draftType === "result" && (
+            <div className="grid grid-cols-2 gap-4">
+              <TextField
+                label="Category"
+                value={fields.category ?? ""}
+                onChange={(e) => setField("category")(e.target.value)}
+              />
+              <TextField
+                label="Result Date"
+                type="date"
+                value={fields.resultDate ?? ""}
+                onChange={(e) => setField("resultDate")(e.target.value)}
+              />
+            </div>
+          )}
+
+          {draft.draftType === "admit_card" && (
+            <div className="grid grid-cols-2 gap-4">
+              <TextField
+                label="Category"
+                value={fields.category ?? ""}
+                onChange={(e) => setField("category")(e.target.value)}
+              />
+              <TextField
+                label="Release Date"
+                type="date"
+                value={fields.releaseDate ?? ""}
+                onChange={(e) => setField("releaseDate")(e.target.value)}
+              />
+              <div className="col-span-2">
+                <TextField
+                  label="Exam Date"
+                  type="date"
+                  value={fields.examDate ?? ""}
+                  onChange={(e) => setField("examDate")(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="rounded-lg bg-[var(--color-background)] p-3 text-xs text-[var(--color-text-secondary)]">
-            More fields (dates, fees, selection process, syllabus) are editable here
-            in the same pattern — kept minimal for review speed. Anything not
-            edited here falls back to a sensible placeholder on publish.
+            Anything not edited here falls back to a sensible placeholder
+            (usually the source notification link) on publish — edit the
+            published entry afterward for anything more precise.
           </div>
 
           {error && (

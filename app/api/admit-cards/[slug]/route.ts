@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
-  const admitCard = getAdmitCardBySlug(slug);
+  const admitCard = await getAdmitCardBySlug(slug);
   if (!admitCard) {
     return NextResponse.json({ error: "Admit card not found" }, { status: 404 });
   }

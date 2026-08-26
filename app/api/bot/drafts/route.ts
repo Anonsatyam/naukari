@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createDraft, draftExistsForSource, addBotLogEntry } from "@/lib/server/data";
+import { DraftType } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
   const expected = process.env.BOT_API_SECRET;
@@ -20,6 +21,7 @@ export async function POST(request: NextRequest) {
     organization?: string;
     sourceUrl?: string;
     confidence?: "high" | "medium" | "low";
+    draftType?: DraftType;
     extractedFields?: Record<string, unknown>;
   };
   try {
@@ -28,7 +30,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { jobTitle, organization, sourceUrl, confidence, extractedFields } = body;
+  const { jobTitle, organization, sourceUrl, confidence, draftType, extractedFields } = body;
   if (!jobTitle || !organization || !sourceUrl) {
     return NextResponse.json(
       { error: "jobTitle, organization and sourceUrl are required" },
@@ -36,24 +38,28 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (draftExistsForSource(sourceUrl)) {
-    addBotLogEntry("warning", `Skipped (already known): ${jobTitle}`);
+  if (await draftExistsForSource(sourceUrl)) {
+    await addBotLogEntry("warning", `Skipped (already known): ${jobTitle}`);
     return NextResponse.json({
       skipped: true,
       reason: "A draft or job already exists for this source URL",
     });
   }
 
-  const draft = createDraft({
+  const draft = await createDraft({
     jobTitle,
     organization,
     sourceUrl,
     confidence: confidence ?? "medium",
+    draftType: draftType ?? "job",
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     extractedFields: (extractedFields ?? {}) as any,
   });
 
-  addBotLogEntry("success", `Draft created: ${jobTitle} (${confidence ?? "medium"} confidence)`);
+  await addBotLogEntry(
+    "success",
+    `${draftType ?? "job"} draft created: ${jobTitle} (${confidence ?? "medium"} confidence)`
+  );
 
   return NextResponse.json({ draft }, { status: 201 });
 }

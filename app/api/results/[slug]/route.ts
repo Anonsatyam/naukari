@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
-  const result = getResultBySlug(slug);
+  const result = await getResultBySlug(slug);
   if (!result) {
     return NextResponse.json({ error: "Result not found" }, { status: 404 });
   }

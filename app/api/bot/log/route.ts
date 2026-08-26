@@ -26,6 +26,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "message is required" }, { status: 400 });
   }
 
-  const entry = addBotLogEntry(body.status ?? "success", body.message);
+  const entry = await addBotLogEntry(body.status ?? "success", body.message);
   return NextResponse.json({ entry }, { status: 201 });
 }

@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ExternalLink } from "lucide-react";
-import { admitCards, getAdmitCardBySlug } from "@/lib/mock-data";
+import { getAdmitCards, getAdmitCardBySlug } from "@/lib/server/data";
 import { formatDate } from "@/lib/utils";
+
+export const revalidate = 300;
 import { ButtonLink } from "@/components/Button";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
@@ -10,8 +12,14 @@ import Breadcrumb from "@/components/Breadcrumb";
 import { KeyValueRow } from "@/components/KeyValueRow";
 import SourceVerified from "@/components/SourceVerified";
 
-export function generateStaticParams() {
-  return admitCards.map((a) => ({ slug: a.slug }));
+export async function generateStaticParams() {
+  try {
+    const admitCards = await getAdmitCards();
+    return admitCards.map((a) => ({ slug: a.slug }));
+  } catch (err) {
+    console.warn("generateStaticParams: could not fetch admit cards at build time, skipping pre-render.", err);
+    return [];
+  }
 }
 
 export async function generateMetadata({
@@ -20,7 +28,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const card = getAdmitCardBySlug(slug);
+  const card = await getAdmitCardBySlug(slug);
   if (!card) return {};
   return { title: card.title, description: `Admit card details for ${card.title}` };
 }
@@ -31,7 +39,7 @@ export default async function AdmitCardDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const card = getAdmitCardBySlug(slug);
+  const card = await getAdmitCardBySlug(slug);
   if (!card) notFound();
 
   return (
