@@ -44,9 +44,12 @@ async function run() {
 
   for (const source of SOURCES) {
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
       const res = await fetch(source.url, {
         headers: { "User-Agent": "BiharSarkariNaukriBot/1.0" },
-      });
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeout));
 
       if (!res.ok) {
         await logActivity("warning", `${source.name}: fetch failed (HTTP ${res.status})`);
@@ -78,7 +81,19 @@ async function run() {
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      await logActivity("error", `${source.name}: ${message}`);
+      // Node's fetch throws a generic "fetch failed" for most low-level
+      // network errors — the real reason (DNS failure, TLS/certificate
+      // issue, connection refused, timeout) lives in `err.cause`, so
+      // surface that too instead of just the unhelpful top-level message.
+      const cause =
+        err instanceof Error && "cause" in err && err.cause
+          ? ` (cause: ${
+              typeof err.cause === "object" && err.cause && "message" in err.cause
+                ? (err.cause as { message: string }).message
+                : String(err.cause)
+            })`
+          : "";
+      await logActivity("error", `${source.name}: ${message}${cause}`);
       errors++;
     }
   }
