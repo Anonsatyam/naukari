@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { SlidersHorizontal, X } from "lucide-react";
 import JobCard from "./JobCard";
 import Breadcrumb from "./Breadcrumb";
 import SearchInput from "./SearchInput";
 import Card from "./Card";
-import { jobs, categories, departments, qualifications } from "@/lib/mock-data";
+import { categories, departments, qualifications } from "@/lib/mock-data";
+import { Job } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export default function JobsExplorer() {
@@ -22,20 +23,26 @@ export default function JobsExplorer() {
   const [qualification, setQualification] = useState<string[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const filtered = useMemo(() => {
-    return jobs.filter((job) => {
-      const matchesQuery =
-        query.trim() === "" ||
-        job.title.toLowerCase().includes(query.toLowerCase()) ||
-        job.organization.toLowerCase().includes(query.toLowerCase()) ||
-        job.department.toLowerCase().includes(query.toLowerCase());
-      const matchesCategory = category.length === 0 || category.includes(job.category);
-      const matchesDepartment = department.length === 0 || department.includes(job.department);
-      const matchesQualification =
-        qualification.length === 0 || qualification.includes(job.qualification);
+  const [filtered, setFiltered] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
 
-      return matchesQuery && matchesCategory && matchesDepartment && matchesQualification;
-    });
+  // Debounced fetch from the real API whenever search/filters change
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      const params = new URLSearchParams();
+      if (query.trim()) params.set("q", query.trim());
+      category.forEach((c) => params.append("category", c));
+      department.forEach((d) => params.append("department", d));
+      qualification.forEach((q) => params.append("qualification", q));
+
+      setLoading(true);
+      fetch(`/api/jobs?${params.toString()}`)
+        .then((res) => res.json())
+        .then((data: { jobs: Job[] }) => setFiltered(data.jobs))
+        .finally(() => setLoading(false));
+    }, 250);
+
+    return () => clearTimeout(handle);
   }, [query, category, department, qualification]);
 
   const activeFilterCount = category.length + department.length + qualification.length;
@@ -67,7 +74,7 @@ export default function JobsExplorer() {
           Bihar Government Jobs
         </h1>
         <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          {filtered.length} of {jobs.length} jobs match your search
+          {loading ? "Searching…" : `${filtered.length} job${filtered.length === 1 ? "" : "s"} found`}
         </p>
       </div>
 
@@ -169,7 +176,11 @@ export default function JobsExplorer() {
 
         {/* Results */}
         <div>
-          {filtered.length === 0 ? (
+          {loading ? (
+            <Card padding="p-10" className="text-center">
+              <p className="text-sm text-[var(--color-text-secondary)]">Loading jobs…</p>
+            </Card>
+          ) : filtered.length === 0 ? (
             <Card padding="p-10" className="border-dashed text-center">
               <p className="text-sm font-semibold text-[var(--color-text-primary)]">
                 No jobs match these filters

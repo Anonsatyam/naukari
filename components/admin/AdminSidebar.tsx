@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   FileStack,
@@ -19,6 +19,13 @@ const links = [
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/admin/login");
+    router.refresh();
+  };
 
   return (
     <aside className="hidden w-60 shrink-0 border-r border-[var(--color-border)] bg-white lg:flex lg:flex-col">
@@ -52,13 +59,14 @@ export default function AdminSidebar() {
       </nav>
 
       <div className="border-t border-[var(--color-border)] p-3">
-        <Link
-          href="/admin/login"
-          className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-background)] hover:text-[var(--color-danger)]"
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-background)] hover:text-[var(--color-danger)]"
         >
           <LogOut size={17} />
           Log out
-        </Link>
+        </button>
       </div>
     </aside>
   );

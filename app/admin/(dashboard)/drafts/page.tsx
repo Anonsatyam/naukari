@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { botDrafts } from "@/lib/mock-data";
+import { getAllDrafts } from "@/lib/server/data";
 import { formatDate } from "@/lib/utils";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
 
 export default function AdminDraftsPage() {
+  const botDrafts = getAllDrafts();
+
   return (
     <div>
       <Breadcrumb items={[{ label: "Dashboard", href: "/admin/dashboard" }, { label: "Bot Drafts" }]} />

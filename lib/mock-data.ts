@@ -562,16 +562,16 @@ export function isClosingSoon(job: Job): boolean {
   const endDateEntry = job.importantDates.find((d) => d.label === "Application End");
   if (!endDateEntry) return false;
   const end = new Date(endDateEntry.date).getTime();
-  const now = new Date("2026-08-24").getTime();
+  const now = Date.now();
   const diffDays = (end - now) / (1000 * 60 * 60 * 24);
   return diffDays >= 0 && diffDays <= 7;
 }
 
 // Generic "was this posted/declared/released recently" check, reused for the
 // "New" badge on jobs, results and admit cards alike instead of one-off logic per type.
-export function isRecent(dateIso: string, withinDays: number = 5, from: string = "2026-08-24"): boolean {
+export function isRecent(dateIso: string, withinDays: number = 5, from?: string): boolean {
   const date = new Date(dateIso).getTime();
-  const start = new Date(from).getTime();
+  const start = from ? new Date(from).getTime() : Date.now();
   const diffDays = (start - date) / (1000 * 60 * 60 * 24);
   return diffDays >= 0 && diffDays <= withinDays;
 }

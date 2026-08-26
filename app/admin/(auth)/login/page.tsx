@@ -1,21 +1,45 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Landmark, Lock } from "lucide-react";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Landmark, Lock, AlertCircle } from "lucide-react";
 import { Button } from "@/components/Button";
 import Card from "@/components/Card";
 import { TextField } from "@/components/FormField";
 
-export default function AdminLoginPage() {
+function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const searchParams = useSearchParams();
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Phase 2 UI only — no real auth yet. Wired to Supabase Auth in Phase 3.
-    router.push("/admin/dashboard");
+    setError(null);
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "Sign in failed. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      const redirectTo = searchParams.get("from") || "/admin/dashboard";
+      router.push(redirectTo);
+      router.refresh();
+    } catch {
+      setError("Could not reach the server. Please try again.");
+      setLoading(false);
+    }
   };
 
   return (
@@ -35,30 +59,39 @@ export default function AdminLoginPage() {
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <TextField
-            label="Email"
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="admin@biharsarkarinaukri.example"
-          />
-          <TextField
             label="Password"
             type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
+            autoFocus
           />
-          <Button type="submit" className="w-full">
-            <Lock size={14} /> Sign In
+
+          {error && (
+            <div className="flex items-start gap-2 rounded-lg bg-[var(--color-danger-tint)] p-3 text-sm text-[var(--color-danger)]">
+              <AlertCircle size={16} className="mt-0.5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <Button type="submit" className="w-full" disabled={loading}>
+            <Lock size={14} /> {loading ? "Signing in…" : "Sign In"}
           </Button>
         </form>
 
         <p className="mt-5 text-center text-xs text-[var(--color-text-muted)]">
-          UI preview only — authentication connects to Supabase Auth in Phase 3.
+          Single admin account for now — set ADMIN_PASSWORD in your environment.
         </p>
       </Card>
     </div>
+  );
+}
+
+export default function AdminLoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }

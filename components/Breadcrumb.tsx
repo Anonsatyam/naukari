@@ -13,7 +13,7 @@ export default function Breadcrumb({ items }: { items: BreadcrumbItem[] }) {
         return (
           <span key={`${item.label}-${i}`}>
             {item.href && !isLast ? (
-              <Link href={item.href} className="text-[var(--color-primary)] font-semibold">
+              <Link href={item.href} className="hover:text-[var(--color-primary)]">
                 {item.label}
               </Link>
             ) : (

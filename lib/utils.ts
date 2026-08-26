@@ -17,7 +17,7 @@ export function formatCurrency(amount: number): string {
   return `₹${amount.toLocaleString("en-IN")}`;
 }
 
-export function daysUntil(iso: string, from: string = "2026-08-24"): number {
+export function daysUntil(iso: string, from: string = new Date().toISOString()): number {
   const target = new Date(iso).getTime();
   const start = new Date(from).getTime();
   return Math.ceil((target - start) / (1000 * 60 * 60 * 24));

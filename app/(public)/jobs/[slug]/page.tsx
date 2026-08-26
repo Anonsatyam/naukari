@@ -2,7 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Calendar, ExternalLink, FileText, Link2, ShieldCheck, Users } from "lucide-react";
-import { jobs, getJobBySlug, getApplicationEndDate, isClosingSoon, getRelatedJobs } from "@/lib/mock-data";
+import {
+  getPublishedJobs,
+  getPublishedJobBySlug,
+  getApplicationEndDate,
+  isClosingSoon,
+  getRelatedJobs,
+} from "@/lib/server/data";
 import { formatCurrency, formatDate, daysUntil } from "@/lib/utils";
 import { ButtonLink } from "@/components/Button";
 import Badge from "@/components/Badge";
@@ -13,7 +19,7 @@ import SourceVerified from "@/components/SourceVerified";
 import JobCard from "@/components/JobCard";
 
 export function generateStaticParams() {
-  return jobs.map((job) => ({ slug: job.slug }));
+  return getPublishedJobs().map((job) => ({ slug: job.slug }));
 }
 
 export async function generateMetadata({
@@ -22,7 +28,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const job = getJobBySlug(slug);
+  const job = getPublishedJobBySlug(slug);
   if (!job) return {};
   return {
     title: job.title,
@@ -36,7 +42,7 @@ export default async function JobDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const job = getJobBySlug(slug);
+  const job = getPublishedJobBySlug(slug);
   if (!job) notFound();
 
   const endDate = getApplicationEndDate(job);

@@ -1,9 +1,9 @@
 "use client";
 
-import { use, useState } from "react";
-import { notFound, useRouter } from "next/navigation";
+import { use, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ExternalLink, CheckCircle2, XCircle, FileText } from "lucide-react";
-import { botDrafts } from "@/lib/mock-data";
+import { BotDraft } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/Button";
 import Badge from "@/components/Badge";
@@ -18,14 +18,86 @@ export default function DraftReviewPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const draft = botDrafts.find((d) => d.id === id);
-  if (!draft) notFound();
 
-  const [title, setTitle] = useState(draft.extractedFields.title ?? "");
-  const [organization, setOrganization] = useState(draft.extractedFields.organization ?? "");
-  const [vacancies, setVacancies] = useState(draft.extractedFields.totalVacancies ?? 0);
-  const [qualification, setQualification] = useState(draft.extractedFields.qualification ?? "");
+  const [draft, setDraft] = useState<BotDraft | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFoundState, setNotFoundState] = useState(false);
+
+  const [title, setTitle] = useState("");
+  const [organization, setOrganization] = useState("");
+  const [vacancies, setVacancies] = useState(0);
+  const [qualification, setQualification] = useState("");
+
   const [decision, setDecision] = useState<"approved" | "rejected" | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/admin/drafts/${id}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("not found");
+        return res.json();
+      })
+      .then((data: { draft: BotDraft }) => {
+        setDraft(data.draft);
+        setTitle(data.draft.extractedFields.title ?? "");
+        setOrganization(data.draft.extractedFields.organization ?? "");
+        setVacancies(data.draft.extractedFields.totalVacancies ?? 0);
+        setQualification(data.draft.extractedFields.qualification ?? "");
+      })
+      .catch(() => setNotFoundState(true))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  const handleApprove = async () => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/drafts/${id}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, organization, totalVacancies: vacancies, qualification }),
+      });
+      if (!res.ok) throw new Error("Approve failed");
+      setDecision("approved");
+    } catch {
+      setError("Could not approve this draft. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleReject = async () => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/drafts/${id}/reject`, { method: "POST" });
+      if (!res.ok) throw new Error("Reject failed");
+      setDecision("rejected");
+    } catch {
+      setError("Could not reject this draft. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return <p className="text-sm text-[var(--color-text-secondary)]">Loading draft…</p>;
+  }
+
+  if (notFoundState || !draft) {
+    return (
+      <Card padding="p-8" className="mx-auto max-w-lg text-center">
+        <p className="text-sm font-semibold text-[var(--color-text-primary)]">Draft not found</p>
+        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+          It may have already been reviewed, or the link is invalid.
+        </p>
+        <Button className="mt-5" onClick={() => router.push("/admin/drafts")}>
+          Back to Drafts
+        </Button>
+      </Card>
+    );
+  }
 
   if (decision) {
     return (
@@ -97,16 +169,24 @@ export default function DraftReviewPage({
 
           <div className="rounded-lg bg-[var(--color-background)] p-3 text-xs text-[var(--color-text-secondary)]">
             More fields (dates, fees, selection process, syllabus) are editable here
-            in the same pattern — kept minimal in this mock for review speed.
+            in the same pattern — kept minimal for review speed. Anything not
+            edited here falls back to a sensible placeholder on publish.
           </div>
 
+          {error && (
+            <p className="rounded-lg bg-[var(--color-danger-tint)] p-3 text-sm text-[var(--color-danger)]">
+              {error}
+            </p>
+          )}
+
           <div className="flex flex-col gap-2 border-t border-[var(--color-border)] pt-4 sm:flex-row">
-            <Button onClick={() => setDecision("approved")} className="flex-1">
-              <CheckCircle2 size={15} /> Approve &amp; Publish
+            <Button onClick={handleApprove} disabled={submitting} className="flex-1">
+              <CheckCircle2 size={15} /> {submitting ? "Approving…" : "Approve & Publish"}
             </Button>
             <Button
               variant="secondary"
-              onClick={() => setDecision("rejected")}
+              onClick={handleReject}
+              disabled={submitting}
               className="flex-1 border-[var(--color-danger)]/30 text-[var(--color-danger)] hover:border-[var(--color-danger)]"
             >
               <XCircle size={15} /> Reject

@@ -1,38 +1,18 @@
 import Link from "next/link";
-import { Bot, CheckCircle2, Clock3, FileStack } from "lucide-react";
-import { jobs, botDrafts } from "@/lib/mock-data";
+import { CheckCircle2, FileStack } from "lucide-react";
+import { getAdminStats, getPendingDrafts, getBotLog } from "@/lib/server/data";
+import { formatDate } from "@/lib/utils";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
 
 export default function AdminDashboardPage() {
-  const pendingDrafts = botDrafts.filter((d) => d.status === "pending");
-  const publishedJobs = jobs.filter((j) => j.status === "published");
+  const { pendingDrafts: pendingCount, publishedJobs: publishedCount } = getAdminStats();
+  const pendingDrafts = getPendingDrafts();
+  const botLog = getBotLog(6);
 
   const stats = [
-    {
-      label: "Pending Drafts",
-      value: pendingDrafts.length,
-      icon: FileStack,
-      tone: "warning" as const,
-    },
-    {
-      label: "Published Jobs",
-      value: publishedJobs.length,
-      icon: CheckCircle2,
-      tone: "success" as const,
-    },
-    {
-      label: "Bot Runs Today",
-      value: 6,
-      icon: Bot,
-      tone: "primary" as const,
-    },
-    {
-      label: "Avg. Review Time",
-      value: "18 min",
-      icon: Clock3,
-      tone: "neutral" as const,
-    },
+    { label: "Pending Drafts", value: pendingCount, icon: FileStack, tone: "warning" as const },
+    { label: "Published Jobs", value: publishedCount, icon: CheckCircle2, tone: "success" as const },
   ];
 
   return (
@@ -42,7 +22,7 @@ export default function AdminDashboardPage() {
         Overview of bot activity and job publishing.
       </p>
 
-      <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:max-w-md">
         {stats.map((s) => {
           const Icon = s.icon;
           return (
@@ -65,36 +45,52 @@ export default function AdminDashboardPage() {
               View all
             </Link>
           </div>
-          <div className="divide-y divide-[var(--color-border)]">
-            {pendingDrafts.map((draft) => (
-              <Link
-                key={draft.id}
-                href={`/admin/drafts/${draft.id}`}
-                className="flex items-center justify-between gap-3 p-4 hover:bg-[var(--color-background)]"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-[var(--color-text-primary)]">{draft.jobTitle}</p>
-                  <p className="text-xs text-[var(--color-text-secondary)]">{draft.organization}</p>
-                </div>
-                <Badge tone={draft.confidence === "high" ? "success" : draft.confidence === "medium" ? "warning" : "danger"}>
-                  {draft.confidence} confidence
-                </Badge>
-              </Link>
-            ))}
-          </div>
+          {pendingDrafts.length === 0 ? (
+            <p className="p-4 text-sm text-[var(--color-text-secondary)]">
+              No drafts waiting right now. Run the bot to check for new notifications.
+            </p>
+          ) : (
+            <div className="divide-y divide-[var(--color-border)]">
+              {pendingDrafts.map((draft) => (
+                <Link
+                  key={draft.id}
+                  href={`/admin/drafts/${draft.id}`}
+                  className="flex items-center justify-between gap-3 p-4 hover:bg-[var(--color-background)]"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[var(--color-text-primary)]">{draft.jobTitle}</p>
+                    <p className="text-xs text-[var(--color-text-secondary)]">{draft.organization}</p>
+                  </div>
+                  <Badge tone={draft.confidence === "high" ? "success" : draft.confidence === "medium" ? "warning" : "danger"}>
+                    {draft.confidence} confidence
+                  </Badge>
+                </Link>
+              ))}
+            </div>
+          )}
         </Card>
 
         <Card padding="p-0">
           <div className="border-b border-[var(--color-border)] p-4">
             <p className="text-sm font-semibold text-[var(--color-text-primary)]">Bot monitoring log</p>
           </div>
-          <div className="divide-y divide-[var(--color-border)] text-sm">
-            <LogRow status="success" text="Checked csbc.bih.nic.in — no new notifications" time="10 min ago" />
-            <LogRow status="success" text="Draft created: Bihar Cooperative Bank Manager" time="1 hr ago" />
-            <LogRow status="warning" text="Low-confidence extraction: Agriculture Field Assistant" time="6 hr ago" />
-            <LogRow status="success" text="Checked bpsc.bih.nic.in — no new notifications" time="8 hr ago" />
-            <LogRow status="success" text="Draft created: Bihar Forest Guard Recruitment" time="14 hr ago" />
-          </div>
+          {botLog.length === 0 ? (
+            <p className="p-4 text-sm text-[var(--color-text-secondary)]">
+              No bot activity yet — this fills in once the bot script runs
+              (locally or via the scheduled GitHub Action).
+            </p>
+          ) : (
+            <div className="divide-y divide-[var(--color-border)] text-sm">
+              {botLog.map((entry) => (
+                <LogRow
+                  key={entry.id}
+                  status={entry.status === "error" ? "warning" : entry.status}
+                  text={entry.message}
+                  time={formatDate(entry.timestamp)}
+                />
+              ))}
+            </div>
+          )}
         </Card>
       </div>
     </div>

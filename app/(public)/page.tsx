@@ -28,7 +28,7 @@ export default function Home() {
         <div className="container-page py-14 md:py-20">
           <div className="mx-auto max-w-2xl text-center">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-primary-tint)] px-3 py-1 text-xs font-semibold text-[var(--color-primary)]">
-              Verified from official sources
+              Bihar · verified from official sources
             </span>
             <h1 className="font-display mt-5 text-3xl font-extrabold leading-tight text-[var(--color-text-primary)] md:text-5xl">
               Government jobs in
@@ -166,7 +166,7 @@ export default function Home() {
       </section>
 
       {/* Eligibility CTA */}
-      <section className="container-page">
+      <section className="container-page pb-16">
         <div className="flex flex-col items-start justify-between gap-6 rounded-2xl bg-[var(--color-primary)] p-8 text-white md:flex-row md:items-center md:p-10">
           <div>
             <h2 className="font-display text-xl font-bold md:text-2xl">
