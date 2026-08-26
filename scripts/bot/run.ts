@@ -75,7 +75,13 @@ async function run() {
       });
 
       if (!res.ok) {
-        await logActivity("warning", `${source.name}: fetch failed (HTTP ${res.status})`);
+        const detail =
+          res.status >= 300 && res.status < 400
+            ? res.headers.location
+              ? ` — still redirecting after 5 hops (likely a loop), last target: ${res.headers.location}`
+              : " — redirect response had no Location header to follow"
+            : "";
+        await logActivity("warning", `${source.name}: fetch failed (HTTP ${res.status})${detail}`);
         errors++;
         continue;
       }

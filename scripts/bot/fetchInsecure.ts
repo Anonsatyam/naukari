@@ -5,6 +5,8 @@ import { URL } from "url";
 export interface InsecureFetchResult {
   ok: boolean;
   status: number;
+  url: string;
+  headers: Record<string, string | string[] | undefined>;
   text: () => Promise<string>;
 }
 
@@ -69,6 +71,8 @@ export function fetchInsecure(
             resolve({
               ok: status >= 200 && status < 300,
               status,
+              url: currentUrl,
+              headers: res.headers,
               text: async () => Buffer.concat(chunks).toString("utf-8"),
             });
           });
