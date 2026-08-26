@@ -1,5 +1,5 @@
-import { Agent, fetch as undiciFetch } from "undici";
 import { loadEnvLocal } from "./loadEnv";
+import { fetchInsecure } from "./fetchInsecure";
 import { SOURCES } from "./sources";
 import { extractCandidates } from "./extract";
 import { extractFields } from "./extractFields";
@@ -9,24 +9,6 @@ loadEnvLocal();
 const SITE_URL = process.env.BOT_SITE_URL || "http://localhost:3000";
 const BOT_API_SECRET = process.env.BOT_API_SECRET;
 const MAX_CANDIDATES_PER_SOURCE = 5;
-
-// Many Indian government sites have known TLS misconfigurations — a
-// missing intermediate certificate, an expired cert, a self-signed cert
-// in the chain. Browsers quietly work around these (auto-fetching or
-// caching the missing intermediate), so the sites look completely fine
-// to a human visitor; Node's strict fetch correctly refuses instead.
-//
-// We relax certificate validation specifically for fetching these
-// government sources — not globally, and never for our own API calls
-// below (those stay on the regular, fully-verified fetch). This is a
-// deliberate, narrow tradeoff: these are read-only GET requests for
-// public information, from sources verified against an official
-// government website list, and every single result is reviewed by a
-// human admin before anything goes live — so a worst-case spoofed
-// response just becomes a draft that gets rejected, not a real risk.
-const insecureAgent = new Agent({
-  connect: { rejectUnauthorized: false },
-});
 
 async function postJson(path: string, body: unknown) {
   const res = await fetch(`${SITE_URL}${path}`, {
@@ -76,16 +58,21 @@ async function run() {
 
   for (const source of SOURCES) {
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
-
-      // undiciFetch + insecureAgent for external government sources —
-      // see the comment on insecureAgent above for why.
-      const res = await undiciFetch(source.url, {
+      // Certificate validation is intentionally relaxed here — many
+      // Indian government sites have known TLS misconfigurations (a
+      // missing intermediate certificate, an expired cert, a self-signed
+      // cert in the chain). Browsers quietly work around these, so the
+      // sites look completely fine to a human visitor; a strict client
+      // correctly refuses instead. This is a deliberate, narrow
+      // tradeoff: these are read-only GET requests for public
+      // information, from sources verified against an official
+      // government website list, and every result is reviewed by a
+      // human admin before anything goes live — so a worst-case spoofed
+      // response just becomes a draft that gets rejected, not a real
+      // risk. Our own API calls (postJson, above) stay fully verified.
+      const res = await fetchInsecure(source.url, {
         headers: { "User-Agent": "BiharSarkariNaukriBot/1.0" },
-        signal: controller.signal,
-        dispatcher: insecureAgent,
-      }).finally(() => clearTimeout(timeout));
+      });
 
       if (!res.ok) {
         await logActivity("warning", `${source.name}: fetch failed (HTTP ${res.status})`);
