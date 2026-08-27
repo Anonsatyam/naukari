@@ -23,6 +23,22 @@ interface FaqDraft {
   answer: string;
 }
 
+// Sources on this site write each FAQ as one paragraph combining both
+// question and answer — "Q1. <question>? Ans: <answer>." — rather than
+// alternating separate blocks, so it's captured as one entry per <p> by
+// the bot's plain-block fallback (extractPlainBlocks). That shape is
+// reliably splittable on the "Ans:"/"उत्तर:" marker, unlike a generic
+// FAQ layout where question/answer pairing can't be inferred safely —
+// this is intentionally narrow rather than a general-purpose FAQ parser.
+const FAQ_LINE = /^\s*(?:q\d*[.):]?\s*)?(.*?)\s*(?:ans(?:wer)?|उत्तर)\s*[:.]?\s*(.+)$/i;
+
+function parseFaqLines(lines: string[]): FaqDraft[] {
+  return lines.map((line) => {
+    const match = line.match(FAQ_LINE);
+    return match ? { question: match[1].trim(), answer: match[2].trim() } : { question: line.trim(), answer: "" };
+  });
+}
+
 // Splits a bot-extracted "cell | cell || row || row" pipe table (see
 // tableToPairs() in extractHtmlNotificationFields.ts) into one readable
 // line per row — used to seed the Eligibility Details textarea with a
@@ -237,6 +253,14 @@ export default function DraftReviewPage({
           // from here rather than typing every bullet from scratch.
           if (typeof ex.eligibility === "string" && ex.eligibility) {
             setEligibilityDetails(pipeRowsToLines(ex.eligibility).join("\n"));
+          }
+          // conclusionText is already a single paragraph — a direct,
+          // risk-free fit for this field, unlike FAQ pairing below.
+          if (typeof ex.conclusionText === "string" && ex.conclusionText) {
+            setConclusion(ex.conclusionText);
+          }
+          if (Array.isArray(ex.faqText) && ex.faqText.length > 0) {
+            setFaqs(parseFaqLines(ex.faqText as string[]));
           }
         }
       })

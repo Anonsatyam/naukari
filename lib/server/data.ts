@@ -42,10 +42,34 @@ function parsePipeRows(text: string): string[][] {
   return text
     .split(" || ")
     .map((row) => row.split(" | ").map((cell) => cell.trim()))
-    .filter((row) => row.some(Boolean));
+    .filter((row) => row.some(Boolean))
+    .filter((row) => !WP_POST_META_ROW.test(row[0]));
 }
 
-const VACANCY_TOTAL_ROW_LABEL = /total\s*vacanc\w*|total\s*post|कुल\s*रिक्तिय|कुल\s*योग/i;
+// "कुल पद" ("total posts") is at least as common on real notification
+// pages as "कुल योग"/"कुल रिक्तियां" — it was missing here, which meant a
+// perfectly well-shaped 2-3 column post/vacancy table failed to produce
+// a vacancyBreakdown at all (the header-column lookup below never
+// matched, so parseVacancyBreakdown bailed out with `undefined` and the
+// whole "Vacancy Details" section silently never rendered on the job
+// page for any source using that phrasing).
+const VACANCY_TOTAL_ROW_LABEL = /total\s*vacanc\w*|total\s*posts?|grand\s*total|कुल\s*रिक्तिय|कुल\s*योग|कुल\s*पद/i;
+
+// WordPress post-meta boilerplate ("Post author: X", "Post published:
+// Y", ...) that some source themes render right at the top of the post
+// body — it can end up captured as a handful of stray one-cell rows
+// ahead of a section's real table (observed under "Post Details"),
+// which shifts the real header out of row 0 and breaks every parser
+// below that assumes row 0 is the header. Filtered out at the one place
+// every draft's raw rows funnel through before being parsed further.
+const WP_POST_META_ROW = /^post\s*(author|published|category|comments?)\s*:/i;
+
+// Rows whose first cell is itself a category label ("Category" /
+// "कोटि" / "वर्ग" / "श्रेणी") mark either the table's own header (already
+// stripped as `header` before this is used) or, mid-table, the start of
+// a *second* sub-table under the same "Age Limit" heading — see
+// parseAgeLimitSections below.
+const CATEGORY_HEADER = /category|कोटि|वर्ग|श्रेणी/i;
 
 /**
  * Converts a postDetails pipe-table into {category, count}[] for the
@@ -84,6 +108,68 @@ function parseVacancyBreakdown(postDetails: unknown): { category: string; count:
     breakdown.push({ category: label, count, ...(grade ? { grade } : {}) });
   }
   return breakdown.length > 0 ? breakdown : undefined;
+}
+
+/**
+ * Converts the raw "Age Limit" pipe-table(s) — extracted as one joined
+ * blob under a single heading, see extractHtmlNotificationFields.ts —
+ * into the job page's two distinct sections: a cadre/grade-wise
+ * min/max-age table (ageLimitByGrade) and a category-wise relaxation
+ * table (ageRelaxationBreakdown). Sources publish this in one of two
+ * shapes:
+ *
+ * 1. A single category-headed table (header's first cell reads
+ *    "Category"/"कोटि"/"वर्ग"/"श्रेणी") where every row already *is* a
+ *    category → age/relaxation value — the whole table becomes
+ *    ageRelaxationBreakdown, keyed off the row's last cell (the actual
+ *    relaxed/final age or relaxation text, whichever the table ends
+ *    with).
+ * 2. A grade-wise age table (e.g. "Officer | 23 | 35") followed by a
+ *    second, separately-headed category/relaxation table under the
+ *    same heading — split at the first body row whose own first cell
+ *    is a category-header, with everything before that row treated as
+ *    grade rows and everything after (skipping that header row itself)
+ *    treated as relaxation rows.
+ *
+ * Deliberately does NOT re-filter body rows by CATEGORY_HEADER once a
+ * table is already classified as category-wise — real category
+ * *values* routinely contain the same words the header does ("सभी
+ * श्रेणी" = "all categories", "आरक्षित वर्ग" = "reserved category"),
+ * and an earlier version of this that filtered on that word discarded
+ * real data rows, not just a repeated header.
+ */
+function parseAgeLimitSections(ageLimit: unknown): {
+  ageLimitByGrade?: { grade: string; minAge: string; maxAge: string }[];
+  ageRelaxationBreakdown?: { category: string; relaxation: string }[];
+} {
+  if (typeof ageLimit !== "string" || !ageLimit.includes(" | ")) return {};
+  const rows = parsePipeRows(ageLimit);
+  if (rows.length < 2) return {};
+  const [header, ...body] = rows;
+
+  const toGradeRow = (row: string[]) => ({ grade: row[0], minAge: row[1] ?? "", maxAge: row[2] ?? "" });
+  const toRelaxationRow = (row: string[]) => ({ category: row[0], relaxation: row[row.length - 1] });
+
+  if (CATEGORY_HEADER.test(header[0])) {
+    const ageRelaxationBreakdown = body.map(toRelaxationRow).filter((r) => r.category && r.relaxation);
+    return { ageRelaxationBreakdown: ageRelaxationBreakdown.length > 0 ? ageRelaxationBreakdown : undefined };
+  }
+
+  const splitIndex = body.findIndex((row) => CATEGORY_HEADER.test(row[0]));
+  if (splitIndex === -1) {
+    const ageLimitByGrade = body.map(toGradeRow).filter((r) => r.grade);
+    return { ageLimitByGrade: ageLimitByGrade.length > 0 ? ageLimitByGrade : undefined };
+  }
+
+  const ageLimitByGrade = body.slice(0, splitIndex).map(toGradeRow).filter((r) => r.grade);
+  const ageRelaxationBreakdown = body
+    .slice(splitIndex + 1)
+    .map(toRelaxationRow)
+    .filter((r) => r.category && r.relaxation);
+  return {
+    ageLimitByGrade: ageLimitByGrade.length > 0 ? ageLimitByGrade : undefined,
+    ageRelaxationBreakdown: ageRelaxationBreakdown.length > 0 ? ageRelaxationBreakdown : undefined,
+  };
 }
 
 /**
@@ -458,9 +544,13 @@ export async function approveDraft(
     minAge: merged.minAge ?? 18,
     maxAge: merged.maxAge ?? 40,
     ageRelaxation: merged.ageRelaxation,
-    ageRelaxationBreakdown: ensureOptionalArray(merged.ageRelaxationBreakdown),
+    // Manual edits from the draft review page win if the admin filled
+    // them in; otherwise fall back to parsing the raw "Age Limit" table
+    // the bot already extracted, same pattern as vacancyBreakdown below.
+    ageRelaxationBreakdown:
+      ensureOptionalArray(merged.ageRelaxationBreakdown) ?? parseAgeLimitSections(merged.ageLimit).ageRelaxationBreakdown,
     ageAsOnDate: merged.ageAsOnDate,
-    ageLimitByGrade: ensureOptionalArray(merged.ageLimitByGrade),
+    ageLimitByGrade: ensureOptionalArray(merged.ageLimitByGrade) ?? parseAgeLimitSections(merged.ageLimit).ageLimitByGrade,
     salaryMin: merged.salaryMin ?? 0,
     salaryMax: merged.salaryMax ?? 0,
     applicationFee: ensureApplicationFee(merged.applicationFee, {

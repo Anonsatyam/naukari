@@ -208,7 +208,19 @@ function extractCanonicalFee(rows: string[]): { general?: number; reserved?: num
   return fee;
 }
 
-const VACANCY_TOTAL_ROW_LABEL = /total\s*vacanc\w*|total\s*post|कुल\s*रिक्तिय|कुल\s*योग/i;
+const VACANCY_TOTAL_ROW_LABEL = /total\s*vacanc\w*|total\s*posts?|grand\s*total|कुल\s*रिक्तिय|कुल\s*योग|कुल\s*पद/i;
+
+// WordPress themes commonly render a small "Post author: X / Post
+// published: Y / Post category: Z / Post comments: N" meta block right
+// at the top of the post body — which, depending on where the theme
+// places it in the markup, can land inside whichever heading's segment
+// happens to wrap around it (observed under "Post Details" on this
+// site), landing as a handful of stray one-cell rows *before* the real
+// table. That shifts the real header row out of position 0, which is
+// exactly what parseVacancyBreakdown()/the review page's "additional
+// details" panel assume the header row to be — so it's filtered out
+// here, generically, rather than only for one field.
+const WP_POST_META_ROW = /^post\s*(author|published|category|comments?)\s*:/i;
 
 function firstNumberInText(text: string | undefined): number | undefined {
   const match = text?.match(/\d[\d,]*/);
@@ -457,7 +469,8 @@ function parseSections(html: string): ParsedSections {
     // or an FAQ/Conclusion written as plain paragraphs — so fall back to
     // paragraph/list-item/sub-heading text instead of leaving the field
     // empty.
-    sections[field].push(...(tableRows.length > 0 ? tableRows : extractPlainBlocks(segment)));
+    const rows = tableRows.length > 0 ? tableRows : extractPlainBlocks(segment);
+    sections[field].push(...rows.filter((row) => !WP_POST_META_ROW.test(row)));
   }
 
   return sections;
