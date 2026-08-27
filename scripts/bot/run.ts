@@ -96,7 +96,7 @@ async function tryExtractPdfFields(candidate: Candidate): Promise<ExtractedStruc
 
 /**
  * Sibling to tryExtractPdfFields: for sources whose structured fields
- * live directly in the post's own HTML (biharjob.co.in-style pages,
+ * live directly in the post's own HTML (abc.com -style pages,
  * which never link out to a separate notification PDF — everything is
  * on the page itself) rather than a linked PDF, fetch the candidate's
  * own page and pull fields out of it directly via
@@ -243,7 +243,7 @@ async function run() {
             draftInput.confidence = fieldsFoundInPdf >= 2 ? "high" : "medium";
           }
 
-          // Sources like biharjob.co.in carry their structured fields in
+          // Sources like abc.com carry their structured fields in
           // the post's own HTML rather than a linked PDF — only attempt
           // this when the PDF pass came up empty, so a source that has
           // both (rare) doesn't do two fetches for nothing.

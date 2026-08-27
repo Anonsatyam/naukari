@@ -210,6 +210,47 @@ export type ApprovedEntity =
   | { type: "admit_card"; entity: AdmitCardItem };
 
 /**
+ * A draft's extractedFields is whatever shape the source extraction
+ * happened to produce — it isn't guaranteed to match the Job type it
+ * gets spread into. `??` alone only substitutes a default for
+ * null/undefined, not for a value that's present but the wrong runtime
+ * type (a string where an array is expected, for instance) — that
+ * wrong-shaped value would otherwise sail straight into the database
+ * and only fail later, when something tries to .map() over it.
+ */
+function ensureStringArray(value: unknown, fallback: string[]): string[] {
+  if (Array.isArray(value) && value.every((v) => typeof v === "string")) return value;
+  return fallback;
+}
+
+function ensureArray<T>(value: unknown, fallback: T[]): T[] {
+  return Array.isArray(value) ? (value as T[]) : fallback;
+}
+
+// For genuinely optional array fields (rendered conditionally when
+// present) — a wrong-shaped value is dropped to undefined rather than
+// forced into an empty array, so "this section doesn't apply" and
+// "this section had bad data" don't get conflated.
+function ensureOptionalArray<T>(value: unknown): T[] | undefined {
+  return Array.isArray(value) ? (value as T[]) : undefined;
+}
+
+function ensureApplicationFee(
+  value: unknown,
+  fallback: { general: number; reserved: number; note?: string }
+): { general: number; reserved: number; note?: string } {
+  if (
+    value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    ("general" in value || "reserved" in value)
+  ) {
+    return value as { general: number; reserved: number; note?: string };
+  }
+  return fallback;
+}
+
+/**
  * Approves a draft: merges the bot-extracted fields with whatever the
  * admin edited, fills in sensible defaults for anything still missing,
  * and publishes the result as a live row — in whichever table matches
@@ -297,25 +338,39 @@ export async function approveDraft(
     department: merged.department ?? draft.organization,
     category: merged.category ?? "Administrative",
     totalVacancies: merged.totalVacancies ?? 0,
-    vacancyBreakdown: merged.vacancyBreakdown,
+    vacancyBreakdown: ensureOptionalArray(merged.vacancyBreakdown),
     qualification: merged.qualification ?? "As per notification",
     minAge: merged.minAge ?? 18,
     maxAge: merged.maxAge ?? 40,
     ageRelaxation: merged.ageRelaxation,
-    ageRelaxationBreakdown: merged.ageRelaxationBreakdown,
+    ageRelaxationBreakdown: ensureOptionalArray(merged.ageRelaxationBreakdown),
     salaryMin: merged.salaryMin ?? 0,
     salaryMax: merged.salaryMax ?? 0,
-    applicationFee: merged.applicationFee ?? { general: 0, reserved: 0, note: "See official notification" },
-    selectionProcess: merged.selectionProcess ?? ["As per official notification"],
+    applicationFee: ensureApplicationFee(merged.applicationFee, {
+      general: 0,
+      reserved: 0,
+      note: "See official notification",
+    }),
+    // These two are the exact field the bug that motivated this fix was
+    // found in: a draft can carry a same-named field in the wrong shape
+    // (e.g. a single joined string instead of an array of steps) —
+    // `??` alone only catches null/undefined, not a wrong runtime type,
+    // so a string sails straight through and crashes `.map()` on the
+    // job page later. Validate the actual shape here, once, at the one
+    // place new job records get created, rather than trusting every
+    // future extraction source to always produce the right type.
+    selectionProcess: ensureStringArray(merged.selectionProcess, ["As per official notification"]),
     examPattern: merged.examPattern,
     syllabusSummary: merged.syllabusSummary,
-    howToApply: merged.howToApply ?? ["See the official notification for the application procedure"],
+    howToApply: ensureStringArray(merged.howToApply, [
+      "See the official notification for the application procedure",
+    ]),
     officialNotificationUrl: merged.officialNotificationUrl ?? draft.sourceUrl,
     officialApplyUrl: merged.officialApplyUrl ?? draft.sourceUrl,
     sourceUrl: draft.sourceUrl,
-    importantLinks: merged.importantLinks,
-    importantDates: merged.importantDates ?? [],
-    eligibilityRules: merged.eligibilityRules ?? [],
+    importantLinks: ensureOptionalArray(merged.importantLinks),
+    importantDates: ensureArray(merged.importantDates, []),
+    eligibilityRules: ensureArray(merged.eligibilityRules, []),
     status: "published",
     createdByBot: true,
     publishedAt: now,

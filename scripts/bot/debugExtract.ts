@@ -6,7 +6,7 @@
  * bot pipeline just skipping already-known URLs?
  *
  * Usage:
- *   npx tsx scripts/bot/debugExtract.ts https://biharjob.co.in/ibps-csa-recruitment-2026/
+ *   npx tsx scripts/bot/debugExtract.ts https://abc.com/ibps-csa-recruitment-2026/
  *
  * (adjust the path to wherever you placed extractHtmlNotificationFields.ts
  * and fetchInsecure.ts — this assumes the same folder as run.ts)

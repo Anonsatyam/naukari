@@ -1,7 +1,7 @@
 import { ExtractedStructuredFields, extractStructuredFields } from "./extractStructuredFields";
 
 /**
- * Sites like biharjob.co.in put every structured field directly in the
+ * Sites like abc.com put every structured field directly in the
  * post's own HTML (as a run of "<h2>Important Dates</h2><table>...")
  * rather than in a linked PDF — parsePdf.ts / extractStructuredFields.ts
  * only fire on PDFs, so a source like this needs its own pass that reads
@@ -355,7 +355,7 @@ export interface HtmlNotificationExtraction {
 }
 
 /**
- * Entry point: given a detail page's raw HTML (a page like biharjob.co.in
+ * Entry point: given a detail page's raw HTML (a page like abc.com
  * publishes for each job/result/admit-card post), returns the org name
  * guessed from the first notification table plus a populated
  * ExtractedStructuredFields — same shape run.ts already merges in from

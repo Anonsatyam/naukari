@@ -3,7 +3,7 @@ export interface ExtractedStructuredFields {
   applicationFee?: { general?: number; reserved?: number };
   totalVacancies?: number;
 
-  // --- Added for HTML-page sources (e.g. biharjob.co.in), where the
+  // --- Added for HTML-page sources (e.g. abc.com), where the
   // structured fields live directly in the post's own HTML tables
   // rather than in a linked PDF. Kept as raw joined strings/arrays
   // rather than trying to force them through the PDF-oriented

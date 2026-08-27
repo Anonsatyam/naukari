@@ -100,8 +100,8 @@ export default async function JobDetailPage({
             label="Total Vacancies"
             value={job.totalVacancies ? job.totalVacancies.toLocaleString("en-IN") : "As notified"}
           />
-          <StatFact label="Qualification" value={job.qualification} />
-          <StatFact label="Age Limit" value={`${job.minAge}–${job.maxAge} yrs`} />
+          <StatFact label="Qualification" value={job.qualification || "As per notification"} />
+          <StatFact label="Age Limit" value={job.minAge && job.maxAge ? `${job.minAge}–${job.maxAge} yrs` : "As per rules"} />
           <StatFact
             label="Salary"
             value={job.salaryMin ? `${formatCurrency(job.salaryMin)}–${formatCurrency(job.salaryMax)}` : "As per rules"}
@@ -114,7 +114,7 @@ export default async function JobDetailPage({
         <div className="order-2 space-y-6 lg:order-1">
           <Section title="Important Dates" icon={<Calendar size={16} />}>
             <div className="divide-y divide-[var(--color-border)]">
-              {job.importantDates.map((d) => (
+              {(Array.isArray(job.importantDates) ? job.importantDates : []).map((d) => (
                 <div key={d.label} className="flex items-center justify-between py-2.5 text-sm">
                   <span className="text-[var(--color-text-secondary)]">{d.label}</span>
                   <span className="font-medium text-[var(--color-text-primary)]">{formatDate(d.date)}</span>
@@ -123,7 +123,7 @@ export default async function JobDetailPage({
             </div>
           </Section>
 
-          {job.vacancyBreakdown && job.vacancyBreakdown.length > 0 && (
+          {Array.isArray(job.vacancyBreakdown) && job.vacancyBreakdown.length > 0 && (
             <Section title="Vacancy Details (Category-wise)" icon={<Users size={16} />}>
               <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
                 <div className="grid grid-cols-2 bg-[var(--color-background)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
@@ -142,7 +142,7 @@ export default async function JobDetailPage({
                   <div className="grid grid-cols-2 bg-[var(--color-background)] px-4 py-2.5 text-sm font-semibold">
                     <span className="text-[var(--color-text-primary)]">Total</span>
                     <span className="text-right text-[var(--color-text-primary)]">
-                      {job.totalVacancies.toLocaleString("en-IN")}
+                      {job.totalVacancies ? job.totalVacancies.toLocaleString("en-IN") : "As notified"}
                     </span>
                   </div>
                 </div>
@@ -152,11 +152,14 @@ export default async function JobDetailPage({
 
           <Section title="Eligibility" icon={<ShieldCheck size={16} />}>
             <div className="space-y-3">
-              <KeyValueRow label="Qualification" value={job.qualification} />
-              <KeyValueRow label="Age Limit" value={`${job.minAge} to ${job.maxAge} years`} />
+              <KeyValueRow label="Qualification" value={job.qualification || "As per notification"} />
+              <KeyValueRow
+                label="Age Limit"
+                value={job.minAge && job.maxAge ? `${job.minAge} to ${job.maxAge} years` : "As per official notification"}
+              />
             </div>
 
-            {job.ageRelaxationBreakdown && job.ageRelaxationBreakdown.length > 0 && (
+            {Array.isArray(job.ageRelaxationBreakdown) && job.ageRelaxationBreakdown.length > 0 && (
               <div className="mt-4 overflow-hidden rounded-lg border border-[var(--color-border)]">
                 <div className="grid grid-cols-2 bg-[var(--color-background)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
                   <span>Age Relaxation</span>
@@ -183,9 +186,9 @@ export default async function JobDetailPage({
 
           <Section title="Application Fee">
             <div className="space-y-3">
-              <KeyValueRow label="General / OBC" value={formatCurrency(job.applicationFee.general)} />
-              <KeyValueRow label="SC / ST / Reserved" value={formatCurrency(job.applicationFee.reserved)} />
-              {job.applicationFee.note && (
+              <KeyValueRow label="General / OBC" value={formatCurrency(job.applicationFee?.general ?? 0)} />
+              <KeyValueRow label="SC / ST / Reserved" value={formatCurrency(job.applicationFee?.reserved ?? 0)} />
+              {job.applicationFee?.note && (
                 <p className="text-xs text-[var(--color-text-secondary)]">{job.applicationFee.note}</p>
               )}
             </div>
@@ -211,7 +214,7 @@ export default async function JobDetailPage({
             <StepList items={job.howToApply} />
           </Section>
 
-          {job.importantLinks && job.importantLinks.length > 0 && (
+          {Array.isArray(job.importantLinks) && job.importantLinks.length > 0 && (
             <Section title="Important Links" icon={<Link2 size={16} />}>
               <div className="divide-y divide-[var(--color-border)]">
                 {job.importantLinks.map((link) => (
@@ -301,9 +304,16 @@ function Section({
 }
 
 function StepList({ items }: { items: string[] }) {
+  // Belt-and-suspenders: approveDraft now validates this shape before
+  // insert, but this guards any record already in the database from
+  // before that fix, and any other path that might ever write here.
+  const safeItems = Array.isArray(items) ? items : [];
+  if (safeItems.length === 0) {
+    return <p className="text-sm text-[var(--color-text-secondary)]">See the official notification for details.</p>;
+  }
   return (
     <ol className="space-y-2">
-      {items.map((step, i) => (
+      {safeItems.map((step, i) => (
         <li key={step} className="flex gap-3 text-sm">
           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary-tint)] text-[10px] font-bold text-[var(--color-primary)]">
             {i + 1}
