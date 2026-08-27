@@ -93,3 +93,65 @@ export function extractCandidates(html: string, baseUrl: string): Candidate[] {
     return true;
   });
 }
+
+// Generic top-nav category labels (Recruitment, Result, Admit Card, ...)
+// point at a LISTING page containing the real, individual notifications —
+// they are not themselves a posting. Matched by exact normalized text,
+// not a substring/length heuristic, so a genuinely specific title (even
+// a short one, if any exist) is never misclassified.
+const SECTION_LABELS = new Set([
+  "recruitment",
+  "recruitments",
+  "result",
+  "results",
+  "admit card",
+  "admit cards",
+  "admit card call letter",
+  "call letter",
+  "call letters",
+  "notification",
+  "notifications",
+  "important notification",
+  "important notifications",
+  "notice",
+  "notices",
+  "important notice",
+  "important notices",
+  "vacancy",
+  "vacancies",
+  "current vacancy",
+  "current vacancies",
+  "career",
+  "careers",
+  "tender",
+  "tenders",
+  "advertisement",
+  "advertisements",
+]);
+
+function normalizeForSectionCheck(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[/:,\-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function isSectionLink(title: string): boolean {
+  return SECTION_LABELS.has(normalizeForSectionCheck(title));
+}
+
+export interface SplitCandidates {
+  listings: Candidate[];
+  sections: Candidate[];
+}
+
+/** Separates real, specific listing links from generic nav-category links. */
+export function splitSectionsFromListings(candidates: Candidate[]): SplitCandidates {
+  const listings: Candidate[] = [];
+  const sections: Candidate[] = [];
+  for (const c of candidates) {
+    (isSectionLink(c.title) ? sections : listings).push(c);
+  }
+  return { listings, sections };
+}

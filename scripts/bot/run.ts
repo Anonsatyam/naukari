@@ -1,7 +1,7 @@
 import { loadEnvLocal } from "./loadEnv";
 import { fetchInsecure } from "./fetchInsecure";
 import { SOURCES } from "./sources";
-import { extractCandidates, Candidate } from "./extract";
+import { extractCandidates, splitSectionsFromListings, Candidate } from "./extract";
 import { extractFields } from "./extractFields";
 import { extractPdfText } from "./parsePdf";
 import { extractStructuredFields, ExtractedStructuredFields } from "./extractStructuredFields";
@@ -10,7 +10,8 @@ loadEnvLocal();
 
 const SITE_URL = process.env.BOT_SITE_URL || "http://localhost:3000";
 const BOT_API_SECRET = process.env.BOT_API_SECRET;
-const MAX_CANDIDATES_PER_SOURCE = 5;
+const MAX_CANDIDATES_PER_SOURCE = 15;
+const MAX_SECTIONS_PER_SOURCE = 5;
 
 async function postJson(path: string, body: unknown) {
   const res = await fetch(`${SITE_URL}${path}`, {
@@ -69,6 +70,28 @@ async function tryExtractPdfFields(candidate: Candidate): Promise<ExtractedStruc
   }
 }
 
+/** Fetches a page and extracts candidates from it, or a warning detail on failure. */
+async function fetchAndExtractCandidates(
+  url: string
+): Promise<{ candidates: Candidate[] } | { error: string }> {
+  const res = await fetchInsecure(url, {
+    headers: { "User-Agent": "BiharSarkariNaukriBot/1.0" },
+  });
+
+  if (!res.ok) {
+    const detail =
+      res.status >= 300 && res.status < 400
+        ? res.headers.location
+          ? ` — still redirecting after 5 hops (likely a loop), last target: ${res.headers.location}`
+          : " — redirect response had no Location header to follow"
+        : "";
+    return { error: `fetch failed (HTTP ${res.status})${detail}` };
+  }
+
+  const html = await res.text();
+  return { candidates: extractCandidates(html, url) };
+}
+
 async function run() {
   if (!BOT_API_SECRET) {
     console.error("BOT_API_SECRET is not set. Add it to your environment before running the bot.");
@@ -96,31 +119,51 @@ async function run() {
       // human admin before anything goes live — so a worst-case spoofed
       // response just becomes a draft that gets rejected, not a real
       // risk. Our own API calls (postJson, above) stay fully verified.
-      const res = await fetchInsecure(source.url, {
-        headers: { "User-Agent": "BiharSarkariNaukriBot/1.0" },
-      });
+      const homepageResult = await fetchAndExtractCandidates(source.url);
 
-      if (!res.ok) {
-        const detail =
-          res.status >= 300 && res.status < 400
-            ? res.headers.location
-              ? ` — still redirecting after 5 hops (likely a loop), last target: ${res.headers.location}`
-              : " — redirect response had no Location header to follow"
-            : "";
-        await logActivity("warning", `${source.name}: fetch failed (HTTP ${res.status})${detail}`);
+      if ("error" in homepageResult) {
+        await logActivity("warning", `${source.name}: ${homepageResult.error}`);
         errors++;
         continue;
       }
 
-      const html = await res.text();
-      const candidates = extractCandidates(html, source.url);
+      const { listings: directListings, sections } = splitSectionsFromListings(
+        homepageResult.candidates
+      );
 
-      if (candidates.length === 0) {
+      // A generic nav link like "Recruitment" or "Result" points at a
+      // LISTING page with the real, individual notifications — crawl
+      // into a bounded number of these instead of treating the nav
+      // link itself as if it were a posting (that was the exact bug:
+      // a draft titled just "Recruitments" with no real data, because
+      // the bot never actually visited the page that link points to).
+      const crawledListings: Candidate[] = [];
+      for (const section of sections.slice(0, MAX_SECTIONS_PER_SOURCE)) {
+        const sectionResult = await fetchAndExtractCandidates(section.url);
+        if ("candidates" in sectionResult) {
+          // Only take real listings from the section page — don't
+          // recurse into any further nav links it might itself contain.
+          const { listings } = splitSectionsFromListings(sectionResult.candidates);
+          crawledListings.push(...listings);
+        }
+        // A single section page failing to fetch isn't a failure of the
+        // whole source (the homepage itself already succeeded) — skip
+        // it quietly rather than counting it as an error.
+      }
+
+      const seenUrls = new Set<string>();
+      const allListings = [...directListings, ...crawledListings].filter((c) => {
+        if (seenUrls.has(c.url)) return false;
+        seenUrls.add(c.url);
+        return true;
+      });
+
+      if (allListings.length === 0) {
         await logActivity("success", `${source.name}: checked, no notification-like links found`);
         continue;
       }
 
-      for (const candidate of candidates.slice(0, MAX_CANDIDATES_PER_SOURCE)) {
+      for (const candidate of allListings.slice(0, MAX_CANDIDATES_PER_SOURCE)) {
         const draftInput = extractFields(candidate, source.orgHint);
 
         const pdfFields = await tryExtractPdfFields(candidate);
