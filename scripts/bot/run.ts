@@ -7,6 +7,7 @@ import { extractTableCandidates } from "./extractTableCandidates";
 import { extractFields } from "./extractFields";
 import { extractPdfText } from "./parsePdf";
 import { extractStructuredFields, ExtractedStructuredFields } from "./extractStructuredFields";
+import { extractHtmlNotificationFields } from "./extractHtmlNotificationFields";
 
 loadEnvLocal();
 
@@ -26,10 +27,7 @@ const MAX_SECTIONS_PER_SOURCE_PLAYWRIGHT = 2;
  * cookie/session handling resolves what a stateless HTTP client can't.
  * Scoped by hostname rather than a hand-picked list, so it
  * automatically covers this whole platform, including anything added
- * to it later — not just the specific sources that happened to fail on
- * the last run (the exact set of which pages fail has been flapping
- * between redirect-loop and timeout run to run, which is itself a sign
- * this is a platform-level thing, not 27 unrelated problems).
+ * to it later.
  */
 function shouldUsePlaywright(url: string): boolean {
   try {
@@ -96,6 +94,33 @@ async function tryExtractPdfFields(candidate: Candidate): Promise<ExtractedStruc
   }
 }
 
+/**
+ * Sibling to tryExtractPdfFields: for sources whose structured fields
+ * live directly in the post's own HTML (biharjob.co.in-style pages,
+ * which never link out to a separate notification PDF — everything is
+ * on the page itself) rather than a linked PDF, fetch the candidate's
+ * own page and pull fields out of it directly via
+ * extractHtmlNotificationFields. Same best-effort contract as the PDF
+ * version — any failure just yields {} rather than aborting the run.
+ */
+async function tryExtractHtmlFields(
+  candidate: Candidate
+): Promise<{ organization?: string; fields: ExtractedStructuredFields }> {
+  if (candidate.url.toLowerCase().endsWith(".pdf")) return { fields: {} };
+
+  try {
+    const res = await fetchInsecure(candidate.url, {
+      headers: { "User-Agent": "BiharSarkariNaukriBot/1.0" },
+    });
+    if (!res.ok) return { fields: {} };
+
+    const html = await res.text();
+    return extractHtmlNotificationFields(html);
+  } catch {
+    return { fields: {} };
+  }
+}
+
 /** Fetches a page and extracts candidates from it, or a warning detail on failure. */
 async function fetchAndExtractCandidates(
   url: string
@@ -132,25 +157,15 @@ async function fetchAndExtractCandidates(
 
 /**
  * Runs both extraction strategies on the same page and merges the
- * results: `extractCandidates` for simple anchor-based listings (e.g.
- * BTSC's homepage), and `extractTableCandidates` for pages structured
- * as a table where the real subject text and the PDF link live in
- * separate cells (e.g. BPSC's /advertisement/ page — see the comment
- * on extractTableCandidates for why that needed its own logic). A page
+ * results: `extractCandidates` for simple anchor-based listings, and
+ * `extractTableCandidates` for pages structured as a table where the
+ * real subject text and the PDF link live in separate cells. A page
  * without a matching table structure simply yields nothing extra from
- * the second pass, so this is safe to run on every page unconditionally
- * rather than needing a per-source flag for which sites use tables.
+ * the second pass, so this is safe to run on every page unconditionally.
  */
 function mergeCandidateSources(html: string, baseUrl: string): Candidate[] {
   const fromTables = extractTableCandidates(html, baseUrl);
   if (fromTables.length > 0) {
-    // This page is structured as a table with descriptive subject cells
-    // separate from generically-labeled PDF links (see the comment on
-    // extractTableCandidates). Skip the plain link scan here — it would
-    // otherwise also pick up the very same PDFs under their unhelpful
-    // generic link text ("Advertisement," "District-wise Roster
-    // Vacancies") as redundant, worse-titled duplicates of what the
-    // table-aware pass already got right.
     return fromTables;
   }
   return extractCandidates(html, baseUrl);
@@ -172,18 +187,10 @@ async function run() {
   try {
     for (const source of SOURCES) {
       try {
-        // Certificate validation is intentionally relaxed here — many
-        // Indian government sites have known TLS misconfigurations (a
-        // missing intermediate certificate, an expired cert, a self-signed
-        // cert in the chain). Browsers quietly work around these, so the
-        // sites look completely fine to a human visitor; a strict client
-        // correctly refuses instead. This is a deliberate, narrow
-        // tradeoff: these are read-only GET requests for public
-        // information, from sources verified against an official
-        // government website list, and every result is reviewed by a
-        // human admin before anything goes live — so a worst-case spoofed
-        // response just becomes a draft that gets rejected, not a real
-        // risk. Our own API calls (postJson, above) stay fully verified.
+        // Certificate validation is intentionally relaxed here — see
+        // fetchInsecure.ts for the full reasoning. These are read-only
+        // GET requests, and every result is reviewed by a human admin
+        // before anything goes live.
         const homepageResult = await fetchAndExtractCandidates(source.url);
 
         if ("error" in homepageResult) {
@@ -196,12 +203,6 @@ async function run() {
           homepageResult.candidates
         );
 
-        // A generic nav link like "Recruitment" or "Result" points at a
-        // LISTING page with the real, individual notifications — crawl
-        // into a bounded number of these instead of treating the nav
-        // link itself as if it were a posting (that was the exact bug:
-        // a draft titled just "Recruitments" with no real data, because
-        // the bot never actually visited the page that link points to).
         const crawledListings: Candidate[] = [];
         const sectionLimit = shouldUsePlaywright(source.url)
           ? MAX_SECTIONS_PER_SOURCE_PLAYWRIGHT
@@ -209,14 +210,9 @@ async function run() {
         for (const section of sections.slice(0, sectionLimit)) {
           const sectionResult = await fetchAndExtractCandidates(section.url);
           if ("candidates" in sectionResult) {
-            // Only take real listings from the section page — don't
-            // recurse into any further nav links it might itself contain.
             const { listings } = splitSectionsFromListings(sectionResult.candidates);
             crawledListings.push(...listings);
           }
-          // A single section page failing to fetch isn't a failure of the
-          // whole source (the homepage itself already succeeded) — skip
-          // it quietly rather than counting it as an error.
         }
 
         const seenUrls = new Set<string>();
@@ -247,6 +243,24 @@ async function run() {
             draftInput.confidence = fieldsFoundInPdf >= 2 ? "high" : "medium";
           }
 
+          // Sources like biharjob.co.in carry their structured fields in
+          // the post's own HTML rather than a linked PDF — only attempt
+          // this when the PDF pass came up empty, so a source that has
+          // both (rare) doesn't do two fetches for nothing.
+          if (fieldsFoundInPdf === 0) {
+            const { organization, fields: htmlFields } = await tryExtractHtmlFields(candidate);
+            const fieldsFoundInHtml = Object.keys(htmlFields).length;
+            if (fieldsFoundInHtml > 0) {
+              draftInput.extractedFields = { ...draftInput.extractedFields, ...htmlFields };
+              draftInput.confidence = fieldsFoundInHtml >= 2 ? "high" : "medium";
+            }
+            // Prefer the organization actually printed on the post over
+            // the source's generic orgHint fallback.
+            if (organization) {
+              draftInput.organization = organization;
+            }
+          }
+
           const result = await postJson("/api/bot/drafts", draftInput);
 
           if (!result.ok) {
@@ -267,9 +281,6 @@ async function run() {
       }
     }
   } finally {
-    // Only actually launched if a state.bihar.gov.in source was hit —
-    // this is a no-op otherwise. Always close it, success or failure,
-    // so a crashed run doesn't leave an orphaned browser process behind.
     await closeSharedBrowser();
   }
 

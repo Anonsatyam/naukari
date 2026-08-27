@@ -1,4 +1,4 @@
-import { ExtractedStructuredFields } from "./extractStructuredFields";
+import { ExtractedStructuredFields, extractStructuredFields } from "./extractStructuredFields";
 
 /**
  * Sites like biharjob.co.in put every structured field directly in the
@@ -216,7 +216,30 @@ export function extractHtmlNotificationFields(html: string): HtmlNotificationExt
 
   const importantLinks = sections.importantLinksRaw;
 
+  const sectionsHadAnyMatch =
+    sections.importantDatesRaw.length > 0 ||
+    sections.applicationFeeRaw.length > 0 ||
+    sections.ageLimitRaw.length > 0 ||
+    sections.postDetailsRaw.length > 0 ||
+    sections.eligibilityRaw.length > 0 ||
+    sections.selectionProcessRaw.length > 0 ||
+    sections.howToApplyRaw.length > 0 ||
+    importantLinks.length > 0;
+
+  // Heading-based bucketing depends on this site's actual markup lining
+  // up with the assumptions above (h2/h3 immediately followed by a
+  // table/list). If a theme change or an unusual post layout means none
+  // of that matched at all, fall back to the same plain-text pattern
+  // matching used for PDFs (findDatesNearLabels / findApplicationFee /
+  // findTotalVacancies via extractStructuredFields) run directly against
+  // this page's own visible text — cruder, but far better than
+  // returning nothing.
+  const fallbackFields: ExtractedStructuredFields = sectionsHadAnyMatch
+    ? {}
+    : extractStructuredFields(stripTags(html));
+
   const fields: ExtractedStructuredFields = {
+    ...fallbackFields,
     ...(sections.importantDatesRaw.length ? { importantDatesText: sections.importantDatesRaw } : {}),
     ...(sections.applicationFeeRaw.length ? { applicationFeeText: sections.applicationFeeRaw } : {}),
     ...(sections.ageLimitRaw.length ? { ageLimit: sections.ageLimitRaw.join(" || ") } : {}),
