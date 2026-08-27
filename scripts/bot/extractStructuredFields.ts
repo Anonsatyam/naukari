@@ -2,6 +2,28 @@ export interface ExtractedStructuredFields {
   importantDates?: { label: string; date: string }[];
   applicationFee?: { general?: number; reserved?: number };
   totalVacancies?: number;
+
+  // --- Added for HTML-page sources (e.g. biharjob.co.in), where the
+  // structured fields live directly in the post's own HTML tables
+  // rather than in a linked PDF. Kept as raw joined strings/arrays
+  // rather than trying to force them through the PDF-oriented
+  // {label,date} / {general,reserved} shapes above, since these pages
+  // present dates and fees per-category in ways that don't collapse
+  // cleanly into a single normalized date or two numbers (e.g. STET's
+  // per-paper, per-category fee table). Both sets of fields can be
+  // present at once — they aren't mutually exclusive with the
+  // PDF-derived fields above.
+  importantDatesText?: string[];
+  applicationFeeText?: string[];
+  ageLimit?: string;
+  postDetails?: string;
+  eligibility?: string;
+  selectionProcess?: string;
+  howToApply?: string[];
+  importantLinks?: { label: string; url: string }[];
+  applyOnlineLink?: string;
+  notificationPdfLink?: string;
+  officialWebsiteLink?: string;
 }
 
 const MONTH_NAMES: Record<string, number> = {
