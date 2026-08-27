@@ -111,6 +111,34 @@ proxy.ts                  Next 16's middleware — guards /admin/* and
 This is intentional, not a limitation — the bot is deliberately never
 allowed to publish anything automatically.
 
+## PDF extraction — free, rule-based, honestly imperfect
+
+When a bot-found link points directly to a PDF, the bot downloads it
+and pulls out structured fields (dates, application fee, vacancy
+count) using pattern matching against the extracted text — no paid
+AI API involved (`scripts/bot/parsePdf.ts` + `extractStructuredFields.ts`).
+
+**This genuinely helps** on PDFs with clean, selectable text and
+fairly standard phrasing ("Last Date: 25/08/2026", "General Fee: Rs.500/-",
+"Total Vacancies: 1214") — verified end-to-end against a real generated
+PDF with 100% accuracy on that kind of input.
+
+**This will still miss or get wrong**:
+- Scanned/image-only PDFs (no selectable text at all — free OCR exists
+  but isn't reliable enough to call "correct")
+- Complex multi-row tables (e.g. a district-wise vacancy breakdown)
+- Anything requiring actual reading comprehension (eligibility nuance,
+  "how to apply" steps) — pattern matching can't summarize, only match
+
+When PDF extraction finds 2+ fields, the draft's confidence is upgraded
+to "high" — that's the one case where "high" is claimed, since it means
+the bot read structured fields out of the actual document rather than
+guessing from a link's title text. The admin review form
+(`/admin/drafts/[id]`) shows these as editable date/fee fields for Job
+drafts specifically, pre-filled when the bot found them — correcting or
+filling in the rest is still expected, the same way a human editor at
+any similar site would.
+
 ## Known real-world constraints, not bugs
 
 - **Several Bihar government sites have broken TLS certificates**

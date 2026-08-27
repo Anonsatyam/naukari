@@ -1,8 +1,10 @@
 import { loadEnvLocal } from "./loadEnv";
 import { fetchInsecure } from "./fetchInsecure";
 import { SOURCES } from "./sources";
-import { extractCandidates } from "./extract";
+import { extractCandidates, Candidate } from "./extract";
 import { extractFields } from "./extractFields";
+import { extractPdfText } from "./parsePdf";
+import { extractStructuredFields, ExtractedStructuredFields } from "./extractStructuredFields";
 
 loadEnvLocal();
 
@@ -41,6 +43,30 @@ function extractErrorDetail(err: unknown): string {
         })`
       : "";
   return `${message}${cause}`;
+}
+
+/**
+ * If the candidate links directly to a PDF, download it and try to
+ * pull structured fields (dates, fees, vacancy count) out of its text.
+ * Returns an empty object for non-PDF links, scanned/image PDFs with
+ * no extractable text, or anything that fails — this is a best-effort
+ * enhancement, not something the rest of the run should depend on.
+ */
+async function tryExtractPdfFields(candidate: Candidate): Promise<ExtractedStructuredFields> {
+  if (!candidate.url.toLowerCase().endsWith(".pdf")) return {};
+
+  try {
+    const res = await fetchInsecure(candidate.url, {
+      headers: { "User-Agent": "BiharSarkariNaukriBot/1.0" },
+    });
+    if (!res.ok) return {};
+
+    const buffer = await res.buffer();
+    const text = await extractPdfText(buffer);
+    return extractStructuredFields(text);
+  } catch {
+    return {};
+  }
 }
 
 async function run() {
@@ -96,6 +122,17 @@ async function run() {
 
       for (const candidate of candidates.slice(0, MAX_CANDIDATES_PER_SOURCE)) {
         const draftInput = extractFields(candidate, source.orgHint);
+
+        const pdfFields = await tryExtractPdfFields(candidate);
+        const fieldsFoundInPdf = Object.keys(pdfFields).length;
+        if (fieldsFoundInPdf > 0) {
+          draftInput.extractedFields = { ...draftInput.extractedFields, ...pdfFields };
+          // Now genuinely reading structured fields out of the actual
+          // notification document, not just guessing from link text —
+          // this is exactly the case "high" confidence is reserved for.
+          draftInput.confidence = fieldsFoundInPdf >= 2 ? "high" : "medium";
+        }
+
         const result = await postJson("/api/bot/drafts", draftInput);
 
         if (!result.ok) {

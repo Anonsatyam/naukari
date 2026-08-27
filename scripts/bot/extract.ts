@@ -3,17 +3,45 @@ export interface Candidate {
   url: string;
 }
 
+// Strong positive signals — a link is genuinely worth investigating further.
 const NOTIFICATION_KEYWORDS = [
   "recruitment",
   "vacancy",
   "vacancies",
-  "notification",
   "bharti",
   "niyukti",
-  "advertisement",
-  "notice",
   "result",
   "admit card",
+  "e-admit",
+  "call letter",
+  "hall ticket",
+  "advt",
+  "advertisement no",
+];
+
+// Explicit noise — even if a title happens to match something above, these
+// patterns mean it's not a real job/result/admit-card notification (a
+// department's navigation link, a policy document, tender for goods/
+// services, an election/administrative report, etc.). Checked first.
+const EXCLUDE_KEYWORDS = [
+  "notice board",
+  "notice section",
+  "model code of conduct",
+  "handbook",
+  "hr policy",
+  "compendium",
+  "election report",
+  "annual report",
+  "right to information",
+  "rti ",
+  "tender notice",
+  "e-tender",
+  "e- tender",
+  "leased line",
+  "hiring vehicles",
+  "fraudulent",
+  "current vacancies", // generic careers-page nav link, not a specific posting
+  "employers connect",
 ];
 
 /**
@@ -40,6 +68,9 @@ export function extractCandidates(html: string, baseUrl: string): Candidate[] {
 
     const lowerText = text.toLowerCase();
     const lowerHref = href.toLowerCase();
+
+    if (EXCLUDE_KEYWORDS.some((kw) => lowerText.includes(kw))) continue;
+
     const isNotificationLike =
       NOTIFICATION_KEYWORDS.some((kw) => lowerText.includes(kw)) || lowerHref.endsWith(".pdf");
 

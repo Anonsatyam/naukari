@@ -8,6 +8,7 @@ export interface InsecureFetchResult {
   url: string;
   headers: Record<string, string | string[] | undefined>;
   text: () => Promise<string>;
+  buffer: () => Promise<Buffer>;
 }
 
 /**
@@ -74,6 +75,7 @@ export function fetchInsecure(
               url: currentUrl,
               headers: res.headers,
               text: async () => Buffer.concat(chunks).toString("utf-8"),
+              buffer: async () => Buffer.concat(chunks),
             });
           });
           res.on("error", (err) => reject(err));

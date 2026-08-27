@@ -17,6 +17,17 @@ const TYPE_LABELS: Record<BotDraft["draftType"], string> = {
   admit_card: "Admit Card",
 };
 
+// Matches exactly what the bot's PDF extraction targets — see
+// scripts/bot/extractStructuredFields.ts
+const JOB_DATE_FIELDS: { key: string; label: string }[] = [
+  { key: "dateApplicationStart", label: "Application Start" },
+  { key: "dateApplicationEnd", label: "Application End" },
+  { key: "dateCorrectionDate", label: "Correction Date" },
+  { key: "dateExamDate", label: "Exam Date" },
+  { key: "dateAdmitCardRelease", label: "Admit Card Release" },
+  { key: "dateResultDate", label: "Result Date" },
+];
+
 export default function DraftReviewPage({
   params,
 }: {
@@ -64,11 +75,25 @@ export default function DraftReviewPage({
             releaseDate: String(ex.releaseDate ?? today),
           });
         } else {
+          const importantDates = Array.isArray(ex.importantDates)
+            ? (ex.importantDates as { label: string; date: string }[])
+            : [];
+          const fee = (ex.applicationFee ?? {}) as { general?: number; reserved?: number };
+
+          const dateFields: Record<string, string> = {};
+          for (const { key, label } of JOB_DATE_FIELDS) {
+            const found = importantDates.find((d) => d.label === label);
+            if (found) dateFields[key] = found.date;
+          }
+
           setFields({
             title: String(ex.title ?? data.draft.jobTitle),
             organization: String(ex.organization ?? data.draft.organization),
             totalVacancies: String(ex.totalVacancies ?? 0),
             qualification: String(ex.qualification ?? ""),
+            feeGeneral: fee.general !== undefined ? String(fee.general) : "",
+            feeReserved: fee.reserved !== undefined ? String(fee.reserved) : "",
+            ...dateFields,
           });
         }
       })
@@ -80,10 +105,33 @@ export default function DraftReviewPage({
     setSubmitting(true);
     setError(null);
     try {
-      const body: Record<string, unknown> = { ...fields };
-      if (draft?.draftType === "job" && "totalVacancies" in fields) {
+      const body: Record<string, unknown> = {
+        title: fields.title,
+        organization: fields.organization,
+      };
+
+      if (draft?.draftType === "job") {
         body.totalVacancies = Number(fields.totalVacancies) || 0;
+        body.qualification = fields.qualification;
+
+        const importantDates = JOB_DATE_FIELDS.filter(({ key }) => fields[key]).map(
+          ({ key, label }) => ({ label, date: fields[key] })
+        );
+        if (importantDates.length > 0) body.importantDates = importantDates;
+
+        const applicationFee: { general?: number; reserved?: number } = {};
+        if (fields.feeGeneral) applicationFee.general = Number(fields.feeGeneral) || 0;
+        if (fields.feeReserved) applicationFee.reserved = Number(fields.feeReserved) || 0;
+        if (Object.keys(applicationFee).length > 0) body.applicationFee = applicationFee;
+      } else if (draft?.draftType === "result") {
+        body.category = fields.category;
+        body.resultDate = fields.resultDate;
+      } else if (draft?.draftType === "admit_card") {
+        body.category = fields.category;
+        body.examDate = fields.examDate;
+        body.releaseDate = fields.releaseDate;
       }
+
       const res = await fetch(`/api/admin/drafts/${id}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -189,19 +237,58 @@ export default function DraftReviewPage({
           />
 
           {draft.draftType === "job" && (
-            <div className="grid grid-cols-2 gap-4">
-              <TextField
-                label="Total Vacancies"
-                type="number"
-                value={fields.totalVacancies ?? "0"}
-                onChange={(e) => setField("totalVacancies")(e.target.value)}
-              />
-              <TextField
-                label="Qualification"
-                value={fields.qualification ?? ""}
-                onChange={(e) => setField("qualification")(e.target.value)}
-              />
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <TextField
+                  label="Total Vacancies"
+                  type="number"
+                  value={fields.totalVacancies ?? "0"}
+                  onChange={(e) => setField("totalVacancies")(e.target.value)}
+                />
+                <TextField
+                  label="Qualification"
+                  value={fields.qualification ?? ""}
+                  onChange={(e) => setField("qualification")(e.target.value)}
+                />
+              </div>
+
+              <div className="border-t border-[var(--color-border)] pt-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                  Important Dates {fields.dateApplicationEnd || fields.dateExamDate ? "(auto-filled from PDF)" : "(fill in from the notification)"}
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  {JOB_DATE_FIELDS.map(({ key, label }) => (
+                    <TextField
+                      key={key}
+                      label={label}
+                      type="date"
+                      value={fields[key] ?? ""}
+                      onChange={(e) => setField(key)(e.target.value)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="border-t border-[var(--color-border)] pt-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                  Application Fee (₹)
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <TextField
+                    label="General / OBC / EWS"
+                    type="number"
+                    value={fields.feeGeneral ?? ""}
+                    onChange={(e) => setField("feeGeneral")(e.target.value)}
+                  />
+                  <TextField
+                    label="SC / ST / PwD"
+                    type="number"
+                    value={fields.feeReserved ?? ""}
+                    onChange={(e) => setField("feeReserved")(e.target.value)}
+                  />
+                </div>
+              </div>
+            </>
           )}
 
           {draft.draftType === "result" && (

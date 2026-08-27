@@ -1,4 +1,5 @@
 import { Candidate } from "./extract";
+import { ExtractedStructuredFields } from "./extractStructuredFields";
 
 export type DraftType = "job" | "result" | "admit_card";
 
@@ -54,7 +55,7 @@ export interface ExtractedDraft {
   extractedFields: {
     category?: string;
     qualification?: string;
-  };
+  } & ExtractedStructuredFields;
 }
 
 export function extractFields(candidate: Candidate, orgHint: string): ExtractedDraft {

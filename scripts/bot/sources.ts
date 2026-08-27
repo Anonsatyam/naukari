@@ -9,6 +9,26 @@ export interface BotSource {
 // government department/organization websites (bihar.gov.in domains,
 // not the older bih.nic.in ones some of these previously used).
 //
+// Verified against real web search on 2026-08-27: 12 URLs that were
+// returning HTTP 404 have been corrected to their actual current paths
+// (departments frequently use a non-obvious short code — e.g. Education
+// is /educationbihar/, not /education/ — rather than a guessable one).
+// Sports is now a fully separate department (split off in Jan 2024)
+// with its own domain, not a state.bihar.gov.in path.
+//
+// Bihar Health Department's URL was spot-checked and confirmed already
+// correct — its earlier "redirect" failures aren't a wrong-URL problem.
+// The remaining sources that showed redirect issues in real bot runs
+// (Animal & Fisheries, Environment/Forest, Building/Road Construction,
+// Water Resources, PHED, Urban Development, Industries, Labour,
+// Transport, Finance, Social Welfare, SC & ST Welfare) were left
+// unchanged rather than guessed at without verification — given the
+// Health Department pattern, they're likely also correct URLs hitting
+// some other server-side behavior (e.g. a session/cookie gate) that a
+// different URL wouldn't fix. Same for the sources that only fail
+// intermittently (timeouts that succeed locally but not from GitHub
+// Actions) — that's IP-range-based blocking, not a URL problem.
+//
 // Not yet included: the 38 district administration portals and other
 // boards/universities/PSUs mentioned in the source list, since specific
 // URLs for those weren't provided — add them here the same way once
@@ -16,7 +36,7 @@ export interface BotSource {
 export const SOURCES: BotSource[] = [
   {
     name: "Bihar Government Master Portal",
-    url: "https://state.bihar.gov.in/main/CitizenHome.html",
+    url: "https://state.bihar.gov.in/",
     orgHint: "Government of Bihar",
   },
   {
@@ -46,7 +66,7 @@ export const SOURCES: BotSource[] = [
   },
   {
     name: "Bihar Education Department",
-    url: "https://state.bihar.gov.in/education/",
+    url: "https://state.bihar.gov.in/educationbihar/",
     orgHint: "Bihar Education Department",
   },
   {
@@ -66,22 +86,22 @@ export const SOURCES: BotSource[] = [
   },
   {
     name: "Revenue & Land Reforms Department",
-    url: "https://state.bihar.gov.in/revenue/",
+    url: "https://state.bihar.gov.in/lrc/",
     orgHint: "Revenue & Land Reforms Department",
   },
   {
     name: "Panchayati Raj Department",
-    url: "https://state.bihar.gov.in/panchayati/",
+    url: "https://state.bihar.gov.in/biharprd/",
     orgHint: "Panchayati Raj Department",
   },
   {
     name: "Rural Development Department",
-    url: "https://state.bihar.gov.in/rural/",
+    url: "https://state.bihar.gov.in/rdd/",
     orgHint: "Rural Development Department",
   },
   {
     name: "Agriculture Department",
-    url: "https://state.bihar.gov.in/agriculture/",
+    url: "https://state.bihar.gov.in/krishi/CitizenHome.html",
     orgHint: "Agriculture Department",
   },
   {
@@ -141,7 +161,7 @@ export const SOURCES: BotSource[] = [
   },
   {
     name: "Commercial Taxes Department",
-    url: "https://state.bihar.gov.in/commercialtax/",
+    url: "https://state.bihar.gov.in/biharcommercialtax/",
     orgHint: "Commercial Taxes Department",
   },
   {
@@ -151,7 +171,7 @@ export const SOURCES: BotSource[] = [
   },
   {
     name: "Food & Consumer Protection Department",
-    url: "https://state.bihar.gov.in/food/",
+    url: "https://state.bihar.gov.in/fcp/",
     orgHint: "Food & Consumer Protection Department",
   },
   {
@@ -161,7 +181,7 @@ export const SOURCES: BotSource[] = [
   },
   {
     name: "ICDS Bihar",
-    url: "https://icdsbih.gov.in/",
+    url: "http://www.icdsbih.gov.in/",
     orgHint: "ICDS Bihar",
   },
   {
@@ -171,27 +191,27 @@ export const SOURCES: BotSource[] = [
   },
   {
     name: "BC & EBC Welfare Department",
-    url: "https://state.bihar.gov.in/bcebcm/",
+    url: "https://state.bihar.gov.in/bcebcwelfare/",
     orgHint: "BC & EBC Welfare Department",
   },
   {
     name: "Minority Welfare Department",
-    url: "https://state.bihar.gov.in/minority/",
+    url: "https://state.bihar.gov.in/minoritywelfare/",
     orgHint: "Minority Welfare Department",
   },
   {
     name: "Tourism Department",
-    url: "https://state.bihar.gov.in/tourism/",
+    url: "https://state.bihar.gov.in/bihartourism/",
     orgHint: "Tourism Department",
   },
   {
     name: "Art & Culture Department",
-    url: "https://state.bihar.gov.in/artculture/",
-    orgHint: "Art & Culture Department",
+    url: "https://state.bihar.gov.in/yac/",
+    orgHint: "Art, Culture & Youth Department",
   },
   {
     name: "Sports Department",
-    url: "https://state.bihar.gov.in/sports/",
+    url: "https://biharsportslive.bihar.gov.in/Default.aspx",
     orgHint: "Sports Department",
   },
   {
