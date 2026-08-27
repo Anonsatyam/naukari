@@ -23,6 +23,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Playwright's Chromium browser
+        # Only Chromium is used (see fetchWithPlaywright.ts), and
+        # --with-deps pulls in the OS-level libraries the browser needs
+        # that a bare Ubuntu runner doesn't have by default.
+        run: npx playwright install --with-deps chromium
+
       - name: Run bot
         env:
           BOT_API_SECRET: ${{ secrets.BOT_API_SECRET }}

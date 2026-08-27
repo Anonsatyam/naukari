@@ -16,7 +16,7 @@ const NOTIFICATION_KEYWORDS = [
   "call letter",
   "hall ticket",
   "advt",
-  "advertisement no",
+  "advertisement",
 ];
 
 // Explicit noise — even if a title happens to match something above, these
@@ -137,8 +137,18 @@ function normalizeForSectionCheck(text: string): string {
     .trim();
 }
 
+// Handles "View All Advertisements", "See All Results", "View All
+// Notices" etc. — a common "see more" nav pattern discovered from
+// BPSC's real "View All Advertisements" link, which pointed at a full
+// listing page the bot wasn't otherwise recognizing as worth crawling
+// into. Generalized as a pattern rather than one hardcoded phrase, so
+// it also catches the same convention on other sources.
+const VIEW_ALL_PATTERN =
+  /^(view|see|show) all (recruitment|recruitments|result|results|admit card|admit cards|notification|notifications|notice|notices|vacancy|vacancies|advertisement|advertisements|tender|tenders)$/;
+
 export function isSectionLink(title: string): boolean {
-  return SECTION_LABELS.has(normalizeForSectionCheck(title));
+  const normalized = normalizeForSectionCheck(title);
+  return SECTION_LABELS.has(normalized) || VIEW_ALL_PATTERN.test(normalized);
 }
 
 export interface SplitCandidates {
