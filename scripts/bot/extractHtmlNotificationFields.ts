@@ -41,6 +41,167 @@ const HEADING_FIELD_MAP: { field: keyof ParsedSections; keywords: string[] }[] =
   { field: "importantLinksRaw", keywords: ["important links", "महत्वपूर्ण लिंक"] },
 ];
 
+// --- Hindi/English canonical date-field mapping --------------------------
+// The PDF pipeline's DATE_LABELS in extractStructuredFields.ts only
+// matches English phrasing ("last date", "exam date", ...), which never
+// appears in this site's mostly-Hindi date table rows. Since we already
+// have each row split cleanly as "label | value" (from tableToPairs),
+// classifying by the row's OWN label text is far more reliable than
+// running generic regex over a wall of free text — so this works off
+// the parsed rows directly rather than reusing the PDF-oriented matcher.
+const HINDI_MONTHS: Record<string, number> = {
+  "जनवरी": 1, "फरवरी": 2, "मार्च": 3, "अप्रैल": 4, "मई": 5, "जून": 6,
+  "जुलाई": 7, "अगस्त": 8, "सितंबर": 9, "सितम्बर": 9, "अक्टूबर": 10,
+  "नवंबर": 11, "नवम्बर": 11, "दिसंबर": 12, "दिसम्बर": 12,
+};
+const ENGLISH_MONTHS: Record<string, number> = {
+  jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3, apr: 4, april: 4,
+  may: 5, jun: 6, june: 6, jul: 7, july: 7, aug: 8, august: 8,
+  sep: 9, sept: 9, september: 9, oct: 10, october: 10, nov: 11, november: 11,
+  dec: 12, december: 12,
+};
+const HINDI_DATE_PATTERN = new RegExp(
+  `(\\d{1,2})\\s+(${Object.keys(HINDI_MONTHS).join("|")})\\s+(\\d{4})`
+);
+const NUMERIC_DATE_PATTERN = /(\d{1,2})\s*[/\-.]\s*(\d{1,2}|[A-Za-z]{3,9})\s*[/\-.]\s*(\d{2,4})/;
+
+function parseAnyDate(text: string): string | null {
+  const hindiMatch = text.match(HINDI_DATE_PATTERN);
+  if (hindiMatch) {
+    const day = parseInt(hindiMatch[1], 10);
+    const month = HINDI_MONTHS[hindiMatch[2]];
+    const year = parseInt(hindiMatch[3], 10);
+    if (day && month && year) return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  }
+  const numMatch = text.match(NUMERIC_DATE_PATTERN);
+  if (numMatch) {
+    const day = parseInt(numMatch[1], 10);
+    const monthRaw = numMatch[2].toLowerCase();
+    const month = ENGLISH_MONTHS[monthRaw] ?? parseInt(monthRaw, 10);
+    let year = parseInt(numMatch[3], 10);
+    if (year < 100) year += 2000;
+    if (day && month && year && day <= 31 && month <= 12) {
+      return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    }
+  }
+  return null;
+}
+
+// Order matters: more specific/exclusionary checks first, so e.g. a fee
+// payment deadline row doesn't get misread as the general application
+// deadline, and a pre-exam training row doesn't get misread as the exam
+// date itself.
+const CANONICAL_DATE_RULES: { label: string; include: string[]; exclude?: string[] }[] = [
+  { label: "Correction Date", include: ["सुधार", "एडिट", "correction", "edit window"] },
+  {
+    label: "Admit Card Release",
+    include: ["प्रवेश पत्र", "एडमिट कार्ड", "admit card"],
+  },
+  { label: "Result Date", include: ["परिणाम", "result"] },
+  {
+    label: "Exam Date",
+    include: ["परीक्षा", "exam"],
+    exclude: ["पूर्व", "प्रशिक्षण", "training", "परिणाम"],
+  },
+  {
+    label: "Application End",
+    include: ["अंतिम तिथि", "last date", "closing date"],
+    exclude: ["शुल्क", "fee"],
+  },
+  {
+    label: "Application Start",
+    include: ["प्रारंभ तिथि", "शुरू", "start date", "registration start"],
+    exclude: ["शुल्क", "fee", "सुधार"],
+  },
+];
+
+function classifyDateRow(label: string): string | null {
+  const lower = label.toLowerCase();
+  for (const rule of CANONICAL_DATE_RULES) {
+    const included = rule.include.some((kw) => lower.includes(kw.toLowerCase()));
+    if (!included) continue;
+    const excluded = rule.exclude?.some((kw) => lower.includes(kw.toLowerCase()));
+    if (excluded) continue;
+    return rule.label;
+  }
+  return null;
+}
+
+/**
+ * Converts raw "label | value" important-dates rows (Hindi or English)
+ * into the canonical {label, date} shape the review-draft form's
+ * APPLICATION START / APPLICATION END / CORRECTION DATE / EXAM DATE /
+ * ADMIT CARD RELEASE / RESULT DATE inputs expect — same shape the PDF
+ * pipeline already produces, so both paths feed the same form fields.
+ * First matching row wins per canonical label (e.g. Prelims exam date
+ * beats Mains, since the form only has one Exam Date slot).
+ */
+function extractCanonicalDates(rows: string[]): { label: string; date: string }[] {
+  const results: { label: string; date: string }[] = [];
+  for (const row of rows) {
+    const [rowLabel, ...rest] = row.split(" | ");
+    if (!rowLabel) continue;
+    const canonical = classifyDateRow(rowLabel);
+    if (!canonical || results.some((r) => r.label === canonical)) continue;
+    const valueText = rest.join(" ");
+    const date = parseAnyDate(valueText) ?? parseAnyDate(row);
+    if (date) results.push({ label: canonical, date });
+  }
+  return results;
+}
+
+const FEE_AMOUNT_PATTERN = /(?:₹|rs\.?|inr)\s*[.:]?\s*([\d,]{2,7})/i;
+
+/**
+ * Converts raw fee-table rows into {general, reserved} numbers, the
+ * same shape the PDF pipeline's applicationFee field uses. Matches
+ * English abbreviations (General/OBC/EWS, SC/ST/PwBD) since those
+ * appear in parentheses even in otherwise-Hindi category labels on
+ * this site, plus the Hindi category words directly as a fallback.
+ */
+function extractCanonicalFee(rows: string[]): { general?: number; reserved?: number } {
+  const fee: { general?: number; reserved?: number } = {};
+  for (const row of rows) {
+    const lower = row.toLowerCase();
+    const amountMatch = row.match(FEE_AMOUNT_PATTERN);
+    if (!amountMatch) continue;
+    const amount = parseInt(amountMatch[1].replace(/,/g, ""), 10);
+    if (!amount) continue;
+
+    const isGeneral = /general|obc|ews|unreserved|सामान्य|ओबीसी/.test(lower);
+    const isReserved = /sc\s*\/?\s*st|pwbd|pwd|reserved|एससी|एसटी|दिव्यांग/.test(lower);
+
+    if (isReserved && fee.reserved === undefined) {
+      fee.reserved = amount;
+    } else if (isGeneral && fee.general === undefined) {
+      fee.general = amount;
+    }
+  }
+  return fee;
+}
+
+/**
+ * Pulls a total vacancy count out of the post-details/vacancy table —
+ * looks for a "Total Post(s)"/"कुल पद"/"कुल योग" style row or
+ * parenthetical number, same field the PDF pipeline's totalVacancies
+ * uses.
+ */
+function extractCanonicalVacancies(rows: string[]): number | undefined {
+  const combined = rows.join(" ");
+  const patterns = [
+    /(?:total\s*post|total\s*vacanc\w*|कुल\s*पद|कुल\s*योग)[^\d]{0,25}(\d[\d,]{1,7})/i,
+    /\(\s*(\d[\d,]{2,7})\s*\)/, // a bare parenthetical count, e.g. "Total Post ( 11403 )"
+  ];
+  for (const pattern of patterns) {
+    const match = combined.match(pattern);
+    if (match) {
+      const n = parseInt(match[1].replace(/,/g, ""), 10);
+      if (n) return n;
+    }
+  }
+  return undefined;
+}
+
 interface ParsedSections {
   importantDatesRaw: string[];
   applicationFeeRaw: string[];
