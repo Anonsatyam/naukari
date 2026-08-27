@@ -25,6 +25,20 @@
   --color-danger: #c22b3c;
   --color-danger-tint: #fbe9eb;
 
+  /* Section accents — used to give distinct info-dense pages (like the
+     job details page) a scannable, color-coded structure without
+     introducing a whole second brand palette. Each pairs with a
+     matching -tint for icon/badge backgrounds, same convention as the
+     semantic colors above. */
+  --color-accent-purple: #7c3aed;
+  --color-accent-purple-tint: #f3ecfd;
+  --color-accent-orange: #c2540e;
+  --color-accent-orange-tint: #fdf0e6;
+  --color-accent-teal: #0f766e;
+  --color-accent-teal-tint: #e6f5f4;
+  --color-accent-pink: #be185d;
+  --color-accent-pink-tint: #fce7f0;
+
   --radius-card: 14px;
   --radius-control: 10px;
 
@@ -52,6 +66,15 @@
   --color-warning-tint: var(--color-warning-tint);
   --color-danger: var(--color-danger);
   --color-danger-tint: var(--color-danger-tint);
+
+  --color-accent-purple: var(--color-accent-purple);
+  --color-accent-purple-tint: var(--color-accent-purple-tint);
+  --color-accent-orange: var(--color-accent-orange);
+  --color-accent-orange-tint: var(--color-accent-orange-tint);
+  --color-accent-teal: var(--color-accent-teal);
+  --color-accent-teal-tint: var(--color-accent-teal-tint);
+  --color-accent-pink: var(--color-accent-pink);
+  --color-accent-pink-tint: var(--color-accent-pink-tint);
 
   --font-sans: var(--font-system);
   --font-display: var(--font-system);

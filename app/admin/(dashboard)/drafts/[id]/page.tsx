@@ -6,6 +6,7 @@ import { ExternalLink, CheckCircle2, XCircle, FileText, Plus, Trash2 } from "luc
 import { BotDraft } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { deepDecodeEntities } from "@/lib/entities";
+import { parsePipeTables, TABLE_SEP, deriveAgeRange, deriveSalaryRange } from "@/lib/pipeTables";
 import { Button } from "@/components/Button";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
@@ -44,22 +45,27 @@ function parseFaqLines(lines: string[]): FaqDraft[] {
 // line per row — used to seed the Eligibility Details textarea with a
 // starting draft from whatever the eligibility table/list actually
 // contained, same idea as parseSelectionSteps() in lib/server/data.ts.
+// Splits on TABLE_SEP first so a section spanning more than one source
+// table (or table + trailing bullet list) still yields one line per
+// row/bullet across all of them, in order.
 function pipeRowsToLines(text: string): string[] {
-  if (!text.includes(" | ")) {
-    // Not a table — likely already plain sentences/bullets (e.g. a <ul>
-    // eligibility list); split on the row separator only.
-    return text.split(" || ").map((s) => s.trim()).filter(Boolean);
-  }
-  return text
-    .split(" || ")
-    .map((row) =>
-      row
-        .split(" | ")
-        .map((c) => c.trim())
-        .filter(Boolean)
-        .join(": ")
-    )
-    .filter(Boolean);
+  return text.split(TABLE_SEP).flatMap((chunk) => {
+    if (!chunk.includes(" | ")) {
+      // Not a table — likely already plain sentences/bullets (e.g. a
+      // <ul> eligibility list); split on the row separator only.
+      return chunk.split(" || ").map((s) => s.trim()).filter(Boolean);
+    }
+    return chunk
+      .split(" || ")
+      .map((row) =>
+        row
+          .split(" | ")
+          .map((c) => c.trim())
+          .filter(Boolean)
+          .join(": ")
+      )
+      .filter(Boolean);
+  });
 }
 
 const TYPE_LABELS: Record<BotDraft["draftType"], string> = {
@@ -90,6 +96,8 @@ const JOB_DATE_FIELDS: { key: string; label: string }[] = [
 // — same information the admin would otherwise have to go dig out of
 // "Raw extracted data" or the source page itself.
 const RICH_DETAIL_KEYS = [
+  "importantDatesText",
+  "applicationFeeText",
   "ageLimit",
   "postDetails",
   "eligibility",
@@ -111,47 +119,41 @@ const RICH_DETAIL_KEYS = [
 // Conclusion inputs above instead.
 const REFERENCE_ONLY_KEYS = ["faqText", "conclusionText"] as const;
 
-// Rows come across as "cell | cell | cell" per row, joined "row || row"
-// across rows — see tableToPairs()/join(" || ") in
-// extractHtmlNotificationFields.ts. First row is treated as the header,
-// matching every table these sources actually publish (category/date
-// labels, column names, etc.).
-function parsePipeRows(text?: string): string[][] {
-  if (!text) return [];
-  return text
-    .split(" || ")
-    .map((row) => row.split(" | ").map((cell) => cell.trim()))
-    .filter((row) => row.some(Boolean));
-}
-
 function PipeTable({ text }: { text?: string }) {
-  const rows = parsePipeRows(text);
-  if (rows.length === 0) return null;
-  const [header, ...body] = rows;
+  if (!text) return null;
+  const tables = parsePipeTables(text);
+  if (tables.length === 0) return null;
   return (
-    <div className="overflow-x-auto rounded-lg border border-[var(--color-border)]">
-      <table className="w-full text-xs">
-        <thead>
-          <tr className="bg-[var(--color-background)] text-left text-[var(--color-text-muted)]">
-            {header.map((cell, i) => (
-              <th key={i} className="whitespace-nowrap px-3 py-2 font-semibold">
-                {cell}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-[var(--color-border)]">
-          {body.map((row, i) => (
-            <tr key={i}>
-              {row.map((cell, j) => (
-                <td key={j} className="whitespace-nowrap px-3 py-2 text-[var(--color-text-secondary)]">
-                  {cell}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-3">
+      {tables.map((t, i) => (
+        <div key={i} className="space-y-1.5">
+          {t.caption && <p className="text-xs leading-relaxed text-[var(--color-text-secondary)]">{t.caption}</p>}
+          <div className="overflow-x-auto rounded-lg border border-[var(--color-border)]">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-[var(--color-background)] text-left text-[var(--color-text-muted)]">
+                  {t.header.map((cell, j) => (
+                    <th key={j} className="px-3 py-2 align-top font-semibold">
+                      {cell}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--color-border)]">
+                {t.body.map((row, r) => (
+                  <tr key={r}>
+                    {row.map((cell, c) => (
+                      <td key={c} className="whitespace-normal break-words px-3 py-2 align-top text-[var(--color-text-secondary)]">
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -238,6 +240,16 @@ export default function DraftReviewPage({
             if (found) dateFields[key] = found.date;
           }
 
+          // Neither of these has its own extracted field or form —
+          // the bot never derives one number from a whole Age Limit
+          // table or a Pay Scale sentence on its own — so pre-fill from
+          // the same best-effort derivation the approve step falls
+          // back to server-side (deriveAgeRange/deriveSalaryRange),
+          // letting the admin see and correct the guess before
+          // publishing rather than only after.
+          const derivedAge = deriveAgeRange(ex.ageLimit);
+          const derivedSalary = deriveSalaryRange(ex.postDetails);
+
           setFields({
             title: String(ex.title ?? data.draft.jobTitle),
             organization: String(ex.organization ?? data.draft.organization),
@@ -245,6 +257,10 @@ export default function DraftReviewPage({
             qualification: String(ex.qualification ?? ""),
             feeGeneral: fee.general !== undefined ? String(fee.general) : "",
             feeReserved: fee.reserved !== undefined ? String(fee.reserved) : "",
+            minAge: derivedAge.minAge !== undefined ? String(derivedAge.minAge) : "",
+            maxAge: derivedAge.maxAge !== undefined ? String(derivedAge.maxAge) : "",
+            salaryMin: derivedSalary.salaryMin !== undefined ? String(derivedSalary.salaryMin) : "",
+            salaryMax: derivedSalary.salaryMax !== undefined ? String(derivedSalary.salaryMax) : "",
             ...dateFields,
           });
 
@@ -280,6 +296,10 @@ export default function DraftReviewPage({
       if (draft?.draftType === "job") {
         body.totalVacancies = Number(fields.totalVacancies) || 0;
         body.qualification = fields.qualification;
+        if (fields.minAge) body.minAge = Number(fields.minAge) || undefined;
+        if (fields.maxAge) body.maxAge = Number(fields.maxAge) || undefined;
+        if (fields.salaryMin) body.salaryMin = Number(fields.salaryMin) || undefined;
+        if (fields.salaryMax) body.salaryMax = Number(fields.salaryMax) || undefined;
 
         const importantDates = JOB_DATE_FIELDS.filter(({ key }) => fields[key]).map(
           ({ key, label }) => ({ label, date: fields[key] })
@@ -456,6 +476,36 @@ export default function DraftReviewPage({
                   label="Qualification"
                   value={fields.qualification ?? ""}
                   onChange={(e) => setField("qualification")(e.target.value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <TextField
+                  label="Min. Age"
+                  type="number"
+                  value={fields.minAge ?? ""}
+                  onChange={(e) => setField("minAge")(e.target.value)}
+                />
+                <TextField
+                  label="Max. Age"
+                  type="number"
+                  value={fields.maxAge ?? ""}
+                  onChange={(e) => setField("maxAge")(e.target.value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <TextField
+                  label="Salary Min (₹)"
+                  type="number"
+                  value={fields.salaryMin ?? ""}
+                  onChange={(e) => setField("salaryMin")(e.target.value)}
+                />
+                <TextField
+                  label="Salary Max (₹)"
+                  type="number"
+                  value={fields.salaryMax ?? ""}
+                  onChange={(e) => setField("salaryMax")(e.target.value)}
                 />
               </div>
 
@@ -744,6 +794,24 @@ export default function DraftReviewPage({
             Additional Notification Details
             <span className="ml-2 font-normal text-[var(--color-text-muted)]">(from source page)</span>
           </p>
+
+          {typeof ex.importantDatesText === "string" && (
+            <section>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                Important Dates (full table)
+              </p>
+              <PipeTable text={ex.importantDatesText} />
+            </section>
+          )}
+
+          {typeof ex.applicationFeeText === "string" && (
+            <section>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                Application Fee (full table)
+              </p>
+              <PipeTable text={ex.applicationFeeText} />
+            </section>
+          )}
 
           {typeof ex.eligibility === "string" && (
             <section>

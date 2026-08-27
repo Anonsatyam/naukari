@@ -13,8 +13,8 @@ export interface ExtractedStructuredFields {
   // per-paper, per-category fee table). Both sets of fields can be
   // present at once — they aren't mutually exclusive with the
   // PDF-derived fields above.
-  importantDatesText?: string[];
-  applicationFeeText?: string[];
+  importantDatesText?: string;
+  applicationFeeText?: string;
   ageLimit?: string;
   postDetails?: string;
   eligibility?: string;

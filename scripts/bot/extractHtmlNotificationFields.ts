@@ -1,4 +1,5 @@
 import { ExtractedStructuredFields, extractStructuredFields } from "./extractStructuredFields";
+import { TABLE_SEP } from "../../lib/pipeTables";
 
 /**
  * Sites like abc.com put every structured field directly in the
@@ -40,7 +41,18 @@ function decodeEntities(text: string): string {
 function stripTags(html: string): string {
   return decodeEntities(html.replace(/<[^>]+>/g, " "))
     .replace(/\s+/g, " ")
-    .trim();
+    .trim()
+    .replace(/\|/g, "｜"); // U+FF5C fullwidth vertical line — visually
+  // identical to a real "|", but a distinct codepoint. Every cell/row of
+  // content extracted from HTML funnels through this one function
+  // before being joined with our own " | "/" || " delimiters — a
+  // source author routinely types a literal "|" as their own mini-list
+  // separator *inside* one table cell (seen on a Patna High Court
+  // notification's CPT row: "Word: 20 | Spread Sheets: 20 | Internet:
+  // 10"), which otherwise reads as extra cell boundaries and shifts
+  // that whole row out of alignment with its header. Neutralizing at
+  // the source, once, protects every consumer of this format instead
+  // of needing an escaping scheme at every join/split site.
 }
 
 // English + Hindi keyword match, same idea as the site's own bilingual
@@ -271,6 +283,18 @@ function extractCanonicalVacancies(rows: string[]): number | undefined {
       const byColumn = firstNumberInText(cells[countColIndex]);
       if (byColumn) return byColumn;
     }
+    // The matched "total" phrase can be this row's own dedicated label
+    // ("कुल योग (Total Vacancies)", with the count in a separate cell —
+    // handled by countColIndex above) OR embedded inline within a
+    // longer post-name cell, e.g. "... Total Post ( 11403 )" (a
+    // single-row post table with no separate grand-total row at all).
+    // In the inline case the count sits right next to the phrase in
+    // THIS cell — checked first, before scanning the whole row, since a
+    // later cell (a pay-scale column, in that exact layout) can also
+    // contain numbers and get mistaken for the count otherwise.
+    const inLabel = lastNumberInRow(label);
+    if (inLabel) return inLabel;
+
     const total = lastNumberInRow(row);
     if (total) return total;
   }
@@ -293,19 +317,27 @@ function extractCanonicalVacancies(rows: string[]): number | undefined {
   return undefined;
 }
 
+// Every field below except howToApplyRaw/importantLinksRaw holds one
+// entry per *distinct table (or plain-text block)* found under that
+// heading, not a flattened list of rows — preserving real `<table>`
+// boundaries is what lets parsePipeTables (lib/pipeTables.ts) split
+// multi-table sections (e.g. Exam Pattern's Prelims+Mains, or Age
+// Limit's grade table + a differently-headed relaxation table)
+// correctly regardless of whether their headers happen to match, one
+// source's markup and never guessed at again downstream.
 interface ParsedSections {
-  importantDatesRaw: string[];
-  applicationFeeRaw: string[];
-  ageLimitRaw: string[];
-  postDetailsRaw: string[];
-  eligibilityRaw: string[];
-  selectionProcessRaw: string[];
+  importantDatesRaw: string[][];
+  applicationFeeRaw: string[][];
+  ageLimitRaw: string[][];
+  postDetailsRaw: string[][];
+  eligibilityRaw: string[][];
+  selectionProcessRaw: string[][];
   howToApplyRaw: string[];
   importantLinksRaw: { label: string; url: string }[];
-  documentsRequiredRaw: string[];
-  examPatternRaw: string[];
-  faqRaw: string[];
-  conclusionRaw: string[];
+  documentsRequiredRaw: string[][];
+  examPatternRaw: string[][];
+  faqRaw: string[][];
+  conclusionRaw: string[][];
 }
 
 function classifyHeading(headingText: string): keyof ParsedSections | null {
@@ -431,21 +463,50 @@ function parseSections(html: string): ParsedSections {
     conclusionRaw: [],
   };
 
-  const headingPositions: { field: keyof ParsedSections | null; start: number; end: number }[] = [];
+  const headingPositions: { field: keyof ParsedSections | null; text: string; start: number; end: number }[] = [];
   const headingPattern = new RegExp(HEADING_PATTERN.source, "gi");
   let headingMatch: RegExpExecArray | null;
   while ((headingMatch = headingPattern.exec(html)) !== null) {
+    const text = stripTags(headingMatch[1]);
     headingPositions.push({
-      field: classifyHeading(stripTags(headingMatch[1])),
+      field: classifyHeading(text),
+      text,
       start: headingMatch.index,
       end: headingPattern.lastIndex,
     });
   }
 
+  // A numbered sub-heading ("1. प्रारंभिक / स्क्रीनिंग परीक्षा", "2. मुख्य
+  // लिखित परीक्षा", ...) — e.g. Exam Pattern broken into a Prelims/Mains/
+  // CPT sub-heading per stage, each with its own table. classifyHeading
+  // won't recognize these (they don't contain "exam pattern" or any
+  // other tracked keyword), so without this they'd end a classified
+  // section's segment right after its intro sentence and silently
+  // discard every table under them — exactly what happened on a Patna
+  // High Court notification page. Capped so this can't run away and
+  // swallow trailing unrelated content (a WordPress footer's "Recent
+  // Posts"/"You Might Also Like" section is many headings deep and
+  // never numbered, so the cap is never the thing standing between a
+  // genuine multi-stage section and the footer either way).
+  const NUMBERED_SUBHEADING = /^\s*\d+\s*[.):]/;
+  const MAX_ABSORBED_SUBHEADINGS = 6;
+
   for (let i = 0; i < headingPositions.length; i++) {
     const { field, end } = headingPositions[i];
     if (!field) continue;
-    const segmentEnd = i + 1 < headingPositions.length ? headingPositions[i + 1].start : html.length;
+
+    let j = i + 1;
+    let absorbed = 0;
+    while (
+      j < headingPositions.length &&
+      !headingPositions[j].field &&
+      NUMBERED_SUBHEADING.test(headingPositions[j].text) &&
+      absorbed < MAX_ABSORBED_SUBHEADINGS
+    ) {
+      j++;
+      absorbed++;
+    }
+    const segmentEnd = j < headingPositions.length ? headingPositions[j].start : html.length;
     const segment = html.slice(end, segmentEnd);
 
     if (field === "importantLinksRaw") {
@@ -461,16 +522,20 @@ function parseSections(html: string): ParsedSections {
 
     const tablePattern = new RegExp(TABLE_PATTERN.source, "gi");
     let tableMatch: RegExpExecArray | null;
-    const tableRows: string[] = [];
+    const tableBlocks: string[][] = [];
     while ((tableMatch = tablePattern.exec(segment)) !== null) {
-      tableRows.push(...tableToPairs(tableMatch[1]));
+      const rows = tableToPairs(tableMatch[1]).filter((row) => !WP_POST_META_ROW.test(row));
+      if (rows.length > 0) tableBlocks.push(rows);
     }
     // No table in this segment — e.g. a bullet-list Eligibility section,
     // or an FAQ/Conclusion written as plain paragraphs — so fall back to
     // paragraph/list-item/sub-heading text instead of leaving the field
     // empty.
-    const rows = tableRows.length > 0 ? tableRows : extractPlainBlocks(segment);
-    sections[field].push(...rows.filter((row) => !WP_POST_META_ROW.test(row)));
+    if (tableBlocks.length === 0) {
+      const plain = extractPlainBlocks(segment).filter((row) => !WP_POST_META_ROW.test(row));
+      if (plain.length > 0) tableBlocks.push(plain);
+    }
+    sections[field].push(...tableBlocks);
   }
 
   return sections;
@@ -539,26 +604,39 @@ export function extractHtmlNotificationFields(html: string): HtmlNotificationExt
   // the fee inputs, and Total Vacancies stayed empty on the review page
   // even though the raw data (visible in "Raw extracted data") clearly
   // had everything needed to fill them in.
-  const canonicalDates = extractCanonicalDates(sections.importantDatesRaw);
-  const canonicalFee = extractCanonicalFee(sections.applicationFeeRaw);
-  const canonicalVacancies = extractCanonicalVacancies(sections.postDetailsRaw);
+  // These flatten the per-table blocks back into one row list — the
+  // canonical parsers don't care which table a "label | value" row came
+  // from, they just want every row under the heading.
+  const canonicalDates = extractCanonicalDates(sections.importantDatesRaw.flat());
+  const canonicalFee = extractCanonicalFee(sections.applicationFeeRaw.flat());
+  const canonicalVacancies = extractCanonicalVacancies(sections.postDetailsRaw.flat());
+
+  // Joins each table's own rows with " || " (unchanged), then joins
+  // multiple tables under one heading with TABLE_SEP — an explicit,
+  // always-correct boundary marker (it comes straight from a real
+  // `<table>` tag pair) that lib/pipeTables.ts's parsePipeTables splits
+  // back apart, instead of the old approach of flattening every table
+  // into one blob and trying to re-detect boundaries later by guessing
+  // (e.g. "does a header row reappear?") — which only ever worked for
+  // the specific shapes it was written against.
+  const joinBlocks = (blocks: string[][]) => blocks.map((rows) => rows.join(" || ")).join(TABLE_SEP);
 
   const fields: ExtractedStructuredFields = {
     ...fallbackFields,
     ...(canonicalDates.length ? { importantDates: canonicalDates } : {}),
     ...(Object.keys(canonicalFee).length ? { applicationFee: canonicalFee } : {}),
     ...(canonicalVacancies !== undefined ? { totalVacancies: canonicalVacancies } : {}),
-    ...(sections.importantDatesRaw.length ? { importantDatesText: sections.importantDatesRaw } : {}),
-    ...(sections.applicationFeeRaw.length ? { applicationFeeText: sections.applicationFeeRaw } : {}),
-    ...(sections.ageLimitRaw.length ? { ageLimit: sections.ageLimitRaw.join(" || ") } : {}),
-    ...(sections.postDetailsRaw.length ? { postDetails: sections.postDetailsRaw.join(" || ") } : {}),
-    ...(sections.eligibilityRaw.length ? { eligibility: sections.eligibilityRaw.join(" || ") } : {}),
-    ...(sections.selectionProcessRaw.length ? { selectionProcess: sections.selectionProcessRaw.join(" || ") } : {}),
+    ...(sections.importantDatesRaw.length ? { importantDatesText: joinBlocks(sections.importantDatesRaw) } : {}),
+    ...(sections.applicationFeeRaw.length ? { applicationFeeText: joinBlocks(sections.applicationFeeRaw) } : {}),
+    ...(sections.ageLimitRaw.length ? { ageLimit: joinBlocks(sections.ageLimitRaw) } : {}),
+    ...(sections.postDetailsRaw.length ? { postDetails: joinBlocks(sections.postDetailsRaw) } : {}),
+    ...(sections.eligibilityRaw.length ? { eligibility: joinBlocks(sections.eligibilityRaw) } : {}),
+    ...(sections.selectionProcessRaw.length ? { selectionProcess: joinBlocks(sections.selectionProcessRaw) } : {}),
     ...(sections.howToApplyRaw.length ? { howToApply: sections.howToApplyRaw } : {}),
-    ...(sections.documentsRequiredRaw.length ? { documentsRequired: sections.documentsRequiredRaw.join(" || ") } : {}),
-    ...(sections.examPatternRaw.length ? { examPattern: sections.examPatternRaw.join(" || ") } : {}),
-    ...(sections.faqRaw.length ? { faqText: sections.faqRaw } : {}),
-    ...(sections.conclusionRaw.length ? { conclusionText: sections.conclusionRaw.join(" ") } : {}),
+    ...(sections.documentsRequiredRaw.length ? { documentsRequired: joinBlocks(sections.documentsRequiredRaw) } : {}),
+    ...(sections.examPatternRaw.length ? { examPattern: joinBlocks(sections.examPatternRaw) } : {}),
+    ...(sections.faqRaw.length ? { faqText: sections.faqRaw.flat() } : {}),
+    ...(sections.conclusionRaw.length ? { conclusionText: sections.conclusionRaw.flat().join(" ") } : {}),
     ...(importantLinks.length ? { importantLinks } : {}),
     ...(guessLink(importantLinks, ["apply online", "apply now", "online form", "click here"])
       ? { applyOnlineLink: guessLink(importantLinks, ["apply online", "apply now", "online form", "click here"]) }

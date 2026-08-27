@@ -13,6 +13,15 @@ import {
 import { Job, ResultItem, AdmitCardItem, BotDraft, BotLogEntry, DraftType, HotUpdateItem } from "@/lib/types";
 import { isRecent, isClosingSoon, getApplicationEndDate } from "@/lib/dateHelpers";
 import { deepDecodeEntities } from "@/lib/entities";
+import { parsePipeTables, PipeTable, firstNumber, deriveAgeRange, deriveSalaryRange } from "@/lib/pipeTables";
+
+// Re-exported so the admin draft review page (a client component,
+// which can't import this server-only module) can compute the same
+// smart pre-fill for its Min/Max Age and Salary inputs — these two are
+// pure text parsers with no server dependency, so they live in the
+// shared lib/pipeTables.ts and are just re-exported here for callers
+// that already import data.ts for everything else.
+export { deriveAgeRange, deriveSalaryRange };
 
 // Re-exported so existing callers importing these from this module keep working.
 export { isRecent, isClosingSoon, getApplicationEndDate };
@@ -26,25 +35,18 @@ function slugify(title: string): string {
   return base || `job-${Date.now()}`;
 }
 
-// ---- Bot raw-field parsing (postDetails / selectionProcess) -------------
+// ---- Bot raw-field parsing (postDetails / selectionProcess / ageLimit) --
 //
-// extractHtmlNotificationFields.ts stores table-shaped notification
-// content as a single "cell | cell | cell || row || row" string (see
-// tableToPairs() there) rather than trying to force every source
-// site's table layout into one fixed shape. Converting that into the
-// Job type's actual fields (vacancyBreakdown: {category,count}[],
-// selectionProcess: string[]) belongs here, at the one place a draft
-// turns into a published record — not in the extractor, which doesn't
-// know what a Job record needs, and not in the page component, which
-// shouldn't have to re-parse raw pipe strings to render.
-
-function parsePipeRows(text: string): string[][] {
-  return text
-    .split(" || ")
-    .map((row) => row.split(" | ").map((cell) => cell.trim()))
-    .filter((row) => row.some(Boolean))
-    .filter((row) => !WP_POST_META_ROW.test(row[0]));
-}
+// extractHtmlNotificationFields.ts stores each free-form section as one
+// or more distinct pipe-tables (see lib/pipeTables.ts) rather than
+// trying to force every source site's table layout into one fixed
+// shape. Converting that into the Job type's actual structured fields
+// (vacancyBreakdown: {category,count}[], selectionProcess: string[])
+// belongs here, at the one place a draft turns into a published record
+// — not in the extractor, which doesn't know what a Job record needs,
+// and not in the page component, which shouldn't have to re-parse raw
+// pipe strings to render (it still does, for the raw-text *fallback*
+// display, via the same shared lib/pipeTables.ts parser).
 
 // "कुल पद" ("total posts") is at least as common on real notification
 // pages as "कुल योग"/"कुल रिक्तियां" — it was missing here, which meant a
@@ -55,25 +57,20 @@ function parsePipeRows(text: string): string[][] {
 // page for any source using that phrasing).
 const VACANCY_TOTAL_ROW_LABEL = /total\s*vacanc\w*|total\s*posts?|grand\s*total|कुल\s*रिक्तिय|कुल\s*योग|कुल\s*पद/i;
 
-// WordPress post-meta boilerplate ("Post author: X", "Post published:
-// Y", ...) that some source themes render right at the top of the post
-// body — it can end up captured as a handful of stray one-cell rows
-// ahead of a section's real table (observed under "Post Details"),
-// which shifts the real header out of row 0 and breaks every parser
-// below that assumes row 0 is the header. Filtered out at the one place
-// every draft's raw rows funnel through before being parsed further.
-const WP_POST_META_ROW = /^post\s*(author|published|category|comments?)\s*:/i;
-
 // Rows whose first cell is itself a category label ("Category" /
-// "कोटि" / "वर्ग" / "श्रेणी") mark either the table's own header (already
-// stripped as `header` before this is used) or, mid-table, the start of
-// a *second* sub-table under the same "Age Limit" heading — see
+// "कोटि" / "वर्ग" / "श्रेणी") mark a table that's entirely category ->
+// age/relaxation value, rather than a grade/cadre age table — see
 // parseAgeLimitSections below.
 const CATEGORY_HEADER = /category|कोटि|वर्ग|श्रेणी/i;
 
 /**
  * Converts a postDetails pipe-table into {category, count}[] for the
- * job page's "Vacancy Details (Category-wise)" section.
+ * job page's "Vacancy Details (Category-wise)" section. Only ever looks
+ * at the FIRST table under the heading — some sources publish a second,
+ * unrelated table in the same section (a regional/language allocation
+ * matrix alongside the actual post-count table); rather than guess
+ * which one is "the" vacancy table, this only trusts the first, and the
+ * job page's postDetailsText raw-table fallback covers the rest.
  *
  * Resolves the count column by its OWN header text (matching the same
  * fix applied in the bot's extractCanonicalVacancies) rather than
@@ -81,12 +78,12 @@ const CATEGORY_HEADER = /category|कोटि|वर्ग|श्रेणी/i
  * Women's Quota or Pay Scale column after the actual post-count
  * column, and a position-based guess picks up the wrong number.
  */
-function parseVacancyBreakdown(postDetails: unknown): { category: string; count: number; grade?: string }[] | undefined {
-  if (typeof postDetails !== "string" || !postDetails.includes(" | ")) return undefined;
-  const rows = parsePipeRows(postDetails);
-  if (rows.length < 2) return undefined;
+export function parseVacancyBreakdown(postDetails: unknown): { category: string; count: number; grade?: string }[] | undefined {
+  if (typeof postDetails !== "string") return undefined;
+  const table = parsePipeTables(postDetails)[0];
+  if (!table) return undefined;
 
-  const [header, ...body] = rows;
+  const { header, body } = table;
   const countColIndex = header.findIndex((h) => VACANCY_TOTAL_ROW_LABEL.test(h));
   if (countColIndex <= 0) return undefined;
   // Some notification templates put a Grade/Scale column between the
@@ -100,76 +97,75 @@ function parseVacancyBreakdown(postDetails: unknown): { category: string; count:
   for (const row of body) {
     const label = row[0];
     if (!label || VACANCY_TOTAL_ROW_LABEL.test(label)) continue; // skip the grand-total row itself
-    const match = row[countColIndex]?.match(/\d[\d,]*/);
-    if (!match) continue;
-    const count = parseInt(match[0].replace(/,/g, ""), 10);
-    if (Number.isNaN(count)) continue;
+    const count = firstNumber(row[countColIndex]);
+    if (count === undefined) continue;
     const grade = gradeColIndex > 0 ? row[gradeColIndex] : undefined;
     breakdown.push({ category: label, count, ...(grade ? { grade } : {}) });
   }
   return breakdown.length > 0 ? breakdown : undefined;
 }
 
+function ageLimitTableToGradeRows(table: PipeTable): { grade: string; minAge: string; maxAge: string }[] {
+  return table.body
+    .map((row) => ({ grade: row[0], minAge: row[1] ?? "", maxAge: row[2] ?? "" }))
+    .filter((r) => r.grade);
+}
+
+function ageLimitTableToRelaxationRows(table: PipeTable): { category: string; relaxation: string }[] {
+  // Deliberately does NOT re-filter rows by CATEGORY_HEADER — real
+  // category *values* routinely contain the same words the header does
+  // ("सभी श्रेणी" = "all categories", "आरक्षित वर्ग" = "reserved
+  // category"), and an earlier version of this that filtered on that
+  // word discarded real data rows, not just a repeated header.
+  return table.body
+    .map((row) => ({ category: row[0], relaxation: row[row.length - 1] }))
+    .filter((r) => r.category && r.relaxation);
+}
+
 /**
- * Converts the raw "Age Limit" pipe-table(s) — extracted as one joined
- * blob under a single heading, see extractHtmlNotificationFields.ts —
- * into the job page's two distinct sections: a cadre/grade-wise
- * min/max-age table (ageLimitByGrade) and a category-wise relaxation
- * table (ageRelaxationBreakdown). Sources publish this in one of two
- * shapes:
+ * Converts the raw "Age Limit" table(s) into the job page's two
+ * distinct sections: a cadre/grade-wise min/max-age table
+ * (ageLimitByGrade) and a category-wise relaxation table
+ * (ageRelaxationBreakdown). Sources publish this in one of two shapes:
  *
- * 1. A single category-headed table (header's first cell reads
+ * 1. Two separate tables under one heading — a grade-wise age table
+ *    (e.g. "Officer | 23 | 35") followed by a category/relaxation
+ *    table. Table boundaries are explicit (see lib/pipeTables.ts), so
+ *    this is just "first table -> grade rows, second -> relaxation
+ *    rows" — no guessing which is which needed.
+ * 2. A single category-headed table (header's first cell reads
  *    "Category"/"कोटि"/"वर्ग"/"श्रेणी") where every row already *is* a
- *    category → age/relaxation value — the whole table becomes
- *    ageRelaxationBreakdown, keyed off the row's last cell (the actual
- *    relaxed/final age or relaxation text, whichever the table ends
- *    with).
- * 2. A grade-wise age table (e.g. "Officer | 23 | 35") followed by a
- *    second, separately-headed category/relaxation table under the
- *    same heading — split at the first body row whose own first cell
- *    is a category-header, with everything before that row treated as
- *    grade rows and everything after (skipping that header row itself)
- *    treated as relaxation rows.
- *
- * Deliberately does NOT re-filter body rows by CATEGORY_HEADER once a
- * table is already classified as category-wise — real category
- * *values* routinely contain the same words the header does ("सभी
- * श्रेणी" = "all categories", "आरक्षित वर्ग" = "reserved category"),
- * and an earlier version of this that filtered on that word discarded
- * real data rows, not just a repeated header.
+ *    category -> age/relaxation value — the whole table becomes
+ *    ageRelaxationBreakdown, keyed off the row's last cell. This is
+ *    the one case that still needs the CATEGORY_HEADER keyword check,
+ *    since a single table's own shape is genuinely ambiguous otherwise
+ *    (a grade table and a category-relaxation table look the same:
+ *    "label | number | number-or-text").
  */
-function parseAgeLimitSections(ageLimit: unknown): {
+export function parseAgeLimitSections(ageLimit: unknown): {
   ageLimitByGrade?: { grade: string; minAge: string; maxAge: string }[];
   ageRelaxationBreakdown?: { category: string; relaxation: string }[];
 } {
-  if (typeof ageLimit !== "string" || !ageLimit.includes(" | ")) return {};
-  const rows = parsePipeRows(ageLimit);
-  if (rows.length < 2) return {};
-  const [header, ...body] = rows;
+  if (typeof ageLimit !== "string") return {};
+  const tables = parsePipeTables(ageLimit);
+  if (tables.length === 0) return {};
 
-  const toGradeRow = (row: string[]) => ({ grade: row[0], minAge: row[1] ?? "", maxAge: row[2] ?? "" });
-  const toRelaxationRow = (row: string[]) => ({ category: row[0], relaxation: row[row.length - 1] });
+  if (tables.length >= 2) {
+    const ageLimitByGrade = ageLimitTableToGradeRows(tables[0]);
+    const ageRelaxationBreakdown = ageLimitTableToRelaxationRows(tables[1]);
+    return {
+      ageLimitByGrade: ageLimitByGrade.length > 0 ? ageLimitByGrade : undefined,
+      ageRelaxationBreakdown: ageRelaxationBreakdown.length > 0 ? ageRelaxationBreakdown : undefined,
+    };
+  }
 
-  if (CATEGORY_HEADER.test(header[0])) {
-    const ageRelaxationBreakdown = body.map(toRelaxationRow).filter((r) => r.category && r.relaxation);
+  const table = tables[0];
+  if (CATEGORY_HEADER.test(table.header[0])) {
+    const ageRelaxationBreakdown = ageLimitTableToRelaxationRows(table);
     return { ageRelaxationBreakdown: ageRelaxationBreakdown.length > 0 ? ageRelaxationBreakdown : undefined };
   }
-
-  const splitIndex = body.findIndex((row) => CATEGORY_HEADER.test(row[0]));
-  if (splitIndex === -1) {
-    const ageLimitByGrade = body.map(toGradeRow).filter((r) => r.grade);
-    return { ageLimitByGrade: ageLimitByGrade.length > 0 ? ageLimitByGrade : undefined };
-  }
-
-  const ageLimitByGrade = body.slice(0, splitIndex).map(toGradeRow).filter((r) => r.grade);
-  const ageRelaxationBreakdown = body
-    .slice(splitIndex + 1)
-    .map(toRelaxationRow)
-    .filter((r) => r.category && r.relaxation);
-  return {
-    ageLimitByGrade: ageLimitByGrade.length > 0 ? ageLimitByGrade : undefined,
-    ageRelaxationBreakdown: ageRelaxationBreakdown.length > 0 ? ageRelaxationBreakdown : undefined,
-  };
+  const ageLimitByGrade = ageLimitTableToGradeRows(table);
+  return { ageLimitByGrade: ageLimitByGrade.length > 0 ? ageLimitByGrade : undefined };
 }
 
 /**
@@ -181,23 +177,24 @@ function parseAgeLimitSections(ageLimit: unknown): {
  * placeholder: `ensureStringArray` correctly rejects the raw pipe
  * string as the wrong runtime shape and falls back to that placeholder
  * — the fix is supplying it a real fallback derived from the table,
- * not bypassing the shape check.
+ * not bypassing the shape check. Flattens across every table under the
+ * heading (rather than only the first) since a source occasionally
+ * splits Prelims/Mains selection stages into two small tables.
  */
 function parseSelectionSteps(selectionProcess: unknown): string[] | undefined {
-  if (typeof selectionProcess !== "string" || !selectionProcess.includes(" | ")) return undefined;
-  const rows = parsePipeRows(selectionProcess);
-  if (rows.length < 2) return undefined;
+  if (typeof selectionProcess !== "string") return undefined;
+  const tables = parsePipeTables(selectionProcess);
+  if (tables.length === 0) return undefined;
 
-  const [header, ...body] = rows;
-  const steps = body
-    .map((row) => {
+  const steps = tables.flatMap(({ header, body }) =>
+    body.map((row) => {
       const parts = row
         .slice(1)
         .map((cell, i) => (cell && cell !== "—" ? `${header[i + 1]}: ${cell}` : null))
         .filter((part): part is string => Boolean(part));
       return [row[0], ...parts].filter(Boolean).join(" — ");
     })
-    .filter(Boolean);
+  ).filter(Boolean);
   return steps.length > 0 ? steps : undefined;
 }
 
@@ -540,9 +537,19 @@ export async function approveDraft(
     // (and the whole "Vacancy Details" section silently never rendered)
     // for every bot-sourced job until now.
     vacancyBreakdown: ensureOptionalArray(merged.vacancyBreakdown) ?? parseVacancyBreakdown(merged.postDetails),
+    // Kept verbatim regardless of whether parseVacancyBreakdown found a
+    // category->count shape in it — some sources' "Post Details" table
+    // is really just post name / participating banks / pay scale, with
+    // no per-category numbers to extract at all, and that's still worth
+    // showing as a table rather than nothing.
+    postDetailsText: typeof merged.postDetails === "string" ? merged.postDetails : undefined,
     qualification: merged.qualification ?? "As per notification",
-    minAge: merged.minAge ?? 18,
-    maxAge: merged.maxAge ?? 40,
+    // The bot never derives a single min/max age number on its own (no
+    // form field for it either) — this was always silently defaulting
+    // to the generic 18-40 placeholder even when the real range (e.g.
+    // "20 to 28 years") was sitting right there in the Age Limit table.
+    minAge: merged.minAge ?? deriveAgeRange(merged.ageLimit).minAge ?? 18,
+    maxAge: merged.maxAge ?? deriveAgeRange(merged.ageLimit).maxAge ?? 40,
     ageRelaxation: merged.ageRelaxation,
     // Manual edits from the draft review page win if the admin filled
     // them in; otherwise fall back to parsing the raw "Age Limit" table
@@ -551,13 +558,23 @@ export async function approveDraft(
       ensureOptionalArray(merged.ageRelaxationBreakdown) ?? parseAgeLimitSections(merged.ageLimit).ageRelaxationBreakdown,
     ageAsOnDate: merged.ageAsOnDate,
     ageLimitByGrade: ensureOptionalArray(merged.ageLimitByGrade) ?? parseAgeLimitSections(merged.ageLimit).ageLimitByGrade,
-    salaryMin: merged.salaryMin ?? 0,
-    salaryMax: merged.salaryMax ?? 0,
+    ageLimitText: typeof merged.ageLimit === "string" ? merged.ageLimit : undefined,
+    // Same gap as age above — there's no dedicated "Salary" section on
+    // these sources at all (it's folded into the Post Details prose as
+    // "Basic Pay: ₹24,050 – ₹64,480/- + allowances"), so this always
+    // silently defaulted to 0/"As per rules" even when a real pay range
+    // was sitting in postDetails.
+    salaryMin: merged.salaryMin ?? deriveSalaryRange(merged.postDetails).salaryMin ?? 0,
+    salaryMax: merged.salaryMax ?? deriveSalaryRange(merged.postDetails).salaryMax ?? 0,
     applicationFee: ensureApplicationFee(merged.applicationFee, {
       general: 0,
       reserved: 0,
       note: "See official notification",
     }),
+    // Kept verbatim regardless of whether the two-number summary above
+    // captured everything — a third PwBD/OH-only fee row, or a payment-
+    // method footnote, has nowhere else to live.
+    applicationFeeText: typeof merged.applicationFeeText === "string" ? merged.applicationFeeText : undefined,
     // These two are the exact field the bug that motivated this fix was
     // found in: a draft can carry a same-named field in the wrong shape
     // (e.g. a single joined string instead of an array of steps) —
@@ -570,11 +587,21 @@ export async function approveDraft(
       merged.selectionProcess,
       parseSelectionSteps(merged.selectionProcess) ?? ["As per official notification"]
     ),
+    // Kept verbatim alongside the reformatted version above — the
+    // job page prefers rendering this actual table when it's present,
+    // since selectionProcess is a lossy one-line-per-stage rewrite of
+    // it built only for the plain numbered StepList.
+    selectionProcessText: typeof merged.selectionProcess === "string" ? merged.selectionProcess : undefined,
     examPattern: merged.examPattern,
     examPatternNotes: ensureOptionalArray(merged.examPatternNotes),
     documentsRequired: merged.documentsRequired,
     syllabusSummary: merged.syllabusSummary,
     eligibilityDetails: ensureOptionalArray(merged.eligibilityDetails),
+    // Captured unconditionally, unlike eligibilityDetails above (which
+    // only exists if an admin kept the review page's textarea
+    // populated) — so eligibility content is never silently lost just
+    // because nobody edited that field before approving.
+    eligibilityText: typeof merged.eligibility === "string" ? merged.eligibility : undefined,
     howToApply: ensureStringArray(merged.howToApply, [
       "See the official notification for the application procedure",
     ]),
@@ -583,6 +610,16 @@ export async function approveDraft(
     sourceUrl: draft.sourceUrl,
     importantLinks: ensureOptionalArray(merged.importantLinks),
     importantDates: ensureArray(merged.importantDates, []),
+    // The bot hands this over as string[] (one "label | value" row per
+    // entry, see importantDatesText in extractHtmlNotificationFields.ts)
+    // — joined into the same single pipe-string convention
+    // postDetailsText/ageLimitText use, so the job page can render it
+    // with the exact same PipeTableOrText.
+    importantDatesText: Array.isArray(merged.importantDatesText)
+      ? (merged.importantDatesText as string[]).join(" || ")
+      : typeof merged.importantDatesText === "string"
+        ? merged.importantDatesText
+        : undefined,
     eligibilityRules: ensureArray(merged.eligibilityRules, []),
     faqs: ensureOptionalArray(merged.faqs),
     conclusion: merged.conclusion,

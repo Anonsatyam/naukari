@@ -1,7 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Calendar, ExternalLink, FileText, HelpCircle, Link2, ShieldCheck, Users } from "lucide-react";
+import {
+  Calendar,
+  ClipboardList,
+  ExternalLink,
+  FileText,
+  GraduationCap,
+  HelpCircle,
+  Hourglass,
+  Link2,
+  ListChecks,
+  Users,
+  Wallet,
+} from "lucide-react";
 import {
   getPublishedJobs,
   getPublishedJobBySlug,
@@ -10,6 +22,7 @@ import {
   getRelatedJobs,
 } from "@/lib/server/data";
 import { formatCurrency, formatDate, daysUntil } from "@/lib/utils";
+import { parsePipeTables } from "@/lib/pipeTables";
 import { ButtonLink } from "@/components/Button";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
@@ -64,6 +77,13 @@ export default async function JobDetailPage({
   const remaining = endDate ? daysUntil(endDate) : null;
   const relatedJobs = await getRelatedJobs(job, 3);
 
+  const hasVacancyTable = Array.isArray(job.vacancyBreakdown) && job.vacancyBreakdown.length > 0;
+  const hasVacancyFallback = !hasVacancyTable && !!job.postDetailsText;
+
+  const hasAgeGradeTable = Array.isArray(job.ageLimitByGrade) && job.ageLimitByGrade.length > 0;
+  const hasAgeRelaxationTable = Array.isArray(job.ageRelaxationBreakdown) && job.ageRelaxationBreakdown.length > 0;
+  const hasAgeLimitFallback = !hasAgeGradeTable && !hasAgeRelaxationTable && !!job.ageLimitText;
+
   return (
     <div className="container-page py-8">
       <Breadcrumb
@@ -95,12 +115,11 @@ export default async function JobDetailPage({
           {job.shortInfo}
         </p>
 
-        <div className="mt-5 grid grid-cols-2 gap-4 border-t border-[var(--color-border)] pt-5 sm:grid-cols-4">
+        <div className="mt-5 grid grid-cols-3 gap-4 border-t border-[var(--color-border)] pt-5">
           <StatFact
             label="Total Vacancies"
             value={job.totalVacancies ? job.totalVacancies.toLocaleString("en-IN") : "As notified"}
           />
-          <StatFact label="Qualification" value={job.qualification || "As per notification"} />
           <StatFact label="Age Limit" value={job.minAge && job.maxAge ? `${job.minAge}–${job.maxAge} yrs` : "As per rules"} />
           <StatFact
             label="Salary"
@@ -112,54 +131,46 @@ export default async function JobDetailPage({
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
         {/* Main content */}
         <div className="order-2 space-y-6 lg:order-1">
-          <Section title="Important Dates" icon={<Calendar size={16} />}>
-            <div className="divide-y divide-[var(--color-border)]">
-              {(Array.isArray(job.importantDates) ? job.importantDates : []).map((d) => (
-                <div key={d.label} className="flex items-center justify-between py-2.5 text-sm">
-                  <span className="text-[var(--color-text-secondary)]">{d.label}</span>
-                  <span className="font-medium text-[var(--color-text-primary)]">{formatDate(d.date)}</span>
-                </div>
-              ))}
-            </div>
+          <Section title="Important Dates" icon={<Calendar size={16} />} accent="blue">
+            {job.importantDatesText ? (
+              // The full dates table as the source actually published it —
+              // includes rows (PET schedule, provisional allotment, a
+              // month-only value, a relative "2 days after registration
+              // closes" edit window) that don't fit the canonical
+              // {label, ISO date} shape below and would otherwise be lost.
+              <PipeTableOrText text={job.importantDatesText} />
+            ) : (
+              <div className="divide-y divide-[var(--color-border)]">
+                {(Array.isArray(job.importantDates) ? job.importantDates : []).map((d) => (
+                  <div key={d.label} className="flex items-center justify-between py-2.5 text-sm">
+                    <span className="text-[var(--color-text-secondary)]">{d.label}</span>
+                    <span className="font-medium text-[var(--color-text-primary)]">{formatDate(d.date)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </Section>
 
-          {Array.isArray(job.vacancyBreakdown) && job.vacancyBreakdown.length > 0 && (() => {
-            const hasGrade = job.vacancyBreakdown!.some((row) => row.grade);
-            const cols = hasGrade ? "grid-cols-[1fr_auto_auto]" : "grid-cols-2";
-            return (
-              <Section title="Vacancy Details (Category-wise)" icon={<Users size={16} />}>
-                <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
-                  <div className={`grid ${cols} gap-3 bg-[var(--color-background)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]`}>
-                    <span>Post / Category</span>
-                    {hasGrade && <span>Grade</span>}
-                    <span className="text-right">Posts</span>
-                  </div>
-                  <div className="divide-y divide-[var(--color-border)]">
-                    {job.vacancyBreakdown!.map((row) => (
-                      <div key={row.category} className={`grid ${cols} gap-3 px-4 py-2.5 text-sm`}>
-                        <span className="text-[var(--color-text-secondary)]">{row.category}</span>
-                        {hasGrade && <span className="text-[var(--color-text-secondary)]">{row.grade ?? "—"}</span>}
-                        <span className="text-right font-medium text-[var(--color-text-primary)]">
-                          {row.count.toLocaleString("en-IN")}
-                        </span>
-                      </div>
-                    ))}
-                    <div className={`grid ${cols} gap-3 bg-[var(--color-background)] px-4 py-2.5 text-sm font-semibold`}>
-                      <span className="text-[var(--color-text-primary)]">Total</span>
-                      {hasGrade && <span />}
-                      <span className="text-right text-[var(--color-text-primary)]">
-                        {job.totalVacancies ? job.totalVacancies.toLocaleString("en-IN") : "As notified"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </Section>
-            );
-          })()}
-
-          <Section title="Eligibility" icon={<ShieldCheck size={16} />}>
+          <Section title="Application Fee" icon={<Wallet size={16} />} accent="green">
             <div className="space-y-3">
-              <KeyValueRow label="Qualification" value={job.qualification || "As per notification"} />
+              <KeyValueRow label="General / OBC" value={formatCurrency(job.applicationFee?.general ?? 0)} />
+              <KeyValueRow label="SC / ST / Reserved" value={formatCurrency(job.applicationFee?.reserved ?? 0)} />
+              {job.applicationFee?.note && (
+                <p className="text-xs text-[var(--color-text-secondary)]">{job.applicationFee.note}</p>
+              )}
+            </div>
+            {job.applicationFeeText && (
+              // The full fee table as the source actually published it —
+              // covers categories/footnotes (a PwBD/OH-only row, a
+              // payment-method note) the two-number summary above can't.
+              <div className="mt-4 border-t border-[var(--color-border)] pt-4">
+                <PipeTableOrText text={job.applicationFeeText} />
+              </div>
+            )}
+          </Section>
+
+          <Section title="Age Limit Details" icon={<Hourglass size={16} />} accent="purple">
+            <div className="space-y-3">
               <KeyValueRow
                 label="Age Limit"
                 value={job.minAge && job.maxAge ? `${job.minAge} to ${job.maxAge} years` : "As per official notification"}
@@ -169,18 +180,7 @@ export default async function JobDetailPage({
               )}
             </div>
 
-            {Array.isArray(job.eligibilityDetails) && job.eligibilityDetails.length > 0 && (
-              <ul className="mt-4 space-y-2">
-                {job.eligibilityDetails.map((point, i) => (
-                  <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-primary)]" />
-                    <span>{point}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {Array.isArray(job.ageLimitByGrade) && job.ageLimitByGrade.length > 0 && (
+            {hasAgeGradeTable && (
               <div className="mt-4">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
                   Grade-wise Age Limit
@@ -192,7 +192,7 @@ export default async function JobDetailPage({
                     <span>Max. Age</span>
                   </div>
                   <div className="divide-y divide-[var(--color-border)]">
-                    {job.ageLimitByGrade.map((row, i) => (
+                    {job.ageLimitByGrade!.map((row, i) => (
                       <div key={i} className="grid grid-cols-3 gap-3 px-4 py-2.5 text-sm">
                         <span className="font-medium text-[var(--color-text-primary)]">{row.grade}</span>
                         <span className="text-[var(--color-text-secondary)]">{row.minAge}</span>
@@ -204,7 +204,7 @@ export default async function JobDetailPage({
               </div>
             )}
 
-            {Array.isArray(job.ageRelaxationBreakdown) && job.ageRelaxationBreakdown.length > 0 && (
+            {hasAgeRelaxationTable && (
               <div className="mt-4">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
                   Age Relaxation
@@ -215,7 +215,7 @@ export default async function JobDetailPage({
                     <span className="text-right">Relaxation</span>
                   </div>
                   <div className="divide-y divide-[var(--color-border)]">
-                    {job.ageRelaxationBreakdown.map((row) => (
+                    {job.ageRelaxationBreakdown!.map((row) => (
                       <div key={row.category} className="grid grid-cols-2 px-4 py-2.5 text-sm">
                         <span className="text-[var(--color-text-secondary)]">{row.category}</span>
                         <span className="text-right font-medium text-[var(--color-text-primary)]">{row.relaxation}</span>
@@ -223,6 +223,12 @@ export default async function JobDetailPage({
                     ))}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {hasAgeLimitFallback && (
+              <div className="mt-4">
+                <PipeTableOrText text={job.ageLimitText!} />
               </div>
             )}
 
@@ -234,22 +240,81 @@ export default async function JobDetailPage({
             </Link>
           </Section>
 
-          <Section title="Application Fee">
-            <div className="space-y-3">
-              <KeyValueRow label="General / OBC" value={formatCurrency(job.applicationFee?.general ?? 0)} />
-              <KeyValueRow label="SC / ST / Reserved" value={formatCurrency(job.applicationFee?.reserved ?? 0)} />
-              {job.applicationFee?.note && (
-                <p className="text-xs text-[var(--color-text-secondary)]">{job.applicationFee.note}</p>
-              )}
-            </div>
+          {(hasVacancyTable || hasVacancyFallback) && (() => {
+            const hasGrade = hasVacancyTable && job.vacancyBreakdown!.some((row) => row.grade);
+            const cols = hasGrade ? "grid-cols-[1fr_auto_auto]" : "grid-cols-2";
+            return (
+              <Section title="Post / Vacancy Details" icon={<Users size={16} />} accent="orange">
+                {hasVacancyTable ? (
+                  <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
+                    <div className={`grid ${cols} gap-3 bg-[var(--color-background)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]`}>
+                      <span>Post / Category</span>
+                      {hasGrade && <span>Grade</span>}
+                      <span className="text-right">Posts</span>
+                    </div>
+                    <div className="divide-y divide-[var(--color-border)]">
+                      {job.vacancyBreakdown!.map((row) => (
+                        <div key={row.category} className={`grid ${cols} gap-3 px-4 py-2.5 text-sm`}>
+                          <span className="text-[var(--color-text-secondary)]">{row.category}</span>
+                          {hasGrade && <span className="text-[var(--color-text-secondary)]">{row.grade ?? "—"}</span>}
+                          <span className="text-right font-medium text-[var(--color-text-primary)]">
+                            {row.count.toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                      ))}
+                      <div className={`grid ${cols} gap-3 bg-[var(--color-background)] px-4 py-2.5 text-sm font-semibold`}>
+                        <span className="text-[var(--color-text-primary)]">Total</span>
+                        {hasGrade && <span />}
+                        <span className="text-right text-[var(--color-text-primary)]">
+                          {job.totalVacancies ? job.totalVacancies.toLocaleString("en-IN") : "As notified"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <PipeTableOrText text={job.postDetailsText!} />
+                )}
+              </Section>
+            );
+          })()}
+
+          <Section title="Education Eligibility" icon={<GraduationCap size={16} />} accent="teal">
+            <KeyValueRow label="Qualification" value={job.qualification || "As per notification"} />
+
+            {Array.isArray(job.eligibilityDetails) && job.eligibilityDetails.length > 0 ? (
+              // An admin-curated bullet list — shown in preference to the
+              // raw table below since it represents deliberate cleanup.
+              <ul className="mt-4 space-y-2">
+                {job.eligibilityDetails.map((point, i) => (
+                  <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-accent-teal)]" />
+                    <span>{point}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              job.eligibilityText && (
+                <div className="mt-4">
+                  <PipeTableOrText text={job.eligibilityText} />
+                </div>
+              )
+            )}
           </Section>
 
-          <Section title="Selection Process">
-            <StepList items={job.selectionProcess} />
+          <Section title="Selection Process" icon={<ListChecks size={16} />} accent="blue">
+            {job.selectionProcessText ? (
+              // The source's own table, verbatim — selectionProcess (the
+              // numbered-steps fallback below) is a lossy one-line-per-
+              // stage reformatting of this, built only for sources with
+              // no table at all.
+              <PipeTableOrText text={job.selectionProcessText} />
+            ) : (
+              <StepList items={job.selectionProcess} />
+            )}
           </Section>
 
           {job.examPattern && (
-            <Section title="Exam Pattern">
+            <Section title="Exam Pattern" icon={<ClipboardList size={16} />} accent="amber">
               <PipeTableOrText text={job.examPattern} />
               {Array.isArray(job.examPatternNotes) && job.examPatternNotes.length > 0 && (
                 <ul className="mt-4 space-y-1.5 border-t border-[var(--color-border)] pt-4">
@@ -264,23 +329,23 @@ export default async function JobDetailPage({
           )}
 
           {job.documentsRequired && (
-            <Section title="Documents Required">
+            <Section title="Documents Required" icon={<FileText size={16} />} accent="neutral">
               <PipeTableOrText text={job.documentsRequired} />
             </Section>
           )}
 
           {job.syllabusSummary && (
-            <Section title="Syllabus">
+            <Section title="Syllabus" accent="neutral">
               <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{job.syllabusSummary}</p>
             </Section>
           )}
 
-          <Section title="How to Apply">
+          <Section title="How to Apply" icon={<ListChecks size={16} />} accent="green">
             <StepList items={job.howToApply} />
           </Section>
 
           {Array.isArray(job.importantLinks) && job.importantLinks.length > 0 && (
-            <Section title="Important Links" icon={<Link2 size={16} />}>
+            <Section title="Important Links" icon={<Link2 size={16} />} accent="blue">
               <div className="divide-y divide-[var(--color-border)]">
                 {job.importantLinks.map((link) => (
                   <a
@@ -299,24 +364,24 @@ export default async function JobDetailPage({
           )}
 
           {Array.isArray(job.faqs) && job.faqs.length > 0 && (
-            <Section title="FAQs" icon={<HelpCircle size={16} />}>
-              <div className="divide-y divide-[var(--color-border)]">
-                {job.faqs.map((faq, i) => (
-                  <div key={i} className={i === 0 ? "pb-4" : "py-4"}>
-                    <p className="text-sm font-semibold text-[var(--color-text-primary)]">
-                      Q{i + 1}. {faq.question}
-                    </p>
-                    <p className="mt-1.5 border-l-2 border-[var(--color-primary-tint)] pl-3 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                      {faq.answer}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </Section>
+  <Section title="FAQs" icon={<HelpCircle size={16} />} accent="pink">
+    <div className="divide-y divide-[var(--color-border)]">
+      {job.faqs.map((faq, i) => (
+        <div key={i} className={i === 0 ? "pb-4" : "py-4"}>
+          <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+            {faq.question}
+          </p>
+          <p className="mt-1.5 border-l-2 border-[var(--color-accent-pink-tint)] pl-3 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+            {faq.answer}
+          </p>
+        </div>
+      ))}
+    </div>
+  </Section>
           )}
 
           {job.conclusion && (
-            <Section title="Conclusion">
+            <Section title="Conclusion" accent="neutral">
               <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{job.conclusion}</p>
             </Section>
           )}
@@ -371,19 +436,77 @@ export default async function JobDetailPage({
   );
 }
 
+type Accent = "blue" | "green" | "purple" | "orange" | "teal" | "amber" | "pink" | "neutral";
+
+// Each section on this page gets a color-coded left edge + icon chip so
+// a page carrying ten-plus sections stays visually scannable — colors
+// pull from the same CSS-variable palette (globals.css) the rest of the
+// site already uses (the semantic tones directly, four new --color-
+// accent-* tones for the rest), rather than a one-off palette bolted
+// onto just this page.
+const ACCENTS: Record<Accent, { border: string; iconBg: string; iconText: string }> = {
+  blue: {
+    border: "border-l-4 border-l-[var(--color-primary)]",
+    iconBg: "bg-[var(--color-primary-tint)]",
+    iconText: "text-[var(--color-primary)]",
+  },
+  green: {
+    border: "border-l-4 border-l-[var(--color-success)]",
+    iconBg: "bg-[var(--color-success-tint)]",
+    iconText: "text-[var(--color-success)]",
+  },
+  purple: {
+    border: "border-l-4 border-l-[var(--color-accent-purple)]",
+    iconBg: "bg-[var(--color-accent-purple-tint)]",
+    iconText: "text-[var(--color-accent-purple)]",
+  },
+  orange: {
+    border: "border-l-4 border-l-[var(--color-accent-orange)]",
+    iconBg: "bg-[var(--color-accent-orange-tint)]",
+    iconText: "text-[var(--color-accent-orange)]",
+  },
+  teal: {
+    border: "border-l-4 border-l-[var(--color-accent-teal)]",
+    iconBg: "bg-[var(--color-accent-teal-tint)]",
+    iconText: "text-[var(--color-accent-teal)]",
+  },
+  amber: {
+    border: "border-l-4 border-l-[var(--color-warning)]",
+    iconBg: "bg-[var(--color-warning-tint)]",
+    iconText: "text-[var(--color-warning)]",
+  },
+  pink: {
+    border: "border-l-4 border-l-[var(--color-accent-pink)]",
+    iconBg: "bg-[var(--color-accent-pink-tint)]",
+    iconText: "text-[var(--color-accent-pink)]",
+  },
+  neutral: {
+    border: "border-l-4 border-l-[var(--color-border)]",
+    iconBg: "bg-[var(--color-background)]",
+    iconText: "text-[var(--color-text-secondary)]",
+  },
+};
+
 function Section({
   title,
   icon,
+  accent = "neutral",
   children,
 }: {
   title: string;
   icon?: React.ReactNode;
+  accent?: Accent;
   children: React.ReactNode;
 }) {
+  const a = ACCENTS[accent];
   return (
-    <Card>
-      <h2 className="flex items-center gap-2 text-[15px] font-bold text-[var(--color-text-primary)]">
-        {icon}
+    <Card className={a.border}>
+      <h2 className="flex items-center gap-2.5 text-[15px] font-bold text-[var(--color-text-primary)]">
+        {icon && (
+          <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${a.iconBg} ${a.iconText}`}>
+            {icon}
+          </span>
+        )}
         {title}
       </h2>
       <div className="mt-4">{children}</div>
@@ -413,53 +536,50 @@ function StepList({ items }: { items: string[] }) {
   );
 }
 
-// Exam Pattern / Documents Required come through as the same
-// "cell | cell || row || row" pipe-delimited strings the bot's HTML
-// extractor produces (see extractHtmlNotificationFields.ts) — they were
-// previously dumped straight into a <p>, which is why Exam Pattern
-// rendered as one long run-on line instead of the table the source
-// notification actually shows. Parsed here into a proper table; falls
-// back to plain text for anything that isn't in that pipe-row shape
-// (e.g. a hand-edited free-text value), so this never hides content it
-// can't parse.
-function parsePipeRows(text: string): string[][] {
-  if (!text.includes(" | ")) return [];
-  return text
-    .split(" || ")
-    .map((row) => row.split(" | ").map((cell) => cell.trim()))
-    .filter((row) => row.some(Boolean));
-}
-
+// Exam Pattern / Documents Required / the Post-Details, Age-Limit and
+// Important-Dates raw-text fallbacks all come through as the pipe-
+// encoded, TABLE_SEP-bounded tables lib/pipeTables.ts's parsePipeTables
+// understands (see extractHtmlNotificationFields.ts) — rendered here as
+// one or more real tables, in source order, each with its own header
+// and caption; falls back to plain text for anything that isn't in
+// that shape at all (e.g. a hand-edited free-text value), so this
+// never hides content it can't parse.
 function PipeTableOrText({ text }: { text: string }) {
-  const rows = parsePipeRows(text);
-  if (rows.length < 2) {
+  const tables = parsePipeTables(text);
+  if (tables.length === 0) {
     return <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{text}</p>;
   }
-  const [header, ...body] = rows;
   return (
-    <div className="overflow-x-auto rounded-lg border border-[var(--color-border)]">
-      <table className="w-full text-xs">
-        <thead>
-          <tr className="bg-[var(--color-background)] text-left text-[var(--color-text-muted)]">
-            {header.map((cell, i) => (
-              <th key={i} className="whitespace-nowrap px-3 py-2 font-semibold">
-                {cell}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-[var(--color-border)]">
-          {body.map((row, i) => (
-            <tr key={i}>
-              {row.map((cell, j) => (
-                <td key={j} className="whitespace-nowrap px-3 py-2 text-[var(--color-text-secondary)]">
-                  {cell}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-4">
+      {tables.map((t, i) => (
+        <div key={i} className="space-y-2">
+          {t.caption && <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{t.caption}</p>}
+          <div className="overflow-x-auto rounded-lg border border-[var(--color-border)]">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-[var(--color-background)] text-left text-[var(--color-text-muted)]">
+                  {t.header.map((cell, j) => (
+                    <th key={j} className="px-3 py-2 align-top font-semibold">
+                      {cell}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--color-border)]">
+                {t.body.map((row, r) => (
+                  <tr key={r}>
+                    {row.map((cell, c) => (
+                      <td key={c} className="whitespace-normal break-words px-3 py-2 align-top text-[var(--color-text-secondary)]">
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

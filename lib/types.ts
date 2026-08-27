@@ -55,6 +55,13 @@ export interface Job {
   category: string; // e.g. "Police", "Teaching", "Banking", "Engineering"
   totalVacancies: number;
   vacancyBreakdown?: VacancyBreakdown[];
+  // Raw "cell | cell || row || row" post-details table, kept verbatim as
+  // a fallback for when the source table isn't a category→count shape
+  // parseVacancyBreakdown can turn into vacancyBreakdown (e.g. a single
+  // post-name/pay-scale/participating-banks row with no per-category
+  // numbers at all) — rendered as a plain table instead of the section
+  // silently not appearing.
+  postDetailsText?: string;
   qualification: string;
   minAge: number;
   maxAge: number;
@@ -62,6 +69,11 @@ export interface Job {
   ageRelaxationBreakdown?: AgeRelaxationRow[];
   ageAsOnDate?: string; // ISO date — the reckoning/cut-off date age is calculated as on
   ageLimitByGrade?: AgeLimitRow[];
+  // Raw "Age Limit" table, kept verbatim as a fallback for whenever
+  // parseAgeLimitSections can't confidently split it into
+  // ageLimitByGrade/ageRelaxationBreakdown — same role as
+  // postDetailsText above.
+  ageLimitText?: string;
   salaryMin: number;
   salaryMax: number;
   applicationFee: {
@@ -69,18 +81,45 @@ export interface Job {
     reserved: number;
     note?: string;
   };
+  // Raw fee table verbatim, as a fallback/full display for whenever the
+  // source publishes more than a plain general/reserved split (a third
+  // PwBD/OH-only row, a payment-method footnote, ...) that the two
+  // summary numbers above can't represent on their own.
+  applicationFeeText?: string;
   selectionProcess: string[];
+  // Raw "Selection Process" table verbatim — selectionProcess above is
+  // a lossy one-line-per-stage rendering of it (built for the plain
+  // numbered StepList, which has no table of its own); shown instead of
+  // that when available, since it's literally what the source
+  // published rather than a reformatting of it.
+  selectionProcessText?: string;
   examPattern?: string;
   examPatternNotes?: string[]; // bullet notes below the exam pattern table, e.g. negative marking / merit-list rules
   documentsRequired?: string;
   syllabusSummary?: string;
   eligibilityDetails?: string[]; // per-post detailed eligibility bullets, beyond the single `qualification` summary
+  // Raw "Eligibility" table/list verbatim — eligibilityDetails above is
+  // an admin-curated bullet list seeded from this but requires manual
+  // review-page action to keep; this is captured automatically on
+  // every approval regardless, so eligibility content is never lost
+  // just because nobody edited that textarea.
+  eligibilityText?: string;
   howToApply: string[];
   officialNotificationUrl: string;
   officialApplyUrl: string;
   sourceUrl: string;
   importantLinks?: ImportantLink[];
   importantDates: ImportantDate[];
+  // Raw "label | value" dates table, kept verbatim as a fallback/full
+  // display for the job page's "Important Dates" section. `importantDates`
+  // above only ever holds the handful of canonical, fully-parsed dates
+  // (Application Start/End, Exam Date, ...) needed for closing-soon
+  // logic and the eligibility checker — a source's actual dates table
+  // routinely has several more rows than that (PET, provisional
+  // allotment, a month-only "September 2026" with no day, an edit
+  // window given as relative text) that never fit the canonical shape
+  // and were silently dropped before this field existed.
+  importantDatesText?: string;
   eligibilityRules: EligibilityRule[];
   faqs?: FaqItem[];
   conclusion?: string;
