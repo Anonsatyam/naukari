@@ -1,4 +1,4 @@
-import { Candidate } from "./extract";
+import { Candidate, isNotificationLike } from "./extract";
 
 const TABLE_ROW_PATTERN = /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
 const CELL_PATTERN = /<td\b[^>]*>([\s\S]*?)<\/td>/gi;
@@ -135,6 +135,13 @@ export function extractTableCandidates(html: string, baseUrl: string): Candidate
 
     const subject = findSubjectCell(cellHtmls);
     if (!subject) continue;
+
+    // Table extraction has no anchor-text keyword to lean on (the
+    // subject cell is plain text, not a link) — without this check it
+    // would accept literally every row in the table, including purely
+    // administrative notices ("Facility to edit GENDER in OTR") that
+    // happen to sit in the same table as real job postings.
+    if (!isNotificationLike(subject)) continue;
 
     const primaryLink = pickPrimaryLink(rowHtml, baseUrl);
     if (!primaryLink) continue;

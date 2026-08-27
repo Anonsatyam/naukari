@@ -17,6 +17,10 @@ const NOTIFICATION_KEYWORDS = [
   "hall ticket",
   "advt",
   "advertisement",
+  "for the post of", // extremely common Indian govt job-posting phrasing
+  "for the posts of", // plural variant of the same pattern
+  // (e.g. "For the Post of School Teacher under Education Department...")
+  // that doesn't itself contain any of the other keywords above.
 ];
 
 // Explicit noise — even if a title happens to match something above, these
@@ -42,7 +46,23 @@ const EXCLUDE_KEYWORDS = [
   "fraudulent",
   "current vacancies", // generic careers-page nav link, not a specific posting
   "employers connect",
+  "facility to", // account/system-feature notices, e.g. "Facility to edit
+  // GENDER in OTR", "Facility to Candidates to update data in Profile
+  // Tab" — real BPSC notices, but administrative, not a job posting.
 ];
+
+/**
+ * Whether a title reads like a genuine job/result/admit-card
+ * notification, independent of where it was found (a link's own
+ * anchor text, or a table row's subject cell). Shared so both
+ * extraction strategies apply the exact same judgment rather than
+ * drifting apart over time.
+ */
+export function isNotificationLike(title: string): boolean {
+  const lowerText = title.toLowerCase();
+  if (EXCLUDE_KEYWORDS.some((kw) => lowerText.includes(kw))) return false;
+  return NOTIFICATION_KEYWORDS.some((kw) => lowerText.includes(kw));
+}
 
 /**
  * Rule-based extraction: scans anchor tags for links that look like
@@ -66,15 +86,7 @@ export function extractCandidates(html: string, baseUrl: string): Candidate[] {
 
     if (!text || text.length < 10) continue;
 
-    const lowerText = text.toLowerCase();
-    const lowerHref = href.toLowerCase();
-
-    if (EXCLUDE_KEYWORDS.some((kw) => lowerText.includes(kw))) continue;
-
-    const isNotificationLike =
-      NOTIFICATION_KEYWORDS.some((kw) => lowerText.includes(kw)) || lowerHref.endsWith(".pdf");
-
-    if (!isNotificationLike) continue;
+    if (!isNotificationLike(text)) continue;
 
     let absoluteUrl: string;
     try {
