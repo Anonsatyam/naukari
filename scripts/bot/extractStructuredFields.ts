@@ -24,6 +24,8 @@ export interface ExtractedStructuredFields {
   applyOnlineLink?: string;
   notificationPdfLink?: string;
   officialWebsiteLink?: string;
+  documentsRequired?: string;
+  examPattern?: string;
 }
 
 const MONTH_NAMES: Record<string, number> = {

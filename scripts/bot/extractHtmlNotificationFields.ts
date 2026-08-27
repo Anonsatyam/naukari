@@ -39,6 +39,8 @@ const HEADING_FIELD_MAP: { field: keyof ParsedSections; keywords: string[] }[] =
   { field: "selectionProcessRaw", keywords: ["selection process", "चयन प्रक्रिया"] },
   { field: "howToApplyRaw", keywords: ["how to apply", "आवेदन कैसे करें"] },
   { field: "importantLinksRaw", keywords: ["important links", "महत्वपूर्ण लिंक"] },
+  { field: "documentsRequiredRaw", keywords: ["documents required", "required documents", "आवश्यक दस्तावेज"] },
+  { field: "examPatternRaw", keywords: ["exam pattern", "syllabus", "परीक्षा पैटर्न", "पाठ्यक्रम"] },
 ];
 
 // --- Hindi/English canonical date-field mapping --------------------------
@@ -211,6 +213,8 @@ interface ParsedSections {
   selectionProcessRaw: string[];
   howToApplyRaw: string[];
   importantLinksRaw: { label: string; url: string }[];
+  documentsRequiredRaw: string[];
+  examPatternRaw: string[];
 }
 
 function classifyHeading(headingText: string): keyof ParsedSections | null {
@@ -309,6 +313,8 @@ function parseSections(html: string): ParsedSections {
     selectionProcessRaw: [],
     howToApplyRaw: [],
     importantLinksRaw: [],
+    documentsRequiredRaw: [],
+    examPatternRaw: [],
   };
 
   const headingPositions: { field: keyof ParsedSections | null; start: number; end: number }[] = [];
@@ -385,6 +391,8 @@ export function extractHtmlNotificationFields(html: string): HtmlNotificationExt
     sections.eligibilityRaw.length > 0 ||
     sections.selectionProcessRaw.length > 0 ||
     sections.howToApplyRaw.length > 0 ||
+    sections.documentsRequiredRaw.length > 0 ||
+    sections.examPatternRaw.length > 0 ||
     importantLinks.length > 0;
 
   // Heading-based bucketing depends on this site's actual markup lining
@@ -399,8 +407,24 @@ export function extractHtmlNotificationFields(html: string): HtmlNotificationExt
     ? {}
     : extractStructuredFields(stripTags(html));
 
+  // These three do the same job the PDF pipeline's extractStructuredFields
+  // does for a linked PDF: turn the raw "label | value" rows into the
+  // canonical {label,date}[] / {general,reserved} / number shapes the
+  // review-draft form's inputs actually read. The functions themselves
+  // already existed above — they just weren't being called, which is why
+  // Application Start/End, Correction/Exam/Admit Card/Result dates,
+  // the fee inputs, and Total Vacancies stayed empty on the review page
+  // even though the raw data (visible in "Raw extracted data") clearly
+  // had everything needed to fill them in.
+  const canonicalDates = extractCanonicalDates(sections.importantDatesRaw);
+  const canonicalFee = extractCanonicalFee(sections.applicationFeeRaw);
+  const canonicalVacancies = extractCanonicalVacancies(sections.postDetailsRaw);
+
   const fields: ExtractedStructuredFields = {
     ...fallbackFields,
+    ...(canonicalDates.length ? { importantDates: canonicalDates } : {}),
+    ...(Object.keys(canonicalFee).length ? { applicationFee: canonicalFee } : {}),
+    ...(canonicalVacancies !== undefined ? { totalVacancies: canonicalVacancies } : {}),
     ...(sections.importantDatesRaw.length ? { importantDatesText: sections.importantDatesRaw } : {}),
     ...(sections.applicationFeeRaw.length ? { applicationFeeText: sections.applicationFeeRaw } : {}),
     ...(sections.ageLimitRaw.length ? { ageLimit: sections.ageLimitRaw.join(" || ") } : {}),
@@ -408,6 +432,8 @@ export function extractHtmlNotificationFields(html: string): HtmlNotificationExt
     ...(sections.eligibilityRaw.length ? { eligibility: sections.eligibilityRaw.join(" || ") } : {}),
     ...(sections.selectionProcessRaw.length ? { selectionProcess: sections.selectionProcessRaw.join(" || ") } : {}),
     ...(sections.howToApplyRaw.length ? { howToApply: sections.howToApplyRaw } : {}),
+    ...(sections.documentsRequiredRaw.length ? { documentsRequired: sections.documentsRequiredRaw.join(" || ") } : {}),
+    ...(sections.examPatternRaw.length ? { examPattern: sections.examPatternRaw.join(" || ") } : {}),
     ...(importantLinks.length ? { importantLinks } : {}),
     ...(guessLink(importantLinks, ["apply online", "apply now", "online form", "click here"])
       ? { applyOnlineLink: guessLink(importantLinks, ["apply online", "apply now", "online form", "click here"]) }

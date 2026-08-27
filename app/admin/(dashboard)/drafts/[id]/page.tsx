@@ -28,6 +28,75 @@ const JOB_DATE_FIELDS: { key: string; label: string }[] = [
   { key: "dateResultDate", label: "Result Date" },
 ];
 
+// Raw text fields the HTML extractor (extractHtmlNotificationFields.ts)
+// produces for sources like biharjob.co.in, where the notification's
+// full detail — eligibility, age limit, vacancy breakdown, selection
+// process, documents required, exam pattern — lives directly in the
+// post's own page rather than a linked PDF. These don't have their own
+// form inputs (there's no single normalized shape for a per-category,
+// per-paper fee table the way there is for a single application fee
+// number), so they're shown here as a read-only reference panel instead
+// — same information the admin would otherwise have to go dig out of
+// "Raw extracted data" or the source page itself.
+const RICH_DETAIL_KEYS = [
+  "ageLimit",
+  "postDetails",
+  "eligibility",
+  "selectionProcess",
+  "documentsRequired",
+  "examPattern",
+  "howToApply",
+  "importantLinks",
+  "applyOnlineLink",
+  "notificationPdfLink",
+  "officialWebsiteLink",
+] as const;
+
+// Rows come across as "cell | cell | cell" per row, joined "row || row"
+// across rows — see tableToPairs()/join(" || ") in
+// extractHtmlNotificationFields.ts. First row is treated as the header,
+// matching every table these sources actually publish (category/date
+// labels, column names, etc.).
+function parsePipeRows(text?: string): string[][] {
+  if (!text) return [];
+  return text
+    .split(" || ")
+    .map((row) => row.split(" | ").map((cell) => cell.trim()))
+    .filter((row) => row.some(Boolean));
+}
+
+function PipeTable({ text }: { text?: string }) {
+  const rows = parsePipeRows(text);
+  if (rows.length === 0) return null;
+  const [header, ...body] = rows;
+  return (
+    <div className="overflow-x-auto rounded-lg border border-[var(--color-border)]">
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="bg-[var(--color-background)] text-left text-[var(--color-text-muted)]">
+            {header.map((cell, i) => (
+              <th key={i} className="whitespace-nowrap px-3 py-2 font-semibold">
+                {cell}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-[var(--color-border)]">
+          {body.map((row, i) => (
+            <tr key={i}>
+              {row.map((cell, j) => (
+                <td key={j} className="whitespace-nowrap px-3 py-2 text-[var(--color-text-secondary)]">
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function DraftReviewPage({
   params,
 }: {
@@ -132,6 +201,19 @@ export default function DraftReviewPage({
         body.releaseDate = fields.releaseDate;
       }
 
+      // Carry the HTML-sourced reference details (eligibility, age limit,
+      // vacancy table, selection process, documents required, exam
+      // pattern, important links, ...) through on approve too, exactly
+      // as extracted — same pass-through contract as the rest of `body`
+      // above. NOTE: the API route and the published job record need to
+      // accept/store these keys for them to actually show up on the live
+      // site; this only wires up the review page's half of that.
+      const ex = draft?.extractedFields as Record<string, unknown> | undefined;
+      for (const key of RICH_DETAIL_KEYS) {
+        const value = ex?.[key];
+        if (value !== undefined) body[key] = value;
+      }
+
       const res = await fetch(`/api/admin/drafts/${id}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -200,6 +282,13 @@ export default function DraftReviewPage({
       </Card>
     );
   }
+
+  const ex = (draft.extractedFields ?? {}) as Record<string, unknown>;
+  const howToApply = Array.isArray(ex.howToApply) ? (ex.howToApply as string[]) : [];
+  const importantLinks = Array.isArray(ex.importantLinks)
+    ? (ex.importantLinks as { label: string; url: string }[])
+    : [];
+  const hasAdditionalDetails = RICH_DETAIL_KEYS.some((key) => ex[key] !== undefined);
 
   return (
     <div>
@@ -382,6 +471,110 @@ export default function DraftReviewPage({
           </div>
         </Card>
       </div>
+
+      {/* Additional notification details pulled from the source page's
+          own sections (eligibility, age limit, vacancy table, selection
+          process, documents required, exam pattern, links) — populated
+          for HTML sources like biharjob.co.in that don't have a linked
+          PDF. Shown as reference/proofreading; included in the approve
+          payload above. */}
+      {hasAdditionalDetails && (
+        <Card className="mt-5 space-y-6">
+          <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+            Additional Notification Details
+            <span className="ml-2 font-normal text-[var(--color-text-muted)]">(from source page)</span>
+          </p>
+
+          {typeof ex.eligibility === "string" && (
+            <section>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                Eligibility
+              </p>
+              <PipeTable text={ex.eligibility as string} />
+            </section>
+          )}
+
+          {typeof ex.ageLimit === "string" && (
+            <section>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                Age Limit
+              </p>
+              <PipeTable text={ex.ageLimit as string} />
+            </section>
+          )}
+
+          {typeof ex.postDetails === "string" && (
+            <section>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                Post / Vacancy Details
+              </p>
+              <PipeTable text={ex.postDetails as string} />
+            </section>
+          )}
+
+          {typeof ex.selectionProcess === "string" && (
+            <section>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                Selection Process
+              </p>
+              <PipeTable text={ex.selectionProcess as string} />
+            </section>
+          )}
+
+          {typeof ex.examPattern === "string" && (
+            <section>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                Exam Pattern
+              </p>
+              <PipeTable text={ex.examPattern as string} />
+            </section>
+          )}
+
+          {typeof ex.documentsRequired === "string" && (
+            <section>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                Documents Required
+              </p>
+              <PipeTable text={ex.documentsRequired as string} />
+            </section>
+          )}
+
+          {howToApply.length > 0 && (
+            <section>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                How to Apply
+              </p>
+              <ol className="list-decimal space-y-1.5 pl-5 text-xs text-[var(--color-text-secondary)]">
+                {howToApply.map((step, i) => (
+                  <li key={i}>{step}</li>
+                ))}
+              </ol>
+            </section>
+          )}
+
+          {importantLinks.length > 0 && (
+            <section>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                Important Links
+              </p>
+              <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                {importantLinks.map((link, i) => (
+                  <a
+                    key={i}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between gap-2 rounded-lg bg-[var(--color-background)] px-3 py-2 text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-primary)]"
+                  >
+                    <span className="truncate">{link.label}</span>
+                    <ExternalLink size={12} className="shrink-0" />
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
+        </Card>
+      )}
     </div>
   );
 }
