@@ -58,6 +58,8 @@ const HEADING_FIELD_MAP: { field: keyof ParsedSections; keywords: string[] }[] =
   { field: "importantLinksRaw", keywords: ["important links", "महत्वपूर्ण लिंक"] },
   { field: "documentsRequiredRaw", keywords: ["documents required", "required documents", "आवश्यक दस्तावेज"] },
   { field: "examPatternRaw", keywords: ["exam pattern", "syllabus", "परीक्षा पैटर्न", "पाठ्यक्रम"] },
+  { field: "faqRaw", keywords: ["faq", "frequently asked", "प्रश्नोत्तर"] },
+  { field: "conclusionRaw", keywords: ["conclusion", "निष्कर्ष"] },
 ];
 
 // --- Hindi/English canonical date-field mapping --------------------------
@@ -290,6 +292,8 @@ interface ParsedSections {
   importantLinksRaw: { label: string; url: string }[];
   documentsRequiredRaw: string[];
   examPatternRaw: string[];
+  faqRaw: string[];
+  conclusionRaw: string[];
 }
 
 function classifyHeading(headingText: string): keyof ParsedSections | null {
@@ -326,6 +330,27 @@ function listToItems(listHtml: string): string[] {
     if (text) items.push(text);
   }
   return items;
+}
+
+const BLOCK_PATTERN = /<(p|li|h[3-6])\b[^>]*>([\s\S]*?)<\/\1>/gi;
+
+/**
+ * Falls back to one entry per <p>/<li>/<h3-6> block for sections whose
+ * content isn't a <table> — e.g. a bullet-list "Education Eligibility"
+ * section, or an FAQ laid out as repeating question/answer paragraphs
+ * rather than a table. Used only when the table-based pass above found
+ * nothing in a given segment, so it never overrides or duplicates a
+ * section that *is* table-shaped.
+ */
+function extractPlainBlocks(segmentHtml: string): string[] {
+  const blocks: string[] = [];
+  const blockPattern = new RegExp(BLOCK_PATTERN.source, "gi");
+  let m: RegExpExecArray | null;
+  while ((m = blockPattern.exec(segmentHtml)) !== null) {
+    const text = stripTags(m[2]);
+    if (text) blocks.push(text);
+  }
+  return blocks;
 }
 
 function extractLinkPairs(sectionHtml: string): { label: string; url: string }[] {
@@ -390,6 +415,8 @@ function parseSections(html: string): ParsedSections {
     importantLinksRaw: [],
     documentsRequiredRaw: [],
     examPatternRaw: [],
+    faqRaw: [],
+    conclusionRaw: [],
   };
 
   const headingPositions: { field: keyof ParsedSections | null; start: number; end: number }[] = [];
@@ -422,9 +449,15 @@ function parseSections(html: string): ParsedSections {
 
     const tablePattern = new RegExp(TABLE_PATTERN.source, "gi");
     let tableMatch: RegExpExecArray | null;
+    const tableRows: string[] = [];
     while ((tableMatch = tablePattern.exec(segment)) !== null) {
-      sections[field].push(...tableToPairs(tableMatch[1]));
+      tableRows.push(...tableToPairs(tableMatch[1]));
     }
+    // No table in this segment — e.g. a bullet-list Eligibility section,
+    // or an FAQ/Conclusion written as plain paragraphs — so fall back to
+    // paragraph/list-item/sub-heading text instead of leaving the field
+    // empty.
+    sections[field].push(...(tableRows.length > 0 ? tableRows : extractPlainBlocks(segment)));
   }
 
   return sections;
@@ -468,6 +501,8 @@ export function extractHtmlNotificationFields(html: string): HtmlNotificationExt
     sections.howToApplyRaw.length > 0 ||
     sections.documentsRequiredRaw.length > 0 ||
     sections.examPatternRaw.length > 0 ||
+    sections.faqRaw.length > 0 ||
+    sections.conclusionRaw.length > 0 ||
     importantLinks.length > 0;
 
   // Heading-based bucketing depends on this site's actual markup lining
@@ -509,6 +544,8 @@ export function extractHtmlNotificationFields(html: string): HtmlNotificationExt
     ...(sections.howToApplyRaw.length ? { howToApply: sections.howToApplyRaw } : {}),
     ...(sections.documentsRequiredRaw.length ? { documentsRequired: sections.documentsRequiredRaw.join(" || ") } : {}),
     ...(sections.examPatternRaw.length ? { examPattern: sections.examPatternRaw.join(" || ") } : {}),
+    ...(sections.faqRaw.length ? { faqText: sections.faqRaw } : {}),
+    ...(sections.conclusionRaw.length ? { conclusionText: sections.conclusionRaw.join(" ") } : {}),
     ...(importantLinks.length ? { importantLinks } : {}),
     ...(guessLink(importantLinks, ["apply online", "apply now", "online form", "click here"])
       ? { applyOnlineLink: guessLink(importantLinks, ["apply online", "apply now", "online form", "click here"]) }

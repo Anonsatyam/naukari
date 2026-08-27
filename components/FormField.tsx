@@ -19,6 +19,21 @@ export function TextField({
   );
 }
 
+export function TextAreaField({
+  label,
+  className,
+  hint,
+  ...rest
+}: BaseProps & { hint?: string } & React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <div>
+      <label className={fieldLabelClass}>{label}</label>
+      <textarea className={cn(fieldInputClass, "min-h-[88px] resize-y", className)} {...rest} />
+      {hint && <p className="mt-1 text-xs text-[var(--color-text-muted)]">{hint}</p>}
+    </div>
+  );
+}
+
 export function SelectField({
   label,
   className,

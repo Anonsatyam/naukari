@@ -20,13 +20,17 @@ export function rowToJob(row: any): Job {
     maxAge: row.max_age,
     ageRelaxation: row.age_relaxation ?? undefined,
     ageRelaxationBreakdown: row.age_relaxation_breakdown ?? undefined,
+    ageAsOnDate: row.age_as_on_date ?? undefined,
+    ageLimitByGrade: row.age_limit_by_grade ?? undefined,
     salaryMin: row.salary_min,
     salaryMax: row.salary_max,
     applicationFee: row.application_fee,
     selectionProcess: row.selection_process,
     examPattern: row.exam_pattern ?? undefined,
+    examPatternNotes: row.exam_pattern_notes ?? undefined,
     documentsRequired: row.documents_required ?? undefined,
     syllabusSummary: row.syllabus_summary ?? undefined,
+    eligibilityDetails: row.eligibility_details ?? undefined,
     howToApply: row.how_to_apply,
     officialNotificationUrl: row.official_notification_url,
     officialApplyUrl: row.official_apply_url,
@@ -34,6 +38,8 @@ export function rowToJob(row: any): Job {
     importantLinks: row.important_links ?? undefined,
     importantDates: row.important_dates,
     eligibilityRules: row.eligibility_rules,
+    faqs: row.faqs ?? undefined,
+    conclusion: row.conclusion ?? undefined,
     status: row.status,
     createdByBot: row.created_by_bot,
     publishedAt: row.published_at,
@@ -58,13 +64,17 @@ export function jobToRow(job: Partial<Job>): Record<string, unknown> {
   if (job.maxAge !== undefined) row.max_age = job.maxAge;
   if (job.ageRelaxation !== undefined) row.age_relaxation = job.ageRelaxation;
   if (job.ageRelaxationBreakdown !== undefined) row.age_relaxation_breakdown = job.ageRelaxationBreakdown;
+  if (job.ageAsOnDate !== undefined) row.age_as_on_date = job.ageAsOnDate;
+  if (job.ageLimitByGrade !== undefined) row.age_limit_by_grade = job.ageLimitByGrade;
   if (job.salaryMin !== undefined) row.salary_min = job.salaryMin;
   if (job.salaryMax !== undefined) row.salary_max = job.salaryMax;
   if (job.applicationFee !== undefined) row.application_fee = job.applicationFee;
   if (job.selectionProcess !== undefined) row.selection_process = job.selectionProcess;
   if (job.examPattern !== undefined) row.exam_pattern = job.examPattern;
+  if (job.examPatternNotes !== undefined) row.exam_pattern_notes = job.examPatternNotes;
   if (job.documentsRequired !== undefined) row.documents_required = job.documentsRequired;
   if (job.syllabusSummary !== undefined) row.syllabus_summary = job.syllabusSummary;
+  if (job.eligibilityDetails !== undefined) row.eligibility_details = job.eligibilityDetails;
   if (job.howToApply !== undefined) row.how_to_apply = job.howToApply;
   if (job.officialNotificationUrl !== undefined) row.official_notification_url = job.officialNotificationUrl;
   if (job.officialApplyUrl !== undefined) row.official_apply_url = job.officialApplyUrl;
@@ -72,6 +82,8 @@ export function jobToRow(job: Partial<Job>): Record<string, unknown> {
   if (job.importantLinks !== undefined) row.important_links = job.importantLinks;
   if (job.importantDates !== undefined) row.important_dates = job.importantDates;
   if (job.eligibilityRules !== undefined) row.eligibility_rules = job.eligibilityRules;
+  if (job.faqs !== undefined) row.faqs = job.faqs;
+  if (job.conclusion !== undefined) row.conclusion = job.conclusion;
   if (job.status !== undefined) row.status = job.status;
   if (job.createdByBot !== undefined) row.created_by_bot = job.createdByBot;
   if (job.publishedAt !== undefined) row.published_at = job.publishedAt;

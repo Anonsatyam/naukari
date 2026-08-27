@@ -26,6 +26,15 @@ export interface ExtractedStructuredFields {
   officialWebsiteLink?: string;
   documentsRequired?: string;
   examPattern?: string;
+
+  // Raw reference text for sections with no single normalized shape —
+  // an FAQ's question/answer pairing and a closing summary paragraph
+  // vary too much page to page to parse reliably, so these are surfaced
+  // as-is for the admin to transcribe into the review page's FAQs /
+  // Conclusion inputs, the same "read-only reference" role ageLimit /
+  // postDetails / eligibility already play there.
+  faqText?: string[];
+  conclusionText?: string;
 }
 
 const MONTH_NAMES: Record<string, number> = {

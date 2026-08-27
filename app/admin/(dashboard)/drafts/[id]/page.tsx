@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ExternalLink, CheckCircle2, XCircle, FileText } from "lucide-react";
+import { ExternalLink, CheckCircle2, XCircle, FileText, Plus, Trash2 } from "lucide-react";
 import { BotDraft } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { deepDecodeEntities } from "@/lib/entities";
@@ -10,7 +10,41 @@ import { Button } from "@/components/Button";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
-import { TextField } from "@/components/FormField";
+import { TextField, TextAreaField } from "@/components/FormField";
+
+interface AgeLimitRowDraft {
+  grade: string;
+  minAge: string;
+  maxAge: string;
+}
+
+interface FaqDraft {
+  question: string;
+  answer: string;
+}
+
+// Splits a bot-extracted "cell | cell || row || row" pipe table (see
+// tableToPairs() in extractHtmlNotificationFields.ts) into one readable
+// line per row — used to seed the Eligibility Details textarea with a
+// starting draft from whatever the eligibility table/list actually
+// contained, same idea as parseSelectionSteps() in lib/server/data.ts.
+function pipeRowsToLines(text: string): string[] {
+  if (!text.includes(" | ")) {
+    // Not a table — likely already plain sentences/bullets (e.g. a <ul>
+    // eligibility list); split on the row separator only.
+    return text.split(" || ").map((s) => s.trim()).filter(Boolean);
+  }
+  return text
+    .split(" || ")
+    .map((row) =>
+      row
+        .split(" | ")
+        .map((c) => c.trim())
+        .filter(Boolean)
+        .join(": ")
+    )
+    .filter(Boolean);
+}
 
 const TYPE_LABELS: Record<BotDraft["draftType"], string> = {
   job: "Job",
@@ -52,6 +86,14 @@ const RICH_DETAIL_KEYS = [
   "notificationPdfLink",
   "officialWebsiteLink",
 ] as const;
+
+// faqText / conclusionText are shown as a read-only reference only (see
+// the panel below) — unlike the keys above, there's no Job field they
+// pass straight through into, since an FAQ/closing-summary section
+// never comes back from extraction in the {faqs, conclusion} shape the
+// job record actually stores; the admin retypes them into the FAQs /
+// Conclusion inputs above instead.
+const REFERENCE_ONLY_KEYS = ["faqText", "conclusionText"] as const;
 
 // Rows come across as "cell | cell | cell" per row, joined "row || row"
 // across rows — see tableToPairs()/join(" || ") in
@@ -113,6 +155,19 @@ export default function DraftReviewPage({
   // One generic field bag — which keys are shown/sent depends on draftType.
   const [fields, setFields] = useState<Record<string, string>>({});
   const setField = (key: string) => (value: string) => setFields((prev) => ({ ...prev, [key]: value }));
+
+  // The richer job-detail fields (see screenshots this feature was built
+  // from: grade-wise age limits, per-post eligibility bullets, exam
+  // pattern footnotes, FAQs, a closing summary) have no single-string
+  // shape the generic `fields` bag above can hold, and the bot never
+  // reliably auto-extracts them — so they get their own state, editable
+  // here, and are merged into the approve payload alongside `fields`.
+  const [ageAsOnDate, setAgeAsOnDate] = useState("");
+  const [ageLimitByGrade, setAgeLimitByGrade] = useState<AgeLimitRowDraft[]>([]);
+  const [eligibilityDetails, setEligibilityDetails] = useState("");
+  const [examPatternNotes, setExamPatternNotes] = useState("");
+  const [faqs, setFaqs] = useState<FaqDraft[]>([]);
+  const [conclusion, setConclusion] = useState("");
 
   const [decision, setDecision] = useState<"approved" | "rejected" | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -176,6 +231,13 @@ export default function DraftReviewPage({
             feeReserved: fee.reserved !== undefined ? String(fee.reserved) : "",
             ...dateFields,
           });
+
+          // Seed a starting draft from whatever the source page's own
+          // Eligibility section contained — the admin edits/corrects
+          // from here rather than typing every bullet from scratch.
+          if (typeof ex.eligibility === "string" && ex.eligibility) {
+            setEligibilityDetails(pipeRowsToLines(ex.eligibility).join("\n"));
+          }
         }
       })
       .catch(() => setNotFoundState(true))
@@ -204,6 +266,22 @@ export default function DraftReviewPage({
         if (fields.feeGeneral) applicationFee.general = Number(fields.feeGeneral) || 0;
         if (fields.feeReserved) applicationFee.reserved = Number(fields.feeReserved) || 0;
         if (Object.keys(applicationFee).length > 0) body.applicationFee = applicationFee;
+
+        if (ageAsOnDate) body.ageAsOnDate = ageAsOnDate;
+
+        const ageLimitRows = ageLimitByGrade.filter((r) => r.grade || r.minAge || r.maxAge);
+        if (ageLimitRows.length > 0) body.ageLimitByGrade = ageLimitRows;
+
+        const eligibilityLines = eligibilityDetails.split("\n").map((s) => s.trim()).filter(Boolean);
+        if (eligibilityLines.length > 0) body.eligibilityDetails = eligibilityLines;
+
+        const examNotes = examPatternNotes.split("\n").map((s) => s.trim()).filter(Boolean);
+        if (examNotes.length > 0) body.examPatternNotes = examNotes;
+
+        const faqRows = faqs.filter((f) => f.question || f.answer);
+        if (faqRows.length > 0) body.faqs = faqRows;
+
+        if (conclusion.trim()) body.conclusion = conclusion.trim();
       } else if (draft?.draftType === "result") {
         body.category = fields.category;
         body.resultDate = fields.resultDate;
@@ -300,7 +378,11 @@ export default function DraftReviewPage({
   const importantLinks = Array.isArray(ex.importantLinks)
     ? (ex.importantLinks as { label: string; url: string }[])
     : [];
-  const hasAdditionalDetails = RICH_DETAIL_KEYS.some((key) => ex[key] !== undefined);
+  const faqTextRef = Array.isArray(ex.faqText) ? (ex.faqText as string[]) : [];
+  const conclusionTextRef = typeof ex.conclusionText === "string" ? ex.conclusionText : "";
+  const hasAdditionalDetails =
+    RICH_DETAIL_KEYS.some((key) => ex[key] !== undefined) ||
+    REFERENCE_ONLY_KEYS.some((key) => ex[key] !== undefined);
 
   return (
     <div>
@@ -388,6 +470,148 @@ export default function DraftReviewPage({
                     onChange={(e) => setField("feeReserved")(e.target.value)}
                   />
                 </div>
+              </div>
+
+              <div className="border-t border-[var(--color-border)] pt-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                  Age Limit — Details
+                </p>
+                <TextField
+                  label="Age Reckoned As On"
+                  type="date"
+                  value={ageAsOnDate}
+                  onChange={(e) => setAgeAsOnDate(e.target.value)}
+                />
+
+                <div className="mt-4 space-y-3">
+                  <p className="text-xs font-semibold text-[var(--color-text-secondary)]">
+                    Grade-wise Age Limit (optional — only for posts where the minimum/maximum age varies by grade)
+                  </p>
+                  {ageLimitByGrade.map((row, i) => (
+                    <div key={i} className="grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-2">
+                      <TextField
+                        label="Grade / Cadre"
+                        value={row.grade}
+                        onChange={(e) =>
+                          setAgeLimitByGrade((prev) =>
+                            prev.map((r, idx) => (idx === i ? { ...r, grade: e.target.value } : r))
+                          )
+                        }
+                      />
+                      <TextField
+                        label="Min. Age"
+                        value={row.minAge}
+                        onChange={(e) =>
+                          setAgeLimitByGrade((prev) =>
+                            prev.map((r, idx) => (idx === i ? { ...r, minAge: e.target.value } : r))
+                          )
+                        }
+                      />
+                      <TextField
+                        label="Max. Age"
+                        value={row.maxAge}
+                        onChange={(e) =>
+                          setAgeLimitByGrade((prev) =>
+                            prev.map((r, idx) => (idx === i ? { ...r, maxAge: e.target.value } : r))
+                          )
+                        }
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setAgeLimitByGrade((prev) => prev.filter((_, idx) => idx !== i))}
+                        className="mb-0.5 flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] text-[var(--color-danger)] hover:bg-[var(--color-danger-tint)]"
+                        aria-label="Remove row"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setAgeLimitByGrade((prev) => [...prev, { grade: "", minAge: "", maxAge: "" }])}
+                  >
+                    <Plus size={14} /> Add Grade Row
+                  </Button>
+                </div>
+              </div>
+
+              <div className="border-t border-[var(--color-border)] pt-4">
+                <TextAreaField
+                  label="Education Eligibility — Details"
+                  value={eligibilityDetails}
+                  onChange={(e) => setEligibilityDetails(e.target.value)}
+                  hint="One bullet point per line — shown as a bulleted list on the job page."
+                />
+              </div>
+
+              <div className="border-t border-[var(--color-border)] pt-4">
+                <TextAreaField
+                  label="Exam Pattern — Notes"
+                  value={examPatternNotes}
+                  onChange={(e) => setExamPatternNotes(e.target.value)}
+                  hint="One note per line, e.g. negative marking or merit-list rules. Shown below the exam pattern table."
+                />
+              </div>
+
+              <div className="border-t border-[var(--color-border)] pt-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                  FAQs
+                </p>
+                <div className="space-y-3">
+                  {faqs.map((faq, i) => (
+                    <div key={i} className="rounded-lg border border-[var(--color-border)] p-3">
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 space-y-2">
+                          <TextField
+                            label="Question"
+                            value={faq.question}
+                            onChange={(e) =>
+                              setFaqs((prev) =>
+                                prev.map((f, idx) => (idx === i ? { ...f, question: e.target.value } : f))
+                              )
+                            }
+                          />
+                          <TextAreaField
+                            label="Answer"
+                            value={faq.answer}
+                            onChange={(e) =>
+                              setFaqs((prev) =>
+                                prev.map((f, idx) => (idx === i ? { ...f, answer: e.target.value } : f))
+                              )
+                            }
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setFaqs((prev) => prev.filter((_, idx) => idx !== i))}
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[var(--color-danger)] hover:bg-[var(--color-danger-tint)]"
+                          aria-label="Remove FAQ"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setFaqs((prev) => [...prev, { question: "", answer: "" }])}
+                  >
+                    <Plus size={14} /> Add FAQ
+                  </Button>
+                </div>
+              </div>
+
+              <div className="border-t border-[var(--color-border)] pt-4">
+                <TextAreaField
+                  label="Conclusion"
+                  value={conclusion}
+                  onChange={(e) => setConclusion(e.target.value)}
+                  hint="Closing summary paragraph shown at the bottom of the job page."
+                />
               </div>
             </>
           )}
@@ -561,6 +785,28 @@ export default function DraftReviewPage({
                   <li key={i}>{step}</li>
                 ))}
               </ol>
+            </section>
+          )}
+
+          {faqTextRef.length > 0 && (
+            <section>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                FAQ (raw — transcribe into the FAQs fields above)
+              </p>
+              <ul className="list-disc space-y-1.5 pl-5 text-xs text-[var(--color-text-secondary)]">
+                {faqTextRef.map((line, i) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {conclusionTextRef && (
+            <section>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                Conclusion (raw — transcribe into the Conclusion field above)
+              </p>
+              <p className="text-xs leading-relaxed text-[var(--color-text-secondary)]">{conclusionTextRef}</p>
             </section>
           )}
 

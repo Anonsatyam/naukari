@@ -57,7 +57,7 @@ const VACANCY_TOTAL_ROW_LABEL = /total\s*vacanc\w*|total\s*post|कुल\s*र�
  * Women's Quota or Pay Scale column after the actual post-count
  * column, and a position-based guess picks up the wrong number.
  */
-function parseVacancyBreakdown(postDetails: unknown): { category: string; count: number }[] | undefined {
+function parseVacancyBreakdown(postDetails: unknown): { category: string; count: number; grade?: string }[] | undefined {
   if (typeof postDetails !== "string" || !postDetails.includes(" | ")) return undefined;
   const rows = parsePipeRows(postDetails);
   if (rows.length < 2) return undefined;
@@ -65,15 +65,23 @@ function parseVacancyBreakdown(postDetails: unknown): { category: string; count:
   const [header, ...body] = rows;
   const countColIndex = header.findIndex((h) => VACANCY_TOTAL_ROW_LABEL.test(h));
   if (countColIndex <= 0) return undefined;
+  // Some notification templates put a Grade/Scale column between the
+  // post name and the post count (e.g. "Post Name | Grade | Total
+  // Posts", as BOB SO 2026 does) — captured here so it isn't silently
+  // dropped, same as the count column already resolves by header text
+  // rather than position.
+  const gradeColIndex = countColIndex === 2 ? 1 : -1;
 
-  const breakdown: { category: string; count: number }[] = [];
+  const breakdown: { category: string; count: number; grade?: string }[] = [];
   for (const row of body) {
     const label = row[0];
     if (!label || VACANCY_TOTAL_ROW_LABEL.test(label)) continue; // skip the grand-total row itself
     const match = row[countColIndex]?.match(/\d[\d,]*/);
     if (!match) continue;
     const count = parseInt(match[0].replace(/,/g, ""), 10);
-    if (!Number.isNaN(count)) breakdown.push({ category: label, count });
+    if (Number.isNaN(count)) continue;
+    const grade = gradeColIndex > 0 ? row[gradeColIndex] : undefined;
+    breakdown.push({ category: label, count, ...(grade ? { grade } : {}) });
   }
   return breakdown.length > 0 ? breakdown : undefined;
 }
@@ -451,6 +459,8 @@ export async function approveDraft(
     maxAge: merged.maxAge ?? 40,
     ageRelaxation: merged.ageRelaxation,
     ageRelaxationBreakdown: ensureOptionalArray(merged.ageRelaxationBreakdown),
+    ageAsOnDate: merged.ageAsOnDate,
+    ageLimitByGrade: ensureOptionalArray(merged.ageLimitByGrade),
     salaryMin: merged.salaryMin ?? 0,
     salaryMax: merged.salaryMax ?? 0,
     applicationFee: ensureApplicationFee(merged.applicationFee, {
@@ -471,8 +481,10 @@ export async function approveDraft(
       parseSelectionSteps(merged.selectionProcess) ?? ["As per official notification"]
     ),
     examPattern: merged.examPattern,
+    examPatternNotes: ensureOptionalArray(merged.examPatternNotes),
     documentsRequired: merged.documentsRequired,
     syllabusSummary: merged.syllabusSummary,
+    eligibilityDetails: ensureOptionalArray(merged.eligibilityDetails),
     howToApply: ensureStringArray(merged.howToApply, [
       "See the official notification for the application procedure",
     ]),
@@ -482,6 +494,8 @@ export async function approveDraft(
     importantLinks: ensureOptionalArray(merged.importantLinks),
     importantDates: ensureArray(merged.importantDates, []),
     eligibilityRules: ensureArray(merged.eligibilityRules, []),
+    faqs: ensureOptionalArray(merged.faqs),
+    conclusion: merged.conclusion,
     status: "published",
     createdByBot: true,
     publishedAt: now,

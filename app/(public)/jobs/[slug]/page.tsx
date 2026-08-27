@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Calendar, ExternalLink, FileText, Link2, ShieldCheck, Users } from "lucide-react";
+import { Calendar, ExternalLink, FileText, HelpCircle, Link2, ShieldCheck, Users } from "lucide-react";
 import {
   getPublishedJobs,
   getPublishedJobBySlug,
@@ -123,32 +123,39 @@ export default async function JobDetailPage({
             </div>
           </Section>
 
-          {Array.isArray(job.vacancyBreakdown) && job.vacancyBreakdown.length > 0 && (
-            <Section title="Vacancy Details (Category-wise)" icon={<Users size={16} />}>
-              <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
-                <div className="grid grid-cols-2 bg-[var(--color-background)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                  <span>Category</span>
-                  <span className="text-right">Posts</span>
-                </div>
-                <div className="divide-y divide-[var(--color-border)]">
-                  {job.vacancyBreakdown.map((row) => (
-                    <div key={row.category} className="grid grid-cols-2 px-4 py-2.5 text-sm">
-                      <span className="text-[var(--color-text-secondary)]">{row.category}</span>
-                      <span className="text-right font-medium text-[var(--color-text-primary)]">
-                        {row.count.toLocaleString("en-IN")}
+          {Array.isArray(job.vacancyBreakdown) && job.vacancyBreakdown.length > 0 && (() => {
+            const hasGrade = job.vacancyBreakdown!.some((row) => row.grade);
+            const cols = hasGrade ? "grid-cols-[1fr_auto_auto]" : "grid-cols-2";
+            return (
+              <Section title="Vacancy Details (Category-wise)" icon={<Users size={16} />}>
+                <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
+                  <div className={`grid ${cols} gap-3 bg-[var(--color-background)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]`}>
+                    <span>Post / Category</span>
+                    {hasGrade && <span>Grade</span>}
+                    <span className="text-right">Posts</span>
+                  </div>
+                  <div className="divide-y divide-[var(--color-border)]">
+                    {job.vacancyBreakdown!.map((row) => (
+                      <div key={row.category} className={`grid ${cols} gap-3 px-4 py-2.5 text-sm`}>
+                        <span className="text-[var(--color-text-secondary)]">{row.category}</span>
+                        {hasGrade && <span className="text-[var(--color-text-secondary)]">{row.grade ?? "—"}</span>}
+                        <span className="text-right font-medium text-[var(--color-text-primary)]">
+                          {row.count.toLocaleString("en-IN")}
+                        </span>
+                      </div>
+                    ))}
+                    <div className={`grid ${cols} gap-3 bg-[var(--color-background)] px-4 py-2.5 text-sm font-semibold`}>
+                      <span className="text-[var(--color-text-primary)]">Total</span>
+                      {hasGrade && <span />}
+                      <span className="text-right text-[var(--color-text-primary)]">
+                        {job.totalVacancies ? job.totalVacancies.toLocaleString("en-IN") : "As notified"}
                       </span>
                     </div>
-                  ))}
-                  <div className="grid grid-cols-2 bg-[var(--color-background)] px-4 py-2.5 text-sm font-semibold">
-                    <span className="text-[var(--color-text-primary)]">Total</span>
-                    <span className="text-right text-[var(--color-text-primary)]">
-                      {job.totalVacancies ? job.totalVacancies.toLocaleString("en-IN") : "As notified"}
-                    </span>
                   </div>
                 </div>
-              </div>
-            </Section>
-          )}
+              </Section>
+            );
+          })()}
 
           <Section title="Eligibility" icon={<ShieldCheck size={16} />}>
             <div className="space-y-3">
@@ -157,21 +164,64 @@ export default async function JobDetailPage({
                 label="Age Limit"
                 value={job.minAge && job.maxAge ? `${job.minAge} to ${job.maxAge} years` : "As per official notification"}
               />
+              {job.ageAsOnDate && (
+                <KeyValueRow label="Age Reckoned As On" value={formatDate(job.ageAsOnDate)} />
+              )}
             </div>
 
-            {Array.isArray(job.ageRelaxationBreakdown) && job.ageRelaxationBreakdown.length > 0 && (
-              <div className="mt-4 overflow-hidden rounded-lg border border-[var(--color-border)]">
-                <div className="grid grid-cols-2 bg-[var(--color-background)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                  <span>Age Relaxation</span>
-                  <span className="text-right">Category</span>
+            {Array.isArray(job.eligibilityDetails) && job.eligibilityDetails.length > 0 && (
+              <ul className="mt-4 space-y-2">
+                {job.eligibilityDetails.map((point, i) => (
+                  <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-primary)]" />
+                    <span>{point}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {Array.isArray(job.ageLimitByGrade) && job.ageLimitByGrade.length > 0 && (
+              <div className="mt-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                  Grade-wise Age Limit
+                </p>
+                <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
+                  <div className="grid grid-cols-3 gap-3 bg-[var(--color-background)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                    <span>Grade / Cadre</span>
+                    <span>Min. Age</span>
+                    <span>Max. Age</span>
+                  </div>
+                  <div className="divide-y divide-[var(--color-border)]">
+                    {job.ageLimitByGrade.map((row, i) => (
+                      <div key={i} className="grid grid-cols-3 gap-3 px-4 py-2.5 text-sm">
+                        <span className="font-medium text-[var(--color-text-primary)]">{row.grade}</span>
+                        <span className="text-[var(--color-text-secondary)]">{row.minAge}</span>
+                        <span className="text-[var(--color-text-secondary)]">{row.maxAge}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="divide-y divide-[var(--color-border)]">
-                  {job.ageRelaxationBreakdown.map((row) => (
-                    <div key={row.category} className="grid grid-cols-2 px-4 py-2.5 text-sm">
-                      <span className="font-medium text-[var(--color-text-primary)]">{row.relaxation}</span>
-                      <span className="text-right text-[var(--color-text-secondary)]">{row.category}</span>
-                    </div>
-                  ))}
+              </div>
+            )}
+
+            {Array.isArray(job.ageRelaxationBreakdown) && job.ageRelaxationBreakdown.length > 0 && (
+              <div className="mt-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                  Age Relaxation
+                </p>
+                <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
+                  <div className="grid grid-cols-2 bg-[var(--color-background)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                    <span>Category</span>
+                    <span className="text-right">Relaxation</span>
+                  </div>
+                  <div className="divide-y divide-[var(--color-border)]">
+                    {job.ageRelaxationBreakdown.map((row) => (
+                      <div key={row.category} className="grid grid-cols-2 px-4 py-2.5 text-sm">
+                        <span className="text-[var(--color-text-secondary)]">{row.category}</span>
+                        <span className="text-right font-medium text-[var(--color-text-primary)]">{row.relaxation}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -201,6 +251,15 @@ export default async function JobDetailPage({
           {job.examPattern && (
             <Section title="Exam Pattern">
               <PipeTableOrText text={job.examPattern} />
+              {Array.isArray(job.examPatternNotes) && job.examPatternNotes.length > 0 && (
+                <ul className="mt-4 space-y-1.5 border-t border-[var(--color-border)] pt-4">
+                  {job.examPatternNotes.map((note, i) => (
+                    <li key={i} className="text-xs leading-relaxed text-[var(--color-text-secondary)]">
+                      • {note}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </Section>
           )}
 
@@ -236,6 +295,29 @@ export default async function JobDetailPage({
                   </a>
                 ))}
               </div>
+            </Section>
+          )}
+
+          {Array.isArray(job.faqs) && job.faqs.length > 0 && (
+            <Section title="FAQs" icon={<HelpCircle size={16} />}>
+              <div className="divide-y divide-[var(--color-border)]">
+                {job.faqs.map((faq, i) => (
+                  <div key={i} className={i === 0 ? "pb-4" : "py-4"}>
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+                      Q{i + 1}. {faq.question}
+                    </p>
+                    <p className="mt-1.5 border-l-2 border-[var(--color-primary-tint)] pl-3 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                      {faq.answer}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {job.conclusion && (
+            <Section title="Conclusion">
+              <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{job.conclusion}</p>
             </Section>
           )}
 

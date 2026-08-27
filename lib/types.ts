@@ -15,11 +15,28 @@ export interface EligibilityRule {
 export interface VacancyBreakdown {
   category: string;
   count: number;
+  grade?: string; // e.g. "MMG/S-II" — the post's grade/scale, when the source table has one
 }
 
 export interface AgeRelaxationRow {
   category: string;
   relaxation: string;
+}
+
+// Cadre/grade-wise minimum-maximum age table (e.g. Officer 23–35,
+// Manager 23–37) — distinct from AgeRelaxationRow, which is the
+// category-wise (SC/ST/OBC/PwBD) *relaxation* applied on top of these.
+// Kept as free text rather than numbers since sources routinely qualify
+// a value ("23 से 25 वर्ष", "35–37 (पदवार)").
+export interface AgeLimitRow {
+  grade: string;
+  minAge: string;
+  maxAge: string;
+}
+
+export interface FaqItem {
+  question: string;
+  answer: string;
 }
 
 export interface ImportantLink {
@@ -43,6 +60,8 @@ export interface Job {
   maxAge: number;
   ageRelaxation?: string;
   ageRelaxationBreakdown?: AgeRelaxationRow[];
+  ageAsOnDate?: string; // ISO date — the reckoning/cut-off date age is calculated as on
+  ageLimitByGrade?: AgeLimitRow[];
   salaryMin: number;
   salaryMax: number;
   applicationFee: {
@@ -52,8 +71,10 @@ export interface Job {
   };
   selectionProcess: string[];
   examPattern?: string;
+  examPatternNotes?: string[]; // bullet notes below the exam pattern table, e.g. negative marking / merit-list rules
   documentsRequired?: string;
   syllabusSummary?: string;
+  eligibilityDetails?: string[]; // per-post detailed eligibility bullets, beyond the single `qualification` summary
   howToApply: string[];
   officialNotificationUrl: string;
   officialApplyUrl: string;
@@ -61,6 +82,8 @@ export interface Job {
   importantLinks?: ImportantLink[];
   importantDates: ImportantDate[];
   eligibilityRules: EligibilityRule[];
+  faqs?: FaqItem[];
+  conclusion?: string;
   status: JobStatus;
   createdByBot: boolean;
   publishedAt: string;
