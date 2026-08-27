@@ -17,11 +17,28 @@ const CELL_PATTERN = /<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi;
 const LIST_ITEM_PATTERN = /<li\b[^>]*>([\s\S]*?)<\/li>/gi;
 const LINK_PATTERN = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
 
+// Bilingual notification pages lean on curly quotes and other named
+// entities inside plain-text list items (how-to-apply steps in
+// particular tend to quote a UI label, e.g. "&#8220;Apply Online&#8221;")
+// — decoding only &nbsp;/&amp; left every other entity showing up
+// verbatim as its numeric code in the stored text. Numeric entities
+// (decimal and hex) cover the long tail; the named-entity table covers
+// the handful WordPress/CMS editors actually emit.
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: "&", nbsp: " ", quot: '"', apos: "'", lt: "<", gt: ">",
+  ldquo: "\u201C", rdquo: "\u201D", lsquo: "\u2018", rsquo: "\u2019",
+  hellip: "\u2026", mdash: "\u2014", ndash: "\u2013",
+};
+
+function decodeEntities(text: string): string {
+  return text
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
+    .replace(/&([a-z]+);/gi, (m, name) => NAMED_ENTITIES[name.toLowerCase()] ?? m);
+}
+
 function stripTags(html: string): string {
-  return html
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
+  return decodeEntities(html.replace(/<[^>]+>/g, " "))
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -152,7 +169,10 @@ function extractCanonicalDates(rows: string[]): { label: string; date: string }[
   return results;
 }
 
-const FEE_AMOUNT_PATTERN = /(?:₹|rs\.?|inr)\s*[.:]?\s*([\d,]{2,7})/i;
+// {1,7} not {2,7} — a free-of-cost row is commonly written as a bare
+// "₹0", which is a single digit. The old 2-digit minimum silently
+// dropped every such row instead of recording the fee as zero.
+const FEE_AMOUNT_PATTERN = /(?:₹|rs\.?|inr)\s*[.:]?\s*([\d,]{1,7})/i;
 
 /**
  * Converts raw fee-table rows into {general, reserved} numbers, the
@@ -168,7 +188,11 @@ function extractCanonicalFee(rows: string[]): { general?: number; reserved?: num
     const amountMatch = row.match(FEE_AMOUNT_PATTERN);
     if (!amountMatch) continue;
     const amount = parseInt(amountMatch[1].replace(/,/g, ""), 10);
-    if (!amount) continue;
+    // NOT `if (!amount) continue` — 0 is a legitimate, common fee value
+    // (SC/ST/PwBD categories are frequently fee-exempt) and `!0` is
+    // true, so that check was silently discarding every free-of-cost
+    // row it managed to match at all.
+    if (Number.isNaN(amount)) continue;
 
     const isGeneral = /general|obc|ews|unreserved|सामान्य|ओबीसी/.test(lower);
     const isReserved = /sc\s*\/?\s*st|pwbd|pwd|reserved|एससी|एसटी|दिव्यांग/.test(lower);
@@ -182,16 +206,67 @@ function extractCanonicalFee(rows: string[]): { general?: number; reserved?: num
   return fee;
 }
 
+const VACANCY_TOTAL_ROW_LABEL = /total\s*vacanc\w*|total\s*post|कुल\s*रिक्तिय|कुल\s*योग/i;
+
+function firstNumberInText(text: string | undefined): number | undefined {
+  const match = text?.match(/\d[\d,]*/);
+  if (!match) return undefined;
+  const n = parseInt(match[0].replace(/,/g, ""), 10);
+  return Number.isNaN(n) ? undefined : n;
+}
+
+function lastNumberInRow(row: string): number | undefined {
+  const matches = row.match(/\d[\d,]*/g);
+  if (!matches || matches.length === 0) return undefined;
+  const n = parseInt(matches[matches.length - 1].replace(/,/g, ""), 10);
+  return Number.isNaN(n) ? undefined : n;
+}
+
 /**
- * Pulls a total vacancy count out of the post-details/vacancy table —
- * looks for a "Total Post(s)"/"कुल पद"/"कुल योग" style row or
- * parenthetical number, same field the PDF pipeline's totalVacancies
- * uses.
+ * Pulls the grand-total vacancy count out of the post-details/vacancy
+ * table, same field the PDF pipeline's totalVacancies uses.
+ *
+ * Resolves the count column by its OWN header text first, then reads
+ * that specific column off the row whose label is the actual grand
+ * total ("कुल रिक्तियां (Total Vacancies)" / "कुल योग (Total
+ * Vacancies)" / "Total Vacancies") — not by position. Different
+ * notification templates put the count column in different places: a
+ * pure UR/EWS/OBC/SC/ST breakdown puts it last, but a table with a
+ * trailing Women's Quota or Pay Scale column puts it second. Taking
+ * "the last number in the total row" (an earlier version of this fix)
+ * silently grabbed the Women's Quota figure instead of the actual
+ * total on exactly that second layout.
+ *
+ * Falls back to the last number in the matched row when the header
+ * can't be resolved or the total row has fewer cells than the header
+ * (a merged/short summary row) — still far better than the very first
+ * version's whole-table blob scan, which matched the column HEADER
+ * itself (containing the same "total" words) and returned the first
+ * category's count instead of the grand total.
  */
 function extractCanonicalVacancies(rows: string[]): number | undefined {
+  const header = rows[0]?.split(" | ");
+  const countColIndex = header?.findIndex((h) => VACANCY_TOTAL_ROW_LABEL.test(h)) ?? -1;
+
+  for (const row of rows) {
+    const cells = row.split(" | ");
+    const label = cells[0];
+    if (!label || !VACANCY_TOTAL_ROW_LABEL.test(label)) continue;
+
+    if (countColIndex > 0) {
+      const byColumn = firstNumberInText(cells[countColIndex]);
+      if (byColumn) return byColumn;
+    }
+    const total = lastNumberInRow(row);
+    if (total) return total;
+  }
+
+  // Fallback for pages with no dedicated total row — same best-effort
+  // blob scan as before, but restricted to unambiguous English phrasing
+  // only, so it can no longer collide with a Hindi column header.
   const combined = rows.join(" ");
   const patterns = [
-    /(?:total\s*post|total\s*vacanc\w*|कुल\s*पद|कुल\s*योग)[^\d]{0,25}(\d[\d,]{1,7})/i,
+    /(?:total\s*post|total\s*vacanc\w*)[^\d]{0,25}(\d[\d,]{1,7})/i,
     /\(\s*(\d[\d,]{2,7})\s*\)/, // a bare parenthetical count, e.g. "Total Post ( 11403 )"
   ];
   for (const pattern of patterns) {

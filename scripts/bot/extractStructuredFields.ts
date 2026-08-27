@@ -81,7 +81,9 @@ function findDatesNearLabels(text: string): { label: string; date: string }[] {
   return results;
 }
 
-const FEE_AMOUNT = /(?:rs\.?|₹|inr)\s*[.:]?\s*(\d{2,5})/i;
+// {1,5} not {2,5} — same fix as the HTML-path extractor: a ₹0/free-of-cost
+// row is a single digit and was silently unmatched at a 2-digit minimum.
+const FEE_AMOUNT = /(?:rs\.?|₹|inr)\s*[.:]?\s*(\d{1,5})/i;
 
 function findApplicationFee(text: string): { general?: number; reserved?: number } {
   const fee: { general?: number; reserved?: number } = {};

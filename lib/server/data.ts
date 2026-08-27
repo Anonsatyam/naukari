@@ -12,6 +12,7 @@ import {
 } from "./mappers";
 import { Job, ResultItem, AdmitCardItem, BotDraft, BotLogEntry, DraftType, HotUpdateItem } from "@/lib/types";
 import { isRecent, isClosingSoon, getApplicationEndDate } from "@/lib/dateHelpers";
+import { deepDecodeEntities } from "@/lib/entities";
 
 // Re-exported so existing callers importing these from this module keep working.
 export { isRecent, isClosingSoon, getApplicationEndDate };
@@ -23,6 +24,87 @@ function slugify(title: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
   return base || `job-${Date.now()}`;
+}
+
+// ---- Bot raw-field parsing (postDetails / selectionProcess) -------------
+//
+// extractHtmlNotificationFields.ts stores table-shaped notification
+// content as a single "cell | cell | cell || row || row" string (see
+// tableToPairs() there) rather than trying to force every source
+// site's table layout into one fixed shape. Converting that into the
+// Job type's actual fields (vacancyBreakdown: {category,count}[],
+// selectionProcess: string[]) belongs here, at the one place a draft
+// turns into a published record — not in the extractor, which doesn't
+// know what a Job record needs, and not in the page component, which
+// shouldn't have to re-parse raw pipe strings to render.
+
+function parsePipeRows(text: string): string[][] {
+  return text
+    .split(" || ")
+    .map((row) => row.split(" | ").map((cell) => cell.trim()))
+    .filter((row) => row.some(Boolean));
+}
+
+const VACANCY_TOTAL_ROW_LABEL = /total\s*vacanc\w*|total\s*post|कुल\s*रिक्तिय|कुल\s*योग/i;
+
+/**
+ * Converts a postDetails pipe-table into {category, count}[] for the
+ * job page's "Vacancy Details (Category-wise)" section.
+ *
+ * Resolves the count column by its OWN header text (matching the same
+ * fix applied in the bot's extractCanonicalVacancies) rather than
+ * assuming it's the last column — some notification templates put a
+ * Women's Quota or Pay Scale column after the actual post-count
+ * column, and a position-based guess picks up the wrong number.
+ */
+function parseVacancyBreakdown(postDetails: unknown): { category: string; count: number }[] | undefined {
+  if (typeof postDetails !== "string" || !postDetails.includes(" | ")) return undefined;
+  const rows = parsePipeRows(postDetails);
+  if (rows.length < 2) return undefined;
+
+  const [header, ...body] = rows;
+  const countColIndex = header.findIndex((h) => VACANCY_TOTAL_ROW_LABEL.test(h));
+  if (countColIndex <= 0) return undefined;
+
+  const breakdown: { category: string; count: number }[] = [];
+  for (const row of body) {
+    const label = row[0];
+    if (!label || VACANCY_TOTAL_ROW_LABEL.test(label)) continue; // skip the grand-total row itself
+    const match = row[countColIndex]?.match(/\d[\d,]*/);
+    if (!match) continue;
+    const count = parseInt(match[0].replace(/,/g, ""), 10);
+    if (!Number.isNaN(count)) breakdown.push({ category: label, count });
+  }
+  return breakdown.length > 0 ? breakdown : undefined;
+}
+
+/**
+ * Converts a selectionProcess pipe-table into one readable line per
+ * stage, e.g. "प्रथम चरण — परीक्षा का नाम: ..., कुल अंक: 50 Marks" —
+ * for the job page's plain numbered StepList, which expects string[]
+ * and has no table-rendering of its own. This is the fix for
+ * selectionProcess showing the generic "As per official notification"
+ * placeholder: `ensureStringArray` correctly rejects the raw pipe
+ * string as the wrong runtime shape and falls back to that placeholder
+ * — the fix is supplying it a real fallback derived from the table,
+ * not bypassing the shape check.
+ */
+function parseSelectionSteps(selectionProcess: unknown): string[] | undefined {
+  if (typeof selectionProcess !== "string" || !selectionProcess.includes(" | ")) return undefined;
+  const rows = parsePipeRows(selectionProcess);
+  if (rows.length < 2) return undefined;
+
+  const [header, ...body] = rows;
+  const steps = body
+    .map((row) => {
+      const parts = row
+        .slice(1)
+        .map((cell, i) => (cell && cell !== "—" ? `${header[i + 1]}: ${cell}` : null))
+        .filter((part): part is string => Boolean(part));
+      return [row[0], ...parts].filter(Boolean).join(" — ");
+    })
+    .filter(Boolean);
+  return steps.length > 0 ? steps : undefined;
 }
 
 // ---- Public reads (published only — uses the publishable-key client,
@@ -271,13 +353,28 @@ export async function approveDraft(
   if (!draftRow) return undefined;
   const draft = rowToDraft(draftRow);
 
+  // Belt-and-suspenders with the bot's own extraction fix: that stops
+  // NEW drafts from ever containing raw entity codes (&#8220; etc), but
+  // any draft already sitting in bot_drafts from before that fix
+  // shipped still has them baked into its stored JSON. Cleaning once
+  // here — the one place every draft type funnels through on its way
+  // to a published record — means approving an old draft doesn't carry
+  // the gibberish into the live site.
+  const cleanedExtractedFields = deepDecodeEntities(draft.extractedFields) as Record<string, unknown>;
+  // The review page re-sends several of these same raw fields back as
+  // `edits` on approve (ageLimit, postDetails, selectionProcess, ...) —
+  // sourced from whatever the browser originally fetched, i.e. still
+  // undecoded. Cleaning `edits` too, so that pass-through doesn't
+  // silently overwrite the decoded version when merged below.
+  const cleanedEdits = deepDecodeEntities(edits) as Record<string, unknown>;
+
   const markApproved = async () => {
     const { error } = await supabase.from("bot_drafts").update({ status: "approved" }).eq("id", id);
     if (error) throw error;
   };
 
   if (draft.draftType === "result") {
-    const merged = { ...draft.extractedFields, ...edits } as Partial<ResultItem>;
+    const merged = { ...cleanedExtractedFields, ...cleanedEdits } as Partial<ResultItem>;
     const title = merged.title ?? draft.jobTitle;
     const newResult: Partial<ResultItem> = {
       slug: slugify(title),
@@ -300,7 +397,7 @@ export async function approveDraft(
   }
 
   if (draft.draftType === "admit_card") {
-    const merged = { ...draft.extractedFields, ...edits } as Partial<AdmitCardItem>;
+    const merged = { ...cleanedExtractedFields, ...cleanedEdits } as Partial<AdmitCardItem>;
     const title = merged.title ?? draft.jobTitle;
     const now = new Date();
     const defaultExamDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -325,7 +422,12 @@ export async function approveDraft(
   }
 
   // draftType === "job" (default, and the original Phase 3/4 behavior)
-  const merged = { ...draft.extractedFields, ...edits } as Partial<Job>;
+  // Partial<Job> alone rejects reading `postDetails` below — it's a
+  // raw bot-only field (the postDetails pipe-table string) that never
+  // becomes its own Job column; it only exists to be parsed into
+  // vacancyBreakdown. The intersection lets known Job fields keep their
+  // real types while still allowing that one raw read.
+  const merged = { ...cleanedExtractedFields, ...cleanedEdits } as Partial<Job> & Record<string, unknown>;
   const title = merged.title ?? draft.jobTitle;
   const now = new Date().toISOString();
 
@@ -338,7 +440,12 @@ export async function approveDraft(
     department: merged.department ?? draft.organization,
     category: merged.category ?? "Administrative",
     totalVacancies: merged.totalVacancies ?? 0,
-    vacancyBreakdown: ensureOptionalArray(merged.vacancyBreakdown),
+    // merged.vacancyBreakdown is only ever populated when an admin
+    // edit supplies it directly — the bot never produces that key, only
+    // the raw postDetails pipe-table, so this fell back to `undefined`
+    // (and the whole "Vacancy Details" section silently never rendered)
+    // for every bot-sourced job until now.
+    vacancyBreakdown: ensureOptionalArray(merged.vacancyBreakdown) ?? parseVacancyBreakdown(merged.postDetails),
     qualification: merged.qualification ?? "As per notification",
     minAge: merged.minAge ?? 18,
     maxAge: merged.maxAge ?? 40,
@@ -359,8 +466,12 @@ export async function approveDraft(
     // job page later. Validate the actual shape here, once, at the one
     // place new job records get created, rather than trusting every
     // future extraction source to always produce the right type.
-    selectionProcess: ensureStringArray(merged.selectionProcess, ["As per official notification"]),
+    selectionProcess: ensureStringArray(
+      merged.selectionProcess,
+      parseSelectionSteps(merged.selectionProcess) ?? ["As per official notification"]
+    ),
     examPattern: merged.examPattern,
+    documentsRequired: merged.documentsRequired,
     syllabusSummary: merged.syllabusSummary,
     howToApply: ensureStringArray(merged.howToApply, [
       "See the official notification for the application procedure",

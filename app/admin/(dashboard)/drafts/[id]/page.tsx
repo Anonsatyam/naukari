@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ExternalLink, CheckCircle2, XCircle, FileText } from "lucide-react";
 import { BotDraft } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
+import { deepDecodeEntities } from "@/lib/entities";
 import { Button } from "@/components/Button";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
@@ -124,8 +125,19 @@ export default function DraftReviewPage({
         return res.json();
       })
       .then((data: { draft: BotDraft }) => {
-        setDraft(data.draft);
-        const ex = data.draft.extractedFields as Record<string, unknown>;
+        // Decode once, here, before the draft ever touches component
+        // state — drafts extracted before the bot's entity-decoding fix
+        // shipped still have raw codes (&#8220; etc) baked into their
+        // stored extractedFields. Cleaning at this single entry point
+        // means the form fields, the Additional Notification Details
+        // preview, and the payload sent on approve are all clean
+        // without needing to remember to decode at each read site.
+        const cleanedDraft: BotDraft = {
+          ...data.draft,
+          extractedFields: deepDecodeEntities(data.draft.extractedFields) as BotDraft["extractedFields"],
+        };
+        setDraft(cleanedDraft);
+        const ex = cleanedDraft.extractedFields as Record<string, unknown>;
         const today = new Date().toISOString().slice(0, 10);
 
         if (data.draft.draftType === "result") {

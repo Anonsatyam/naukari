@@ -25,6 +25,7 @@ export function rowToJob(row: any): Job {
     applicationFee: row.application_fee,
     selectionProcess: row.selection_process,
     examPattern: row.exam_pattern ?? undefined,
+    documentsRequired: row.documents_required ?? undefined,
     syllabusSummary: row.syllabus_summary ?? undefined,
     howToApply: row.how_to_apply,
     officialNotificationUrl: row.official_notification_url,
@@ -62,6 +63,7 @@ export function jobToRow(job: Partial<Job>): Record<string, unknown> {
   if (job.applicationFee !== undefined) row.application_fee = job.applicationFee;
   if (job.selectionProcess !== undefined) row.selection_process = job.selectionProcess;
   if (job.examPattern !== undefined) row.exam_pattern = job.examPattern;
+  if (job.documentsRequired !== undefined) row.documents_required = job.documentsRequired;
   if (job.syllabusSummary !== undefined) row.syllabus_summary = job.syllabusSummary;
   if (job.howToApply !== undefined) row.how_to_apply = job.howToApply;
   if (job.officialNotificationUrl !== undefined) row.official_notification_url = job.officialNotificationUrl;

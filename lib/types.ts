@@ -52,6 +52,7 @@ export interface Job {
   };
   selectionProcess: string[];
   examPattern?: string;
+  documentsRequired?: string;
   syllabusSummary?: string;
   howToApply: string[];
   officialNotificationUrl: string;

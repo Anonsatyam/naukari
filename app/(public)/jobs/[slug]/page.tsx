@@ -200,7 +200,13 @@ export default async function JobDetailPage({
 
           {job.examPattern && (
             <Section title="Exam Pattern">
-              <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{job.examPattern}</p>
+              <PipeTableOrText text={job.examPattern} />
+            </Section>
+          )}
+
+          {job.documentsRequired && (
+            <Section title="Documents Required">
+              <PipeTableOrText text={job.documentsRequired} />
             </Section>
           )}
 
@@ -322,5 +328,56 @@ function StepList({ items }: { items: string[] }) {
         </li>
       ))}
     </ol>
+  );
+}
+
+// Exam Pattern / Documents Required come through as the same
+// "cell | cell || row || row" pipe-delimited strings the bot's HTML
+// extractor produces (see extractHtmlNotificationFields.ts) — they were
+// previously dumped straight into a <p>, which is why Exam Pattern
+// rendered as one long run-on line instead of the table the source
+// notification actually shows. Parsed here into a proper table; falls
+// back to plain text for anything that isn't in that pipe-row shape
+// (e.g. a hand-edited free-text value), so this never hides content it
+// can't parse.
+function parsePipeRows(text: string): string[][] {
+  if (!text.includes(" | ")) return [];
+  return text
+    .split(" || ")
+    .map((row) => row.split(" | ").map((cell) => cell.trim()))
+    .filter((row) => row.some(Boolean));
+}
+
+function PipeTableOrText({ text }: { text: string }) {
+  const rows = parsePipeRows(text);
+  if (rows.length < 2) {
+    return <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{text}</p>;
+  }
+  const [header, ...body] = rows;
+  return (
+    <div className="overflow-x-auto rounded-lg border border-[var(--color-border)]">
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="bg-[var(--color-background)] text-left text-[var(--color-text-muted)]">
+            {header.map((cell, i) => (
+              <th key={i} className="whitespace-nowrap px-3 py-2 font-semibold">
+                {cell}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-[var(--color-border)]">
+          {body.map((row, i) => (
+            <tr key={i}>
+              {row.map((cell, j) => (
+                <td key={j} className="whitespace-nowrap px-3 py-2 text-[var(--color-text-secondary)]">
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
