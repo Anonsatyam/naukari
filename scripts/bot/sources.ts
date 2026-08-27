@@ -4,10 +4,22 @@ export interface BotSource {
   orgHint: string;
 }
 
-// Official Bihar government recruitment sources the bot checks on
-// schedule. Sourced from a verified master list of official Bihar
-// government department/organization websites (bihar.gov.in domains,
-// not the older bih.nic.in ones some of these previously used).
+// Only BPSC is active right now, on purpose — the goal is to get one
+// source working end-to-end and verified (correct discovery, correct
+// table/PDF extraction, correct drafts) before expanding back out to
+// the rest. Nothing else runs until it's added back to SOURCES below.
+export const SOURCES: BotSource[] = [
+  {
+    name: "BPSC",
+    url: "https://bpsc.bihar.gov.in/",
+    orgHint: "Bihar Public Service Commission (BPSC)",
+  },
+];
+
+// Everything previously configured and verified, kept here rather than
+// deleted so no research is lost. To bring any of these back: move the
+// entry into SOURCES above (or do `export const SOURCES = [...SOURCES,
+// ...OTHER_SOURCES]` to re-enable all of them at once).
 //
 // Verified against real web search on 2026-08-27: 12 URLs that were
 // returning HTTP 404 have been corrected to their actual current paths
@@ -28,21 +40,11 @@ export interface BotSource {
 // different URL wouldn't fix. Same for the sources that only fail
 // intermittently (timeouts that succeed locally but not from GitHub
 // Actions) — that's IP-range-based blocking, not a URL problem.
-//
-// Not yet included: the 38 district administration portals and other
-// boards/universities/PSUs mentioned in the source list, since specific
-// URLs for those weren't provided — add them here the same way once
-// you have the URLs.
-export const SOURCES: BotSource[] = [
+export const OTHER_SOURCES: BotSource[] = [
   {
     name: "Bihar Government Master Portal",
     url: "https://state.bihar.gov.in/",
     orgHint: "Government of Bihar",
-  },
-  {
-    name: "BPSC",
-    url: "https://bpsc.bihar.gov.in/",
-    orgHint: "Bihar Public Service Commission (BPSC)",
   },
   {
     name: "BSSC",
