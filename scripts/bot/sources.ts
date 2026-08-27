@@ -17,8 +17,8 @@ export interface BotSource {
 // fallback wherever it's actually found (see run.ts wiring).
 export const SOURCES: BotSource[] = [
   {
-    name: "Bihar Job Portal (biharjob.co.in)",
-    url: "https://biharjob.co.in/",
+    name: "Bihar Job Portal (sarkariresult.com)",
+    url: "https://sarkariresult.com/",
     orgHint: "Unknown (see extracted organization)",
   },
 ];
