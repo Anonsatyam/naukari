@@ -13,12 +13,52 @@ loadEnvLocal();
 
 const SITE_URL = process.env.BOT_SITE_URL || "http://localhost:3000";
 const BOT_API_SECRET = process.env.BOT_API_SECRET;
-const MAX_CANDIDATES_PER_SOURCE = 15;
+// Raised from 15 now that the bot actually crawls into a source's full
+// "View More" listing page (see extract.ts's VIEW_MORE_PATTERN) rather
+// than only ever seeing the homepage widget's ~10 most-recent links —
+// biharjob.co.in's combined Jobs/Results/Admit Card listings measured
+// at 77 unique candidates in one live check, so this needs real
+// headroom above that to avoid silently truncating, not just enough
+// to cover today's count exactly.
+const MAX_CANDIDATES_PER_SOURCE = 120;
 const MAX_SECTIONS_PER_SOURCE = 5;
 // Playwright page loads take several seconds each, versus milliseconds
 // for the normal fetch — a lower section limit keeps the added cost of
 // testing this hypothesis bounded rather than multiplying it by 5.
 const MAX_SECTIONS_PER_SOURCE_PLAYWRIGHT = 2;
+
+// A single isolated request to a candidate's detail page reliably
+// returns the full page; a burst of many fired back-to-back within
+// under a minute reliably came back with nothing extractable, with no
+// HTTP error at all — the signature of a rate-limiter/WAF issuing a
+// soft-blocked (still HTTP 200) response to a burst rather than an
+// outright block. Spacing requests out is the direct fix for that, not
+// a network/extraction bug — and matters even more now that a single
+// source can have dozens of candidates instead of a handful.
+const DETAIL_FETCH_DELAY_MS = 1200;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Skips drafting a posting whose application deadline has *definitely*
+// already passed — nobody can still apply to it. Deliberately only
+// acts when a clean "Application End" date was actually extracted and
+// parses; a posting with a messy/relative/missing date is kept rather
+// than guessed at, since wrongly dropping a still-open posting is
+// worse than occasionally drafting one that turns out to be expired
+// (a human reviews every draft before it goes live anyway).
+function isDefinitelyExpired(extractedFields: { importantDates?: { label: string; date: string }[] }): boolean {
+  const endDate = extractedFields.importantDates?.find((d) => d.label === "Application End")?.date;
+  if (!endDate) return false;
+  const end = new Date(endDate).getTime();
+  if (Number.isNaN(end)) return false;
+  // Compared against the start of today, not the current instant, so a
+  // deadline of "today" is never treated as already expired.
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  return end < startOfToday.getTime();
+}
 
 /**
  * These sources all share one government CMS platform
@@ -182,6 +222,7 @@ async function run() {
 
   let created = 0;
   let skipped = 0;
+  let expired = 0;
   let errors = 0;
 
   try {
@@ -230,7 +271,11 @@ async function run() {
           continue;
         }
 
-        for (const candidate of allListings.slice(0, MAX_CANDIDATES_PER_SOURCE)) {
+        const candidatesToProcess = allListings.slice(0, MAX_CANDIDATES_PER_SOURCE);
+        for (let i = 0; i < candidatesToProcess.length; i++) {
+          const candidate = candidatesToProcess[i];
+          if (i > 0) await sleep(DETAIL_FETCH_DELAY_MS);
+
           const draftInput = extractFields(candidate, source.orgHint);
 
           const pdfFields = await tryExtractPdfFields(candidate);
@@ -261,6 +306,14 @@ async function run() {
             }
           }
 
+          if (isDefinitelyExpired(draftInput.extractedFields)) {
+            expired++;
+            console.log(
+              `  ⏭ [${source.name}] Skipped (application deadline passed): ${candidate.title}`
+            );
+            continue;
+          }
+
           const result = await postJson("/api/bot/drafts", draftInput);
 
           if (!result.ok) {
@@ -284,7 +337,9 @@ async function run() {
     await closeSharedBrowser();
   }
 
-  console.log(`\nDone. ${created} draft(s) created, ${skipped} skipped (already known), ${errors} error(s).`);
+  console.log(
+    `\nDone. ${created} draft(s) created, ${skipped} skipped (already known), ${expired} skipped (deadline passed), ${errors} error(s).`
+  );
 }
 
 run();

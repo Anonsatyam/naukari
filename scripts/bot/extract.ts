@@ -93,9 +93,20 @@ export function extractCandidates(html: string, baseUrl: string): Candidate[] {
         .trim()
     );
 
-    if (!text || text.length < 10) continue;
+    if (!text) continue;
 
-    if (!isNotificationLike(text)) continue;
+    // A "View More"/"See All Results"-style nav link is admitted
+    // regardless of the length/keyword filters below — those exist to
+    // reject noise from being mistaken for an actual notification
+    // title, but a section link is deliberately short and generic
+    // (isSectionLink is the check that actually validates it), so
+    // applying the notification-title filters to it first meant it
+    // never survived long enough for splitSectionsFromListings to ever
+    // see it and route it to the crawl-deeper path.
+    if (!isSectionLink(text)) {
+      if (text.length < 10) continue;
+      if (!isNotificationLike(text)) continue;
+    }
 
     let absoluteUrl: string;
     try {
@@ -167,9 +178,20 @@ function normalizeForSectionCheck(text: string): string {
 const VIEW_ALL_PATTERN =
   /^(view|see|show) all (recruitment|recruitments|result|results|admit card|admit cards|notification|notifications|notice|notices|vacancy|vacancies|advertisement|advertisements|tender|tenders)$/;
 
+// A bare "View More" / "See More" / "Read More" / "Load More" — no
+// category named, unlike VIEW_ALL_PATTERN above — is the other common
+// convention for "this box only shows the last handful, click through
+// for the real, full listing" (seen on biharjob.co.in's homepage
+// "Latest Jobs" widget, which links out to a ~50-posting listing page
+// the bot was otherwise never discovering — only ever scraping the
+// homepage widget's own ~10 links). Matched generically rather than
+// tied to one exact phrase so it also catches whichever of these four
+// verbs a given source happens to use.
+const VIEW_MORE_PATTERN = /^(view|see|show|read|load) more$/;
+
 export function isSectionLink(title: string): boolean {
   const normalized = normalizeForSectionCheck(title);
-  return SECTION_LABELS.has(normalized) || VIEW_ALL_PATTERN.test(normalized);
+  return SECTION_LABELS.has(normalized) || VIEW_ALL_PATTERN.test(normalized) || VIEW_MORE_PATTERN.test(normalized);
 }
 
 export interface SplitCandidates {
