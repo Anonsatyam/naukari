@@ -372,7 +372,7 @@ export default async function JobDetailPage({
           )}
 
           {job.conclusion && (
-            <Section title="Conclusion" icon={<CheckCircle2 size={16} />} accent="neutral">
+            <Section title="Conclusion" icon={<CheckCircle2 size={16} />} accent="green">
               <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{job.conclusion}</p>
             </Section>
           )}
