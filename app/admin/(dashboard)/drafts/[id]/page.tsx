@@ -128,10 +128,11 @@ function PipeTable({ text }: { text?: string }) {
       {tables.map((t, i) => (
         <div key={i} className="space-y-1.5">
           {t.caption && <p className="text-xs leading-relaxed text-[var(--color-text-secondary)]">{t.caption}</p>}
-          <div className="overflow-x-auto rounded-lg border border-[var(--color-border)]">
+          <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
+            <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="bg-[var(--color-background)] text-left text-[var(--color-text-muted)]">
+                <tr className="bg-[var(--color-primary)] text-left text-white">
                   {t.header.map((cell, j) => (
                     <th key={j} className="px-3 py-2 align-top font-semibold">
                       {cell}
@@ -151,6 +152,7 @@ function PipeTable({ text }: { text?: string }) {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       ))}

@@ -176,7 +176,7 @@ export default async function JobDetailPage({
                   Grade-wise Age Limit
                 </p>
                 <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
-                  <div className="grid grid-cols-3 gap-3 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-primary)]">
+                  <div className="grid grid-cols-3 gap-3 bg-[var(--color-primary)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white">
                     <span>Grade / Cadre</span>
                     <span>Min. Age</span>
                     <span>Max. Age</span>
@@ -200,7 +200,7 @@ export default async function JobDetailPage({
                   Age Relaxation
                 </p>
                 <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
-                  <div className="grid grid-cols-2 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-primary)]">
+                  <div className="grid grid-cols-2 bg-[var(--color-primary)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white">
                     <span>Category</span>
                     <span className="text-right">Relaxation</span>
                   </div>
@@ -237,7 +237,7 @@ export default async function JobDetailPage({
               <Section title="Post / Vacancy Details" icon={<Users size={16} />} accent="orange">
                 {hasVacancyTable ? (
                   <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
-                    <div className={`grid ${cols} gap-3 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-primary)]`}>
+                    <div className={`grid ${cols} gap-3 bg-[var(--color-primary)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white`}>
                       <span>Post / Category</span>
                       {hasGrade && <span>Grade</span>}
                       <span className="text-right">Posts</span>
@@ -428,50 +428,44 @@ export default async function JobDetailPage({
 
 type Accent = "blue" | "green" | "purple" | "orange" | "teal" | "amber" | "pink" | "neutral";
 
-// Each section on this page gets a color-coded left edge + icon chip so
-// a page carrying ten-plus sections stays visually scannable — colors
-// pull from the same CSS-variable palette (globals.css) the rest of the
+// Each section on this page gets a color-coded icon chip so a page
+// carrying ten-plus sections stays visually scannable — colors pull
+// from the same CSS-variable palette (globals.css) the rest of the
 // site already uses (the semantic tones directly, four new --color-
 // accent-* tones for the rest), rather than a one-off palette bolted
-// onto just this page.
-const ACCENTS: Record<Accent, { border: string; iconBg: string; iconText: string }> = {
+// onto just this page. Sections no longer get a colored left-edge
+// border on top of that — just the plain card border every other
+// card on the site uses.
+const ACCENTS: Record<Accent, { iconBg: string; iconText: string }> = {
   blue: {
-    border: "border-l-4 border-l-[var(--color-primary)]",
     iconBg: "bg-[var(--color-primary-tint)]",
     iconText: "text-[var(--color-primary)]",
   },
   green: {
-    border: "border-l-4 border-l-[var(--color-success)]",
     iconBg: "bg-[var(--color-success-tint)]",
     iconText: "text-[var(--color-success)]",
   },
   purple: {
-    border: "border-l-4 border-l-[var(--color-accent-purple)]",
     iconBg: "bg-[var(--color-accent-purple-tint)]",
     iconText: "text-[var(--color-accent-purple)]",
   },
   orange: {
-    border: "border-l-4 border-l-[var(--color-accent-orange)]",
     iconBg: "bg-[var(--color-accent-orange-tint)]",
     iconText: "text-[var(--color-accent-orange)]",
   },
   teal: {
-    border: "border-l-4 border-l-[var(--color-accent-teal)]",
     iconBg: "bg-[var(--color-accent-teal-tint)]",
     iconText: "text-[var(--color-accent-teal)]",
   },
   amber: {
-    border: "border-l-4 border-l-[var(--color-warning)]",
     iconBg: "bg-[var(--color-warning-tint)]",
     iconText: "text-[var(--color-warning)]",
   },
   pink: {
-    border: "border-l-4 border-l-[var(--color-accent-pink)]",
     iconBg: "bg-[var(--color-accent-pink-tint)]",
     iconText: "text-[var(--color-accent-pink)]",
   },
   neutral: {
-    border: "border-l-4 border-l-[var(--color-border)]",
     iconBg: "bg-[var(--color-background)]",
     iconText: "text-[var(--color-text-secondary)]",
   },
@@ -490,7 +484,7 @@ function Section({
 }) {
   const a = ACCENTS[accent];
   return (
-    <Card className={a.border}>
+    <Card>
       <h2 className="flex items-center gap-2.5 text-[15px] font-bold text-[var(--color-text-primary)]">
         {icon && (
           <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${a.iconBg} ${a.iconText}`}>
@@ -544,29 +538,31 @@ function PipeTableOrText({ text }: { text: string }) {
       {tables.map((t, i) => (
         <div key={i} className="space-y-2">
           {t.caption && <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{t.caption}</p>}
-          <div className="overflow-x-auto rounded-lg border border-[var(--color-border)]">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-left text-[var(--color-text-primary)]">
-                  {t.header.map((cell, j) => (
-                    <th key={j} className="px-3 py-2 align-top font-semibold">
-                      {cell}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {t.body.map((row, r) => (
-                  <tr key={r}>
-                    {row.map((cell, c) => (
-                      <td key={c} className="whitespace-normal break-words px-3 py-2 align-top text-[var(--color-text-secondary)]">
+          <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-[var(--color-primary)] text-left text-white">
+                    {t.header.map((cell, j) => (
+                      <th key={j} className="px-3 py-2 align-top font-semibold">
                         {cell}
-                      </td>
+                      </th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {t.body.map((row, r) => (
+                    <tr key={r}>
+                      {row.map((cell, c) => (
+                        <td key={c} className="whitespace-normal break-words px-3 py-2 align-top text-[var(--color-text-secondary)]">
+                          {cell}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       ))}
