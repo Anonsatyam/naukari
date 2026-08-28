@@ -2,22 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { CheckCircle2, XCircle, Info, ShieldQuestion } from "lucide-react";
-import { qualifications } from "@/lib/taxonomy";
+import { qualifications, qualificationRank, classifyQualification } from "@/lib/taxonomy";
 import { Job } from "@/lib/types";
 import { Button } from "./Button";
 import Card from "./Card";
 import { SelectField, TextField, CheckboxField } from "./FormField";
 import { cn } from "@/lib/utils";
-
-const qualificationRank: Record<string, number> = {
-  "10th Pass": 1,
-  "12th Pass": 2,
-  Diploma: 3,
-  Graduate: 4,
-  "B.Tech / B.E.": 4,
-  "B.Ed": 4,
-  "Post Graduate": 5,
-};
 
 type CheckResult = {
   label: string;
@@ -31,17 +21,35 @@ function evaluate(
 ): CheckResult[] {
   const results: CheckResult[] = [];
 
-  // Education
-  const requiredRank = qualificationRank[job.qualification] ?? 1;
+  // Education — job.qualification is a taxonomy label the vast
+  // majority of the time (extraction now classifies it from the
+  // notification's own Eligibility text), but a bot draft can still
+  // land on something else (an admin-edited free-text value, or the
+  // "As per notification" fallback when nothing recognizable was
+  // found anywhere). classifyQualification catches the free-text case;
+  // when even that comes back empty, the requirement is genuinely
+  // unknown — reported as "info" rather than silently auto-passing
+  // every candidate against a requirement the checker never actually
+  // identified.
+  const requiredLabel = qualificationRank[job.qualification] ? job.qualification : classifyQualification(job.qualification);
+  const requiredRank = requiredLabel ? qualificationRank[requiredLabel] : undefined;
   const userRank = qualificationRank[input.qualification] ?? 1;
-  results.push({
-    label: "Education",
-    status: userRank >= requiredRank ? "pass" : "fail",
-    reason:
-      userRank >= requiredRank
-        ? `Your qualification meets the requirement (${job.qualification}).`
-        : `This job requires at least ${job.qualification}.`,
-  });
+  if (requiredRank === undefined) {
+    results.push({
+      label: "Education",
+      status: "info",
+      reason: `This job's qualification requirement ("${job.qualification}") couldn't be matched to a specific level — check the official notification directly.`,
+    });
+  } else {
+    results.push({
+      label: "Education",
+      status: userRank >= requiredRank ? "pass" : "fail",
+      reason:
+        userRank >= requiredRank
+          ? `Your qualification meets the requirement (${requiredLabel}).`
+          : `This job requires at least ${requiredLabel}.`,
+    });
+  }
 
   // Age
   const ageOk = input.age >= job.minAge && input.age <= job.maxAge;

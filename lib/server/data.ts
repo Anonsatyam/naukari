@@ -14,6 +14,7 @@ import { Job, ResultItem, AdmitCardItem, BotDraft, BotLogEntry, DraftType, HotUp
 import { isRecent, isClosingSoon, getApplicationEndDate } from "@/lib/dateHelpers";
 import { deepDecodeEntities, decodeHtmlEntities } from "@/lib/entities";
 import { parsePipeTables, PipeTable, firstNumber, deriveAgeRange, deriveSalaryRange } from "@/lib/pipeTables";
+import { classifyQualification } from "@/lib/taxonomy";
 
 // Re-exported so the admin draft review page (a client component,
 // which can't import this server-only module) can compute the same
@@ -611,7 +612,26 @@ export async function approveDraft(
     // no per-category numbers to extract at all, and that's still worth
     // showing as a table rather than nothing.
     postDetailsText: typeof merged.postDetails === "string" ? merged.postDetails : undefined,
-    qualification: merged.qualification ?? "As per notification",
+    // merged.qualification only ever comes from the bot's crude
+    // title-keyword guess (extractFields.ts) or an admin edit — most
+    // titles don't literally contain a qualification word, so this
+    // fell back to the generic "As per notification" string far more
+    // often than not. Since that string isn't one of the taxonomy
+    // buckets the eligibility checker compares against, it silently
+    // defaulted to the LOWEST rank there — meaning every candidate,
+    // regardless of what they selected, "passed" the qualification
+    // check for a job the bot never actually classified. Trying the
+    // full Eligibility section text (far more likely to actually state
+    // the requirement) before falling back to the title itself fixes
+    // that for the common case; "As per notification" only remains for
+    // when neither source mentions a recognizable qualification level
+    // at all — and the checker below now treats that honestly (as
+    // "unknown", not "no requirement") rather than auto-passing it.
+    qualification:
+      merged.qualification ??
+      classifyQualification(typeof merged.eligibility === "string" ? merged.eligibility : undefined) ??
+      classifyQualification(title) ??
+      "As per notification",
     // The bot never derives a single min/max age number on its own (no
     // form field for it either) — this was always silently defaulting
     // to the generic 18-40 placeholder even when the real range (e.g.
