@@ -3,6 +3,7 @@ import { Search, ArrowRight } from "lucide-react";
 import JobCard from "@/components/JobCard";
 import ListItemCard from "@/components/ListItemCard";
 import HotUpdates from "@/components/HotUpdates";
+import RotatingHeroWord from "@/components/RotatingHeroWord";
 import { ButtonLink } from "@/components/Button";
 import { getPublishedJobs, getResults, getAdmitCards, getHotUpdates } from "@/lib/server/data";
 import { isClosingSoon, isRecent } from "@/lib/dateHelpers";
@@ -43,7 +44,7 @@ export default async function Home() {
               Bihar · verified from official sources
             </span>
             <h1 className="font-display mt-5 text-3xl font-extrabold leading-tight text-[var(--color-text-primary)] md:text-5xl">
-              Government Jobs, Results &amp; Admit Cards
+              Government <RotatingHeroWord />
               <br />
               <span className="text-[var(--color-primary)]">in Bihar</span>
             </h1>

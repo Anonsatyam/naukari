@@ -37,7 +37,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-8 flex flex-col gap-2 border-t border-[var(--color-border)] pt-6 text-xs text-[var(--color-text-muted)] sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 Bihar Sarkari Naukri. Built for Bihar, made by Bihari.</p>
+          <p>© 2026 Bihar Sarkari Naukri. Built for Bihar, made by a Bihari.</p>
           <div className="flex gap-4">
             <Link href="/about" className="hover:text-[var(--color-primary)]">About</Link>
             <Link href="/about#disclaimer" className="hover:text-[var(--color-primary)]">Disclaimer</Link>
