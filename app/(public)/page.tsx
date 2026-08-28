@@ -3,7 +3,6 @@ import { Search, ArrowRight } from "lucide-react";
 import JobCard from "@/components/JobCard";
 import ListItemCard from "@/components/ListItemCard";
 import HotUpdates from "@/components/HotUpdates";
-import RotatingStateName from "@/components/RotatingStateName";
 import { ButtonLink } from "@/components/Button";
 import { getPublishedJobs, getResults, getAdmitCards, getHotUpdates } from "@/lib/server/data";
 import { isClosingSoon, isRecent } from "@/lib/dateHelpers";
@@ -44,9 +43,9 @@ export default async function Home() {
               Bihar · verified from official sources
             </span>
             <h1 className="font-display mt-5 text-3xl font-extrabold leading-tight text-[var(--color-text-primary)] md:text-5xl">
-              Government jobs in
+              Government Jobs, Results &amp; Admit Cards
               <br />
-              <RotatingStateName className="text-[var(--color-primary)]" />
+              <span className="text-[var(--color-primary)]">in Bihar</span>
             </h1>
             <p className="mt-4 text-base leading-relaxed text-[var(--color-text-secondary)] md:text-lg">
               Structured job details, real search and filters, and a
