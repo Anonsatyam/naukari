@@ -38,8 +38,15 @@ function decodeEntities(text: string): string {
     .replace(/&([a-z]+);/gi, (m, name) => NAMED_ENTITIES[name.toLowerCase()] ?? m);
 }
 
+// Source pages routinely prefix a title/description line with a
+// decorative "🔥" flag — meaningless on our site, stripped at the same
+// choke point every piece of extracted text already funnels through.
+function stripDecorativeEmoji(text: string): string {
+  return text.replace(/\u{1F525}️?/gu, "").replace(/[ \t]{2,}/g, " ").trim();
+}
+
 function stripTags(html: string): string {
-  return decodeEntities(html.replace(/<[^>]+>/g, " "))
+  return stripDecorativeEmoji(decodeEntities(html.replace(/<[^>]+>/g, " ")))
     .replace(/\s+/g, " ")
     .trim()
     .replace(/\|/g, "｜"); // U+FF5C fullwidth vertical line — visually

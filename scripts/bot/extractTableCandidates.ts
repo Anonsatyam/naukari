@@ -10,12 +10,21 @@ const LINK_PATTERN = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
 // rather than creating one near-duplicate draft per attachment.
 const PREFERRED_LINK_LABELS = ["advertisement", "important notice", "notification", "notice"];
 
+// Source pages routinely prefix a title with a decorative "🔥" flag —
+// meaningless on our site, stripped at the same choke point every raw
+// cell's text passes through.
+function stripDecorativeEmoji(text: string): string {
+  return text.replace(/\u{1F525}️?/gu, "").replace(/[ \t]{2,}/g, " ").trim();
+}
+
 function stripTags(html: string): string {
-  return html
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  return stripDecorativeEmoji(
+    html
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+  );
 }
 
 // Strips out entire <a>...</a> blocks (tag AND their text content),

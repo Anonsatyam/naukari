@@ -12,7 +12,7 @@ import {
 } from "./mappers";
 import { Job, ResultItem, AdmitCardItem, BotDraft, BotLogEntry, DraftType, HotUpdateItem } from "@/lib/types";
 import { isRecent, isClosingSoon, getApplicationEndDate } from "@/lib/dateHelpers";
-import { deepDecodeEntities } from "@/lib/entities";
+import { deepDecodeEntities, decodeHtmlEntities } from "@/lib/entities";
 import { parsePipeTables, PipeTable, firstNumber, deriveAgeRange, deriveSalaryRange } from "@/lib/pipeTables";
 
 // Re-exported so the admin draft review page (a client component,
@@ -458,6 +458,11 @@ export async function approveDraft(
   // undecoded. Cleaning `edits` too, so that pass-through doesn't
   // silently overwrite the decoded version when merged below.
   const cleanedEdits = deepDecodeEntities(edits) as Record<string, unknown>;
+  // Same belt-and-suspenders reasoning as above, for the one title
+  // field that isn't inside extractedFields/edits: a draft scraped
+  // before the bot's own emoji-stripping fix shipped can still have a
+  // "🔥" baked into jobTitle itself.
+  const cleanJobTitle = decodeHtmlEntities(draft.jobTitle);
 
   const markApproved = async () => {
     const { error } = await supabase.from("bot_drafts").update({ status: "approved" }).eq("id", id);
@@ -466,7 +471,7 @@ export async function approveDraft(
 
   if (draft.draftType === "result") {
     const merged = { ...cleanedExtractedFields, ...cleanedEdits } as Partial<ResultItem>;
-    const title = merged.title ?? draft.jobTitle;
+    const title = merged.title ?? cleanJobTitle;
     const newResult: Partial<ResultItem> = {
       slug: slugify(title),
       title,
@@ -489,7 +494,7 @@ export async function approveDraft(
 
   if (draft.draftType === "admit_card") {
     const merged = { ...cleanedExtractedFields, ...cleanedEdits } as Partial<AdmitCardItem>;
-    const title = merged.title ?? draft.jobTitle;
+    const title = merged.title ?? cleanJobTitle;
     const now = new Date();
     const defaultExamDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const newCard: Partial<AdmitCardItem> = {
@@ -519,7 +524,7 @@ export async function approveDraft(
   // vacancyBreakdown. The intersection lets known Job fields keep their
   // real types while still allowing that one raw read.
   const merged = { ...cleanedExtractedFields, ...cleanedEdits } as Partial<Job> & Record<string, unknown>;
-  const title = merged.title ?? draft.jobTitle;
+  const title = merged.title ?? cleanJobTitle;
   const now = new Date().toISOString();
 
   const newJob: Partial<Job> = {

@@ -3,6 +3,13 @@ export interface Candidate {
   url: string;
 }
 
+// Source pages routinely prefix a title with a decorative "🔥" flag —
+// meaningless on our site, so it's stripped right where every raw
+// title first gets its tags stripped, before anything else ever sees it.
+function stripDecorativeEmoji(text: string): string {
+  return text.replace(/\u{1F525}️?/gu, "").replace(/[ \t]{2,}/g, " ").trim();
+}
+
 // Strong positive signals — a link is genuinely worth investigating further.
 const NOTIFICATION_KEYWORDS = [
   "recruitment",
@@ -79,10 +86,12 @@ export function extractCandidates(html: string, baseUrl: string): Candidate[] {
 
   while ((match = linkPattern.exec(html)) !== null) {
     const href = match[1];
-    const text = match[2]
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
+    const text = stripDecorativeEmoji(
+      match[2]
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+    );
 
     if (!text || text.length < 10) continue;
 

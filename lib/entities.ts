@@ -18,11 +18,24 @@ const NAMED_ENTITIES: Record<string, string> = {
   hellip: "\u2026", mdash: "\u2014", ndash: "\u2013",
 };
 
+// Source pages routinely prefix a title or a description line with a
+// decorative "🔥" (their own "hot/new" flag) — it means nothing on our
+// site and was showing up baked into stored titles/descriptions.
+// Stripped as its own step (not folded into the entity table above,
+// since it's a literal character in the scraped text, not an entity
+// code) with the optional variation-selector-16 that some sources emit
+// right after it, then any doubled-up whitespace it leaves behind.
+export function stripDecorativeEmoji(text: string): string {
+  return text.replace(/\u{1F525}️?/gu, "").replace(/[ \t]{2,}/g, " ").trim();
+}
+
 export function decodeHtmlEntities(text: string): string {
-  return text
-    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
-    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
-    .replace(/&([a-z]+);/gi, (m, name) => NAMED_ENTITIES[name.toLowerCase()] ?? m);
+  return stripDecorativeEmoji(
+    text
+      .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+      .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
+      .replace(/&([a-z]+);/gi, (m, name) => NAMED_ENTITIES[name.toLowerCase()] ?? m)
+  );
 }
 
 /**

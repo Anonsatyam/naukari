@@ -185,7 +185,7 @@ export default async function Home() {
       )}
 
       {/* Eligibility CTA */}
-      <section className="container-page pb-16">
+      <section className="container-page pb-10">
         <div className="flex flex-col items-start justify-between gap-6 rounded-2xl bg-[var(--color-primary)] p-8 text-white md:flex-row md:items-center md:p-10">
           <div>
             <h2 className="font-display text-xl font-bold md:text-2xl">
