@@ -79,12 +79,75 @@ export function isNotificationLike(title: string): boolean {
  * need real-world tuning once run against actual source pages, since
  * government site markup varies a lot.
  */
-export function extractCandidates(html: string, baseUrl: string): Candidate[] {
+// WordPress's "List Category Posts" plugin renders a listing page's
+// actual posts inside a <ul class="lcp_catlist"> — verified against
+// biharjob.co.in's homepage widget, its full Jobs/Results/Admit Card
+// listing pages, all consistently — and nothing else (nav, footer,
+// sidebar widgets) ever lands inside it. That makes container
+// membership alone sufficient proof a link is a real posting, which
+// sidesteps keyword-matching entirely for anything found this way.
+// Keyword matching is a fixed vocabulary that can only ever recognize
+// phrasing someone thought to list in advance — real example that
+// slipped through it: "Gramin Dak Sevak (GDS) Online Engagement
+// Schedule-II July 2026", which is a genuine, current job posting that
+// contains none of "recruitment"/"vacancy"/"bharti"/etc. India Post
+// officially calls GDS positions "engaged", not "recruited" — a
+// keyword list can be patched for THIS one case, but the same failure
+// mode recurs for every other phrasing nobody's added yet (as seen on
+// the very same run: two LNMU admission "Merit List" results, also
+// missed, also genuinely on the page). Trusting the container this
+// listing is actually rendered in has no such blind spot.
+const TRUSTED_LIST_CONTAINER_PATTERN = /<ul\b[^>]*class=["'][^"']*\blcp_catlist\b[^"']*["'][^>]*>([\s\S]*?)<\/ul>/gi;
+
+/**
+ * Pulls every link out of each trusted-list container found on the
+ * page, with no title filtering at all beyond "has visible text" —
+ * and returns the page HTML with those container blocks blanked out,
+ * so the keyword-based fallback pass below doesn't re-scan (and
+ * potentially reject) the exact same links a second time.
+ */
+function extractTrustedListLinks(html: string, baseUrl: string): { candidates: Candidate[]; remainingHtml: string } {
   const candidates: Candidate[] = [];
+  let remainingHtml = html;
+  const containerPattern = new RegExp(TRUSTED_LIST_CONTAINER_PATTERN.source, "gi");
+  let containerMatch: RegExpExecArray | null;
+
+  while ((containerMatch = containerPattern.exec(html)) !== null) {
+    const linkPattern = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    let linkMatch: RegExpExecArray | null;
+    while ((linkMatch = linkPattern.exec(containerMatch[1])) !== null) {
+      const text = stripDecorativeEmoji(
+        linkMatch[2]
+          .replace(/<[^>]+>/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+      );
+      if (!text) continue;
+      try {
+        candidates.push({ title: text, url: new URL(linkMatch[1], baseUrl).toString() });
+      } catch {
+        continue;
+      }
+    }
+    remainingHtml = remainingHtml.replace(containerMatch[0], "");
+  }
+
+  return { candidates, remainingHtml };
+}
+
+export function extractCandidates(html: string, baseUrl: string): Candidate[] {
+  const { candidates: trustedCandidates, remainingHtml } = extractTrustedListLinks(html, baseUrl);
+
+  // Everything outside a trusted-list container still goes through the
+  // keyword/section-link filter below — that's what finds a "View
+  // More" nav link (which lives in the page's surrounding chrome, not
+  // inside the listing itself) and covers any page that doesn't use
+  // this particular plugin at all.
+  const candidates: Candidate[] = [...trustedCandidates];
   const linkPattern = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   let match: RegExpExecArray | null;
 
-  while ((match = linkPattern.exec(html)) !== null) {
+  while ((match = linkPattern.exec(remainingHtml)) !== null) {
     const href = match[1];
     const text = stripDecorativeEmoji(
       match[2]
