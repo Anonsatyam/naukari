@@ -433,6 +433,20 @@ function findLinkByKeywords(links: unknown, keywords: string[]): string | undefi
 const APPLY_LINK_KEYWORDS = ["apply", "online", "registration", "आवेदन", "रजिस्ट्रेशन"];
 const NOTIFICATION_LINK_KEYWORDS = ["notification", "notice", "advertisement", "pdf", "नोटिफिकेशन", "अधिसूचना"];
 
+// The source's own Conclusion paragraph routinely plugs itself by
+// name/domain ("अधिक जानकारी के लिए biharjob.co.in पर विजिट करें" and
+// similar) — harmless as a fact, but it's directing our own visitors
+// to a competing site. Swapped for ours wherever it appears, in any
+// of the forms a source actually writes it (bare domain, with a
+// protocol/www prefix, or wrapped in a markdown link).
+const SOURCE_SITE_PATTERN = /(https?:\/\/)?(www\.)?biharjob\.co\.in/gi;
+const OWN_SITE_DOMAIN = "naukari-lac.vercel.app";
+
+function replaceSourceSitePlug(text: string | undefined): string | undefined {
+  if (typeof text !== "string") return text;
+  return text.replace(SOURCE_SITE_PATTERN, OWN_SITE_DOMAIN);
+}
+
 function ensureApplicationFee(
   value: unknown,
   fallback: { general: number; reserved: number; note?: string }
@@ -656,7 +670,7 @@ export async function approveDraft(
         : undefined,
     eligibilityRules: ensureArray(merged.eligibilityRules, []),
     faqs: ensureOptionalArray(merged.faqs),
-    conclusion: merged.conclusion,
+    conclusion: replaceSourceSitePlug(merged.conclusion),
     status: "published",
     createdByBot: true,
     publishedAt: now,
