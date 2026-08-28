@@ -176,7 +176,7 @@ export default async function JobDetailPage({
                   Grade-wise Age Limit
                 </p>
                 <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
-                  <div className="grid grid-cols-3 gap-3 bg-[var(--color-background)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                  <div className="grid grid-cols-3 gap-3 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-primary)]">
                     <span>Grade / Cadre</span>
                     <span>Min. Age</span>
                     <span>Max. Age</span>
@@ -200,7 +200,7 @@ export default async function JobDetailPage({
                   Age Relaxation
                 </p>
                 <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
-                  <div className="grid grid-cols-2 bg-[var(--color-background)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                  <div className="grid grid-cols-2 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-primary)]">
                     <span>Category</span>
                     <span className="text-right">Relaxation</span>
                   </div>
@@ -237,7 +237,7 @@ export default async function JobDetailPage({
               <Section title="Post / Vacancy Details" icon={<Users size={16} />} accent="orange">
                 {hasVacancyTable ? (
                   <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
-                    <div className={`grid ${cols} gap-3 bg-[var(--color-background)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]`}>
+                    <div className={`grid ${cols} gap-3 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-primary)]`}>
                       <span>Post / Category</span>
                       {hasGrade && <span>Grade</span>}
                       <span className="text-right">Posts</span>
@@ -547,7 +547,7 @@ function PipeTableOrText({ text }: { text: string }) {
           <div className="overflow-x-auto rounded-lg border border-[var(--color-border)]">
             <table className="w-full text-xs">
               <thead>
-                <tr className="bg-[var(--color-background)] text-left text-[var(--color-text-muted)]">
+                <tr className="text-left text-[var(--color-text-primary)]">
                   {t.header.map((cell, j) => (
                     <th key={j} className="px-3 py-2 align-top font-semibold">
                       {cell}
