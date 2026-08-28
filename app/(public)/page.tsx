@@ -40,13 +40,13 @@ export default async function Home() {
       <section className="border-b border-[var(--color-border)] bg-white">
         <div className="container-page py-14 md:py-20">
           <div className="mx-auto max-w-2xl text-center">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-primary-tint)] px-3 py-1 text-xs font-semibold text-[var(--color-primary)]">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-success-tint)] px-3 py-1 text-xs font-semibold text-[var(--color-success)]">
               Bihar · verified from official sources
             </span>
             <h1 className="font-display mt-5 text-3xl font-extrabold leading-tight text-[var(--color-text-primary)] md:text-5xl">
-              Government <RotatingHeroWord />
+              Sarkari <RotatingHeroWord />
               <br />
-              <span className="text-[var(--color-primary)]">in Bihar</span>
+              in Bihar
             </h1>
             <p className="mt-4 text-base leading-relaxed text-[var(--color-text-secondary)] md:text-lg">
               Structured job details, real search and filters, and a
