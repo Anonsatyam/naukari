@@ -73,7 +73,28 @@ const HEADING_FIELD_MAP: { field: keyof ParsedSections; keywords: string[] }[] =
   { field: "postDetailsRaw", keywords: ["post details", "vacancy", "seat distribution", "पद विवरण", "सीट वितरण"] },
   { field: "eligibilityRaw", keywords: ["eligibility", "योग्यता"] },
   { field: "selectionProcessRaw", keywords: ["selection process", "चयन प्रक्रिया"] },
-  { field: "howToApplyRaw", keywords: ["how to apply", "आवेदन कैसे करें"] },
+  // Same bucket covers a Job's "How to Apply", a Result's "How to
+  // Check Result", and an Admit Card's "How to Download Admit Card" —
+  // structurally the same thing (a numbered procedure), just worded
+  // differently depending on what the posting actually is. Without
+  // these extra phrasings, a Result/Admit Card page's own how-to
+  // section matched none of the heading keywords at all and was
+  // silently dropped rather than captured under any field.
+  {
+    field: "howToApplyRaw",
+    keywords: [
+      "how to apply",
+      "आवेदन कैसे करें",
+      "how to check result",
+      "how to check the result",
+      "रिजल्ट कैसे चेक करें",
+      "परिणाम कैसे देखें",
+      "how to download admit card",
+      "how to download the admit card",
+      "एडमिट कार्ड कैसे डाउनलोड करें",
+      "प्रवेश पत्र कैसे डाउनलोड करें",
+    ],
+  },
   { field: "importantLinksRaw", keywords: ["important links", "महत्वपूर्ण लिंक"] },
   { field: "documentsRequiredRaw", keywords: ["documents required", "required documents", "आवश्यक दस्तावेज"] },
   { field: "examPatternRaw", keywords: ["exam pattern", "syllabus", "परीक्षा पैटर्न", "पाठ्यक्रम"] },

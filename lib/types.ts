@@ -139,6 +139,22 @@ export interface ResultItem {
   officialLink: string;
   sourceUrl: string;
   summary: string;
+  // Raw "label | value" dates table (declaration date, document
+  // verification / interview call-letter dates, next-round dates) —
+  // same TABLE_SEP/pipe convention as the Job type's importantDatesText,
+  // rendered the same way. Kept as free text rather than a canonical
+  // array since a result's own set of relevant dates varies a lot more
+  // than a job posting's fixed Application Start/End shape.
+  importantDatesText?: string;
+  // "How to Check Result" steps, when the source publishes a
+  // step-by-step procedure rather than just a direct link.
+  howToCheck?: string[];
+  // Raw merit-list/cutoff table verbatim, when the source publishes
+  // category-wise cutoff marks alongside the result declaration.
+  cutoffText?: string;
+  importantLinks?: ImportantLink[];
+  faqs?: FaqItem[];
+  conclusion?: string;
 }
 
 export interface AdmitCardItem {
@@ -151,6 +167,20 @@ export interface AdmitCardItem {
   releaseDate: string;
   officialLink: string;
   sourceUrl: string;
+  // Same raw pipe-table convention as ResultItem.importantDatesText —
+  // exam date, admit card download window, exam-day reporting time.
+  importantDatesText?: string;
+  // "How to Download Admit Card" steps.
+  howToDownload?: string[];
+  // Exam-day essentials (documents to carry, reporting time, dress
+  // code) when the source publishes them alongside the release
+  // announcement — kept as the raw pipe-table/plain-text the extractor
+  // already produces for this kind of section.
+  examDayInstructionsText?: string;
+  examPattern?: string;
+  importantLinks?: ImportantLink[];
+  faqs?: FaqItem[];
+  conclusion?: string;
 }
 
 export type DraftType = "job" | "result" | "admit_card";

@@ -509,7 +509,14 @@ export async function approveDraft(
   };
 
   if (draft.draftType === "result") {
-    const merged = { ...cleanedExtractedFields, ...cleanedEdits } as Partial<ResultItem>;
+    // The `& Record<string, unknown>` intersection (same trick the Job
+    // branch below uses) is needed to read `howToApply` off `merged` —
+    // that's the bot's raw, generic field name (shared with Job, since
+    // extraction doesn't know or care what kind of posting a "How to
+    // ..." section belongs to); ResultItem's own field for it is
+    // `howToCheck`, renamed here to match what this section actually
+    // is for a result rather than a job application.
+    const merged = { ...cleanedExtractedFields, ...cleanedEdits } as Partial<ResultItem> & Record<string, unknown>;
     const title = merged.title ?? cleanJobTitle;
     const newResult: Partial<ResultItem> = {
       slug: slugify(title),
@@ -520,6 +527,11 @@ export async function approveDraft(
       officialLink: merged.officialLink ?? draft.sourceUrl,
       sourceUrl: draft.sourceUrl,
       summary: merged.summary ?? `${title} — see the official notification for full details.`,
+      importantDatesText: merged.importantDatesText,
+      howToCheck: ensureOptionalArray(merged.howToApply),
+      importantLinks: ensureOptionalArray(merged.importantLinks),
+      faqs: ensureOptionalArray(merged.faqs),
+      conclusion: replaceSourceSitePlug(merged.conclusion),
     };
     const { data: inserted, error: insertError } = await supabase
       .from("results")
@@ -532,7 +544,7 @@ export async function approveDraft(
   }
 
   if (draft.draftType === "admit_card") {
-    const merged = { ...cleanedExtractedFields, ...cleanedEdits } as Partial<AdmitCardItem>;
+    const merged = { ...cleanedExtractedFields, ...cleanedEdits } as Partial<AdmitCardItem> & Record<string, unknown>;
     const title = merged.title ?? cleanJobTitle;
     const now = new Date();
     const defaultExamDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -545,6 +557,18 @@ export async function approveDraft(
       releaseDate: merged.releaseDate ?? now.toISOString().slice(0, 10),
       officialLink: merged.officialLink ?? draft.sourceUrl,
       sourceUrl: draft.sourceUrl,
+      importantDatesText: merged.importantDatesText,
+      howToDownload: ensureOptionalArray(merged.howToApply),
+      // "Documents Required" is the same heading/keyword bucket a job
+      // posting's own document checklist uses — reused here for an
+      // admit card's exam-day essentials (documents to carry, dress
+      // code) since sources commonly publish that under the same kind
+      // of heading right alongside the release announcement.
+      examDayInstructionsText: typeof merged.documentsRequired === "string" ? merged.documentsRequired : undefined,
+      examPattern: merged.examPattern,
+      importantLinks: ensureOptionalArray(merged.importantLinks),
+      faqs: ensureOptionalArray(merged.faqs),
+      conclusion: replaceSourceSitePlug(merged.conclusion),
     };
     const { data: inserted, error: insertError } = await supabase
       .from("admit_cards")

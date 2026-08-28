@@ -117,6 +117,12 @@ export function rowToResult(row: any): ResultItem {
     officialLink: row.official_link,
     sourceUrl: row.source_url,
     summary: row.summary,
+    importantDatesText: row.important_dates_text ?? undefined,
+    howToCheck: row.how_to_check ?? undefined,
+    cutoffText: row.cutoff_text ?? undefined,
+    importantLinks: row.important_links ?? undefined,
+    faqs: row.faqs ?? undefined,
+    conclusion: row.conclusion ?? undefined,
   };
 }
 
@@ -130,6 +136,12 @@ export function resultToRow(result: Partial<ResultItem>): Record<string, unknown
   if (result.officialLink !== undefined) row.official_link = result.officialLink;
   if (result.sourceUrl !== undefined) row.source_url = result.sourceUrl;
   if (result.summary !== undefined) row.summary = result.summary;
+  if (result.importantDatesText !== undefined) row.important_dates_text = result.importantDatesText;
+  if (result.howToCheck !== undefined) row.how_to_check = result.howToCheck;
+  if (result.cutoffText !== undefined) row.cutoff_text = result.cutoffText;
+  if (result.importantLinks !== undefined) row.important_links = result.importantLinks;
+  if (result.faqs !== undefined) row.faqs = result.faqs;
+  if (result.conclusion !== undefined) row.conclusion = result.conclusion;
   return row;
 }
 
@@ -147,6 +159,13 @@ export function rowToAdmitCard(row: any): AdmitCardItem {
     releaseDate: row.release_date,
     officialLink: row.official_link,
     sourceUrl: row.source_url,
+    importantDatesText: row.important_dates_text ?? undefined,
+    howToDownload: row.how_to_download ?? undefined,
+    examDayInstructionsText: row.exam_day_instructions_text ?? undefined,
+    examPattern: row.exam_pattern ?? undefined,
+    importantLinks: row.important_links ?? undefined,
+    faqs: row.faqs ?? undefined,
+    conclusion: row.conclusion ?? undefined,
   };
 }
 
@@ -160,6 +179,13 @@ export function admitCardToRow(card: Partial<AdmitCardItem>): Record<string, unk
   if (card.releaseDate !== undefined) row.release_date = card.releaseDate;
   if (card.officialLink !== undefined) row.official_link = card.officialLink;
   if (card.sourceUrl !== undefined) row.source_url = card.sourceUrl;
+  if (card.importantDatesText !== undefined) row.important_dates_text = card.importantDatesText;
+  if (card.howToDownload !== undefined) row.how_to_download = card.howToDownload;
+  if (card.examDayInstructionsText !== undefined) row.exam_day_instructions_text = card.examDayInstructionsText;
+  if (card.examPattern !== undefined) row.exam_pattern = card.examPattern;
+  if (card.importantLinks !== undefined) row.important_links = card.importantLinks;
+  if (card.faqs !== undefined) row.faqs = card.faqs;
+  if (card.conclusion !== undefined) row.conclusion = card.conclusion;
   return row;
 }
 
