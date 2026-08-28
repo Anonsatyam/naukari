@@ -27,7 +27,7 @@ import { ButtonLink } from "@/components/Button";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
-import { KeyValueRow, StatFact } from "@/components/KeyValueRow";
+import { KeyValueRow } from "@/components/KeyValueRow";
 import SourceVerified from "@/components/SourceVerified";
 import JobCard from "@/components/JobCard";
 
@@ -114,18 +114,6 @@ export default async function JobDetailPage({
         <p className="mt-3 text-sm leading-relaxed text-[var(--color-text-secondary)]">
           {job.shortInfo}
         </p>
-
-        <div className="mt-5 grid grid-cols-3 gap-4 border-t border-[var(--color-border)] pt-5">
-          <StatFact
-            label="Total Vacancies"
-            value={job.totalVacancies ? job.totalVacancies.toLocaleString("en-IN") : "As notified"}
-          />
-          <StatFact label="Age Limit" value={job.minAge && job.maxAge ? `${job.minAge}–${job.maxAge} yrs` : "As per rules"} />
-          <StatFact
-            label="Salary"
-            value={job.salaryMin ? `${formatCurrency(job.salaryMin)}–${formatCurrency(job.salaryMax)}` : "As per rules"}
-          />
-        </div>
       </Card>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
@@ -152,33 +140,35 @@ export default async function JobDetailPage({
           </Section>
 
           <Section title="Application Fee" icon={<Wallet size={16} />} accent="green">
-            <div className="space-y-3">
-              <KeyValueRow label="General / OBC" value={formatCurrency(job.applicationFee?.general ?? 0)} />
-              <KeyValueRow label="SC / ST / Reserved" value={formatCurrency(job.applicationFee?.reserved ?? 0)} />
-              {job.applicationFee?.note && (
-                <p className="text-xs text-[var(--color-text-secondary)]">{job.applicationFee.note}</p>
-              )}
-            </div>
-            {job.applicationFeeText && (
-              // The full fee table as the source actually published it —
-              // covers categories/footnotes (a PwBD/OH-only row, a
-              // payment-method note) the two-number summary above can't.
-              <div className="mt-4 border-t border-[var(--color-border)] pt-4">
-                <PipeTableOrText text={job.applicationFeeText} />
+            {job.applicationFeeText ? (
+              // The full fee table as the source actually published it
+              // already covers categories/footnotes (a PwBD/OH-only row,
+              // a payment-method note) — the two-number summary is only
+              // needed when there's no full table to fall back to.
+              <PipeTableOrText text={job.applicationFeeText} />
+            ) : (
+              <div className="space-y-3">
+                <KeyValueRow label="General / OBC" value={formatCurrency(job.applicationFee?.general ?? 0)} />
+                <KeyValueRow label="SC / ST / Reserved" value={formatCurrency(job.applicationFee?.reserved ?? 0)} />
+                {job.applicationFee?.note && (
+                  <p className="text-xs text-[var(--color-text-secondary)]">{job.applicationFee.note}</p>
+                )}
               </div>
             )}
           </Section>
 
           <Section title="Age Limit Details" icon={<Hourglass size={16} />} accent="purple">
-            <div className="space-y-3">
-              <KeyValueRow
-                label="Age Limit"
-                value={job.minAge && job.maxAge ? `${job.minAge} to ${job.maxAge} years` : "As per official notification"}
-              />
-              {job.ageAsOnDate && (
-                <KeyValueRow label="Age Reckoned As On" value={formatDate(job.ageAsOnDate)} />
-              )}
-            </div>
+            {!hasAgeGradeTable && !hasAgeRelaxationTable && !hasAgeLimitFallback && (
+              <div className="space-y-3">
+                <KeyValueRow
+                  label="Age Limit"
+                  value={job.minAge && job.maxAge ? `${job.minAge} to ${job.maxAge} years` : "As per official notification"}
+                />
+                {job.ageAsOnDate && (
+                  <KeyValueRow label="Age Reckoned As On" value={formatDate(job.ageAsOnDate)} />
+                )}
+              </div>
+            )}
 
             {hasAgeGradeTable && (
               <div className="mt-4">
