@@ -355,19 +355,133 @@ function classifyHeading(headingText: string): keyof ParsedSections | null {
   return null;
 }
 
+const CELL_WITH_TAG_PATTERN = /<(td|th)\b([^>]*)>([\s\S]*?)<\/(?:td|th)>/gi;
+const THEAD_PATTERN = /<thead\b[^>]*>[\s\S]*?<\/thead>/i;
+
+function parseSpanAttr(attrs: string, name: "colspan" | "rowspan"): number {
+  const match = attrs.match(new RegExp(`${name}\\s*=\\s*["']?(\\d+)`, "i"));
+  const n = match ? parseInt(match[1], 10) : 1;
+  return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
+interface RawCell {
+  tag: "td" | "th";
+  value: string;
+  colspan: number;
+  rowspan: number;
+}
+
+interface TableCell {
+  tag: "td" | "th";
+  value: string;
+}
+
+/**
+ * Expands one <tr>'s own cells against any rowspan carried over from
+ * earlier rows (mutated in place, keyed by final column position) into
+ * a full-width row — every column position a sighted user would see
+ * gets an entry, a rowspan cell's value repeated down into every row
+ * it visually covers and a colspan cell's value repeated across every
+ * column it visually covers. Without this, a row whose leading cell is
+ * merged away by an earlier row's rowspan (very common: a "Circle"
+ * column that only prints once per group of States under it) comes out
+ * short by however many cells were merged, so it no longer lines up
+ * under the same header its neighbors do.
+ */
+function expandRow(rawCells: RawCell[], carry: (TableCell & { remaining: number })[]): TableCell[] {
+  const out: TableCell[] = [];
+  let cellIndex = 0;
+  let col = 0;
+  const MAX_COLS = 300; // circuit breaker against malformed/runaway markup
+  while (col < MAX_COLS && (cellIndex < rawCells.length || carry[col])) {
+    const carried = carry[col];
+    if (carried) {
+      out.push({ tag: carried.tag, value: carried.value });
+      carried.remaining--;
+      if (carried.remaining <= 0) delete carry[col];
+      col++;
+      continue;
+    }
+    const cell = rawCells[cellIndex];
+    if (!cell) break;
+    cellIndex++;
+    for (let i = 0; i < cell.colspan; i++) {
+      out.push({ tag: cell.tag, value: cell.value });
+      if (cell.rowspan > 1) carry[col] = { tag: cell.tag, value: cell.value, remaining: cell.rowspan - 1 };
+      col++;
+    }
+  }
+  return out;
+}
+
+/**
+ * Flattens an HTML table into one pipe-joined row per data row,
+ * respecting colspan/rowspan (see expandRow above) and collapsing a
+ * multi-row grouped header (an explicit <thead> with several stacked
+ * <tr>s, e.g. "Regular Vacancies" spanning 6 sub-columns above their
+ * individual SC/ST/OBC/... headers) into a single combined header row
+ * by joining each column's text across every header level. Without
+ * this, a source's real per-column headers were being read as extra
+ * (badly misaligned) data rows, while the actual header used for
+ * rendering only had as many cells as the *coarsest* grouping row —
+ * exactly what broke the SBI vacancy table's layout.
+ */
 function tableToPairs(tableHtml: string): string[] {
-  const rows: string[] = [];
+  const theadMatch = tableHtml.match(THEAD_PATTERN);
+  const theadEnd = theadMatch ? tableHtml.indexOf(theadMatch[0]) + theadMatch[0].length : -1;
+
   const rowPattern = new RegExp(ROW_PATTERN.source, "gi");
+  const headerRows: TableCell[][] = [];
+  const bodyRows: TableCell[][] = [];
+  const carry: (TableCell & { remaining: number })[] = [];
   let rowMatch: RegExpExecArray | null;
+
   while ((rowMatch = rowPattern.exec(tableHtml)) !== null) {
-    const cellPattern = new RegExp(CELL_PATTERN.source, "gi");
-    const cells: string[] = [];
+    const cellPattern = new RegExp(CELL_WITH_TAG_PATTERN.source, "gi");
+    const rawCells: RawCell[] = [];
     let cellMatch: RegExpExecArray | null;
     while ((cellMatch = cellPattern.exec(rowMatch[1])) !== null) {
-      const text = stripTags(cellMatch[1]);
-      if (text) cells.push(text);
+      rawCells.push({
+        tag: cellMatch[1].toLowerCase() as "td" | "th",
+        value: stripTags(cellMatch[3]),
+        colspan: parseSpanAttr(cellMatch[2], "colspan"),
+        rowspan: parseSpanAttr(cellMatch[2], "rowspan"),
+      });
     }
-    if (cells.length > 0) rows.push(cells.join(" | "));
+    if (rawCells.length === 0) continue;
+
+    const expanded = expandRow(rawCells, carry);
+    if (expanded.length === 0) continue;
+
+    // A row counts as a header row if it's inside an explicit <thead>,
+    // or — when a source doesn't use one — every one of its own cells
+    // is a <th>, which is the other convention seen in the wild.
+    const isHeaderRow = theadEnd >= 0 ? rowMatch.index < theadEnd : rawCells.every((c) => c.tag === "th");
+    (isHeaderRow ? headerRows : bodyRows).push(expanded);
+  }
+
+  const rows: string[] = [];
+  if (headerRows.length > 0) {
+    const width = Math.max(...headerRows.map((r) => r.length));
+    const combined: string[] = [];
+    for (let c = 0; c < width; c++) {
+      const levels: string[] = [];
+      let prev = "";
+      for (const headerRow of headerRows) {
+        const text = headerRow[c]?.value ?? "";
+        // A level whose text repeats the level above it in this same
+        // column (the natural result of expanding a single header cell
+        // down through rowspan, e.g. "Circle" spanning all 3 header
+        // rows) is only kept once rather than stuttering.
+        if (text && text !== prev) levels.push(text);
+        prev = text;
+      }
+      combined.push(levels.join(" - "));
+    }
+    rows.push(combined.join(" | "));
+  }
+  for (const bodyRow of bodyRows) {
+    rows.push(bodyRow.map((c) => c.value).join(" | "));
   }
   return rows;
 }
