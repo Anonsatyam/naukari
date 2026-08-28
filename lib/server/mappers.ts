@@ -46,6 +46,7 @@ export function rowToJob(row: any): Job {
     eligibilityRules: row.eligibility_rules,
     faqs: row.faqs ?? undefined,
     conclusion: row.conclusion ?? undefined,
+    additionalSections: row.additional_sections ?? undefined,
     status: row.status,
     createdByBot: row.created_by_bot,
     publishedAt: row.published_at,
@@ -96,6 +97,7 @@ export function jobToRow(job: Partial<Job>): Record<string, unknown> {
   if (job.eligibilityRules !== undefined) row.eligibility_rules = job.eligibilityRules;
   if (job.faqs !== undefined) row.faqs = job.faqs;
   if (job.conclusion !== undefined) row.conclusion = job.conclusion;
+  if (job.additionalSections !== undefined) row.additional_sections = job.additionalSections;
   if (job.status !== undefined) row.status = job.status;
   if (job.createdByBot !== undefined) row.created_by_bot = job.createdByBot;
   if (job.publishedAt !== undefined) row.published_at = job.publishedAt;
@@ -123,6 +125,7 @@ export function rowToResult(row: any): ResultItem {
     importantLinks: row.important_links ?? undefined,
     faqs: row.faqs ?? undefined,
     conclusion: row.conclusion ?? undefined,
+    additionalSections: row.additional_sections ?? undefined,
   };
 }
 
@@ -142,6 +145,7 @@ export function resultToRow(result: Partial<ResultItem>): Record<string, unknown
   if (result.importantLinks !== undefined) row.important_links = result.importantLinks;
   if (result.faqs !== undefined) row.faqs = result.faqs;
   if (result.conclusion !== undefined) row.conclusion = result.conclusion;
+  if (result.additionalSections !== undefined) row.additional_sections = result.additionalSections;
   return row;
 }
 
@@ -166,6 +170,7 @@ export function rowToAdmitCard(row: any): AdmitCardItem {
     importantLinks: row.important_links ?? undefined,
     faqs: row.faqs ?? undefined,
     conclusion: row.conclusion ?? undefined,
+    additionalSections: row.additional_sections ?? undefined,
   };
 }
 
@@ -186,6 +191,7 @@ export function admitCardToRow(card: Partial<AdmitCardItem>): Record<string, unk
   if (card.importantLinks !== undefined) row.important_links = card.importantLinks;
   if (card.faqs !== undefined) row.faqs = card.faqs;
   if (card.conclusion !== undefined) row.conclusion = card.conclusion;
+  if (card.additionalSections !== undefined) row.additional_sections = card.additionalSections;
   return row;
 }
 

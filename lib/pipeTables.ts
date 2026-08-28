@@ -101,6 +101,49 @@ export function parsePipeTables(text: string): PipeTable[] {
   return groups.map((rows) => toPipeTable(rows)).filter((t): t is PipeTable => t !== null);
 }
 
+export type PipeBlock = { type: "table"; table: PipeTable } | { type: "list"; items: string[] };
+
+/**
+ * Like parsePipeTables, but recognizes when a chunk is actually a flat
+ * list — every row has exactly one cell, i.e. no CELL_SEP anywhere in
+ * it — rather than forcing it through the table shape. That mattered
+ * for two real, observed failure modes: a pure bullet list (a GDS
+ * posting's 3-sentence "Exam Pattern": no exam held, how merit is
+ * decided, grade conversion) has no CELL_SEP anywhere at all, so
+ * parsePipeTables' up-front guard rejected it entirely and the caller
+ * fell back to dumping the whole raw " || "-joined string as one
+ * paragraph — the literal "||" separators show up as visible text.
+ * And a field spanning a genuine list block *and* a genuine table
+ * block (the same posting's Eligibility section: education bullets,
+ * then a separate Physical Eligibility table) needs each block kept
+ * in its own shape, not the list's first bullet mistaken for a table
+ * header the way parsePipeTables' single-column fallback would read
+ * it. Table-shaped chunks behave exactly as parsePipeTables already
+ * does; text with no CELL_SEP anywhere still returns [] so the caller
+ * can show it as plain prose.
+ */
+export function parsePipeBlocks(text: string): PipeBlock[] {
+  if (!text) return [];
+  const chunks = text.includes(TABLE_SEP) ? text.split(TABLE_SEP) : [text];
+  const blocks: PipeBlock[] = [];
+
+  for (const chunk of chunks) {
+    const rows = parseRows(chunk);
+    if (rows.length === 0) continue;
+
+    if (rows.every((row) => row.length <= 1)) {
+      const items = rows.map((row) => row[0]).filter(Boolean);
+      if (items.length > 0) blocks.push({ type: "list", items });
+      continue;
+    }
+
+    const table = toPipeTable(rows);
+    if (table) blocks.push({ type: "table", table });
+  }
+
+  return blocks;
+}
+
 export function firstNumber(text: string | undefined): number | undefined {
   const match = text?.match(/\d[\d,]*/);
   if (!match) return undefined;

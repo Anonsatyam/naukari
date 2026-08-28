@@ -50,13 +50,19 @@ function parseFaqLines(lines: string[]): FaqDraft[] {
 // row/bullet across all of them, in order.
 function pipeRowsToLines(text: string): string[] {
   return text.split(TABLE_SEP).flatMap((chunk) => {
+    const rows = chunk.split(" || ").map((row) => row.trim()).filter(Boolean);
     if (!chunk.includes(" | ")) {
       // Not a table — likely already plain sentences/bullets (e.g. a
-      // <ul> eligibility list); split on the row separator only.
-      return chunk.split(" || ").map((s) => s.trim()).filter(Boolean);
+      // <ul> eligibility list); each row IS the line, verbatim.
+      return rows;
     }
-    return chunk
-      .split(" || ")
+    // A real table's first row is its column header (labels, not a
+    // criterion of its own) — skipping it here avoids seeding the
+    // textarea with a bogus "Parameter: Details"-style bullet made out
+    // of the header cells themselves, keeping only the actual data
+    // rows as one "label: value" line each.
+    return rows
+      .slice(1)
       .map((row) =>
         row
           .split(" | ")
@@ -109,6 +115,13 @@ const RICH_DETAIL_KEYS = [
   "applyOnlineLink",
   "notificationPdfLink",
   "officialWebsiteLink",
+  // Every source section that didn't match a specific bucket above —
+  // see genericSections in extractHtmlNotificationFields.ts. Carried
+  // through on approve exactly like the rest of this list, so a
+  // Physical Eligibility table (or literally anything else the source
+  // published under its own heading) survives into the published
+  // record instead of only ever showing up in bulk-approve.
+  "genericSections",
 ] as const;
 
 // faqText / conclusionText are shown as a read-only reference only (see
@@ -823,6 +836,16 @@ export default function DraftReviewPage({
               <PipeTable text={ex.eligibility as string} />
             </section>
           )}
+
+          {Array.isArray(ex.genericSections) &&
+            (ex.genericSections as { heading: string; content: string }[]).map((s, i) => (
+              <section key={i}>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                  {s.heading} <span className="normal-case text-[var(--color-text-muted)]/70">(no dedicated field — captured generically)</span>
+                </p>
+                <PipeTable text={s.content} />
+              </section>
+            ))}
 
           {typeof ex.ageLimit === "string" && (
             <section>

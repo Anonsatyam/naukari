@@ -66,7 +66,7 @@ function stripTags(html: string): string {
 // headings ("Important Dates / महत्वपूर्ण तिथियां") — matched loosely by
 // substring so slight heading variants ("Important Dates for X 2026")
 // still classify correctly.
-const HEADING_FIELD_MAP: { field: keyof ParsedSections; keywords: string[] }[] = [
+const HEADING_FIELD_MAP: { field: MatchableSection; keywords: string[] }[] = [
   { field: "importantDatesRaw", keywords: ["important dates", "महत्वपूर्ण तिथ"] },
   { field: "applicationFeeRaw", keywords: ["application fee", "आवेदन शुल्क"] },
   { field: "ageLimitRaw", keywords: ["age limit", "आयु सीमा"] },
@@ -98,7 +98,18 @@ const HEADING_FIELD_MAP: { field: keyof ParsedSections; keywords: string[] }[] =
   { field: "importantLinksRaw", keywords: ["important links", "महत्वपूर्ण लिंक"] },
   { field: "documentsRequiredRaw", keywords: ["documents required", "required documents", "आवश्यक दस्तावेज"] },
   { field: "examPatternRaw", keywords: ["exam pattern", "syllabus", "परीक्षा पैटर्न", "पाठ्यक्रम"] },
-  { field: "faqRaw", keywords: ["faq", "frequently asked", "प्रश्नोत्तर"] },
+  {
+    field: "faqRaw",
+    keywords: [
+      "faq",
+      "frequently asked",
+      "प्रश्नोत्तर",
+      "अक्सर पूछे जाने वाले प्रश्न", // "questions frequently asked" — a
+      // full-phrase Hindi heading this source actually uses, distinct
+      // from the words above.
+      "सामान्य प्रश्न",
+    ],
+  },
   { field: "conclusionRaw", keywords: ["conclusion", "निष्कर्ष"] },
 ];
 
@@ -366,11 +377,44 @@ interface ParsedSections {
   examPatternRaw: string[][];
   faqRaw: string[][];
   conclusionRaw: string[][];
+  // Every heading on the page that doesn't match any of the specific
+  // buckets above — captured with its OWN heading text rather than
+  // being silently discarded (which is what happened before this
+  // existed: any section whose heading didn't happen to contain one of
+  // the keywords tracked above simply never made it into extraction at
+  // all, however genuinely different it was from the sections that DO
+  // have a bucket — a "Physical Eligibility" table, a "Reservation
+  // Policy" note, anything). Rendered generically, one section per
+  // entry, in source order, using the source's own heading as the
+  // title — the fix for one specific missing heading shouldn't require
+  // a matching fix for the next one nobody's seen yet.
+  genericSections: { heading: string; blocks: string[][] }[];
 }
 
-function classifyHeading(headingText: string): keyof ParsedSections | null {
+// genericSections is populated directly (see the `!field` branch
+// below), never reached via a HEADING_FIELD_MAP keyword match — this
+// excludes it from the type a heading can classify as, so
+// `sections[field].push(...)` for an actually-matched heading is known
+// to be pushing into one of the `string[][]`/`string[]` fields above,
+// not genericSections' different shape.
+type MatchableSection = Exclude<keyof ParsedSections, "genericSections">;
+
+// "शारीरिक योग्यता" (Physical Eligibility) and "शैक्षणिक योग्यता"
+// (Education Eligibility) both contain "योग्यता" — matched here by the
+// generic eligibilityRaw entry, they'd merge into one section instead
+// of the two distinct ones a source actually publishes. Rather than
+// hardcoding yet another named field+bucket for "physical" specifically
+// (the same fix would still be needed the next time a source uses some
+// other qualifying word nobody's excluded), excluding it here just
+// stops the OVER-broad generic match from claiming it — letting it
+// fall through to the generic, heading-text-preserving catch-all below
+// instead, exactly like any other heading this map has no entry for.
+const ELIGIBILITY_EXCLUDE = ["physical", "शारीरिक"];
+
+function classifyHeading(headingText: string): MatchableSection | null {
   const lower = headingText.toLowerCase();
   for (const { field, keywords } of HEADING_FIELD_MAP) {
+    if (field === "eligibilityRaw" && ELIGIBILITY_EXCLUDE.some((kw) => lower.includes(kw))) continue;
     if (keywords.some((kw) => lower.includes(kw.toLowerCase()))) return field;
   }
   return null;
@@ -603,9 +647,10 @@ function parseSections(html: string): ParsedSections {
     examPatternRaw: [],
     faqRaw: [],
     conclusionRaw: [],
+    genericSections: [],
   };
 
-  const headingPositions: { field: keyof ParsedSections | null; text: string; start: number; end: number }[] = [];
+  const headingPositions: { field: MatchableSection | null; text: string; start: number; end: number }[] = [];
   const headingPattern = new RegExp(HEADING_PATTERN.source, "gi");
   let headingMatch: RegExpExecArray | null;
   while ((headingMatch = headingPattern.exec(html)) !== null) {
@@ -633,9 +678,77 @@ function parseSections(html: string): ParsedSections {
   const NUMBERED_SUBHEADING = /^\s*\d+\s*[.):]/;
   const MAX_ABSORBED_SUBHEADINGS = 6;
 
+  // Headings that are clearly navigational/boilerplate chrome — a
+  // WordPress theme's "Related Posts", a comment-section prompt,
+  // social-share buttons — rather than genuine notification content.
+  // Checked before a heading falls through to the generic catch-all
+  // below, so page furniture never gets rendered as if it were one of
+  // the posting's own sections.
+  const GENERIC_SECTION_EXCLUDE = [
+    "related",
+    "recent post",
+    "recent comment",
+    "you might also like",
+    "leave a comment",
+    "leave a reply",
+    "share this",
+    "share on",
+    "follow us",
+    "subscribe",
+    "newsletter",
+    "categories",
+    "tags",
+    "search",
+    "comments",
+    "post navigation",
+    "similar post",
+    "about the author",
+    "about author",
+  ];
+  const isBoilerplateHeading = (text: string) => {
+    const lower = text.toLowerCase();
+    return GENERIC_SECTION_EXCLUDE.some((kw) => lower.includes(kw));
+  };
+
+  // Shared by both the specific-field path below and the generic
+  // catch-all: scans a segment for real <table>s first, falling back
+  // to paragraph/list-item text only when there's no table at all —
+  // same "never leave a matched heading's content empty" contract
+  // either path relies on.
+  const extractBlocksFromSegment = (segment: string): string[][] => {
+    const tablePattern = new RegExp(TABLE_PATTERN.source, "gi");
+    let tableMatch: RegExpExecArray | null;
+    const blocks: string[][] = [];
+    while ((tableMatch = tablePattern.exec(segment)) !== null) {
+      const rows = tableToPairs(tableMatch[1]).filter((row) => !WP_POST_META_ROW.test(row));
+      if (rows.length > 0) blocks.push(rows);
+    }
+    if (blocks.length === 0) {
+      const plain = extractPlainBlocks(segment).filter((row) => !WP_POST_META_ROW.test(row));
+      if (plain.length > 0) blocks.push(plain);
+    }
+    return blocks;
+  };
+
   for (let i = 0; i < headingPositions.length; i++) {
-    const { field, end } = headingPositions[i];
-    if (!field) continue;
+    const { field, end, text: headingText } = headingPositions[i];
+
+    if (!field) {
+      // A heading with no specific bucket — captured generically with
+      // its own text as the title (see genericSections' own comment
+      // for why: the alternative is silently discarding it, which is
+      // exactly what happened to every "Physical Eligibility" table,
+      // every section nobody had thought to add a keyword for yet).
+      if (!isBoilerplateHeading(headingText)) {
+        const segmentEnd = i + 1 < headingPositions.length ? headingPositions[i + 1].start : html.length;
+        const segment = html.slice(end, segmentEnd);
+        const blocks = extractBlocksFromSegment(segment);
+        if (blocks.length > 0) {
+          sections.genericSections.push({ heading: headingText, blocks });
+        }
+      }
+      continue;
+    }
 
     let j = i + 1;
     let absorbed = 0;
@@ -650,6 +763,13 @@ function parseSections(html: string): ParsedSections {
     }
     const segmentEnd = j < headingPositions.length ? headingPositions[j].start : html.length;
     const segment = html.slice(end, segmentEnd);
+    // Any numbered sub-headings just absorbed into this segment (e.g.
+    // Exam Pattern's own "1. Phase-I ..." / "2. Phase-II ...") are now
+    // part of THIS field's content — advancing i past them stops the
+    // outer loop from also visiting them individually and, since they
+    // have no field of their own, capturing the exact same content a
+    // second time under the generic catch-all.
+    i = j - 1;
 
     if (field === "importantLinksRaw") {
       sections.importantLinksRaw.push(...extractLinkPairs(segment));
@@ -662,22 +782,7 @@ function parseSections(html: string): ParsedSections {
       continue;
     }
 
-    const tablePattern = new RegExp(TABLE_PATTERN.source, "gi");
-    let tableMatch: RegExpExecArray | null;
-    const tableBlocks: string[][] = [];
-    while ((tableMatch = tablePattern.exec(segment)) !== null) {
-      const rows = tableToPairs(tableMatch[1]).filter((row) => !WP_POST_META_ROW.test(row));
-      if (rows.length > 0) tableBlocks.push(rows);
-    }
-    // No table in this segment — e.g. a bullet-list Eligibility section,
-    // or an FAQ/Conclusion written as plain paragraphs — so fall back to
-    // paragraph/list-item/sub-heading text instead of leaving the field
-    // empty.
-    if (tableBlocks.length === 0) {
-      const plain = extractPlainBlocks(segment).filter((row) => !WP_POST_META_ROW.test(row));
-      if (plain.length > 0) tableBlocks.push(plain);
-    }
-    sections[field].push(...tableBlocks);
+    sections[field].push(...extractBlocksFromSegment(segment));
   }
 
   return sections;
@@ -696,8 +801,29 @@ export interface HtmlNotificationExtraction {
  * PDF extraction, so this plugs into the existing pipeline without
  * changing anything downstream of extractFields.ts.
  */
+// Scopes heading-scanning to the actual post body, not the whole page
+// — needed specifically for genericSections (see parseSections):
+// without it, a page's footer widgets ("Bihar Job Portal" branding
+// blurb, a "Legal Pages" nav list) have headings too, and with no
+// keyword to exclude them by (the whole point of the generic
+// catch-all is to skip needing one), they'd get rendered as if they
+// were sections of the posting itself. `itemprop="text"` marks where
+// the actual article content starts and `</article>` where it ends —
+// both standard WordPress theme conventions, verified consistent
+// across this source's listing pages and individual post pages alike.
+// Falls back to the full, unscoped page when either marker is
+// missing, so a source that doesn't use this convention degrades to
+// today's behavior rather than losing everything.
+function scopeToArticleBody(html: string): string {
+  const startMarker = 'itemprop="text"';
+  const startIdx = html.indexOf(startMarker);
+  const endIdx = html.indexOf("</article>", startIdx);
+  if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) return html;
+  return html.slice(startIdx, endIdx);
+}
+
 export function extractHtmlNotificationFields(html: string): HtmlNotificationExtraction {
-  const sections = parseSections(html);
+  const sections = parseSections(scopeToArticleBody(html));
 
   // The very first table on the page is the notification header block
   // (e.g. "EAST COAST RAILWAY (ECoR)") on every post on this site —
@@ -723,6 +849,7 @@ export function extractHtmlNotificationFields(html: string): HtmlNotificationExt
     sections.examPatternRaw.length > 0 ||
     sections.faqRaw.length > 0 ||
     sections.conclusionRaw.length > 0 ||
+    sections.genericSections.length > 0 ||
     importantLinks.length > 0;
 
   // Heading-based bucketing depends on this site's actual markup lining
@@ -774,6 +901,14 @@ export function extractHtmlNotificationFields(html: string): HtmlNotificationExt
     ...(sections.postDetailsRaw.length ? { postDetails: joinBlocks(sections.postDetailsRaw) } : {}),
     ...(sections.eligibilityRaw.length ? { eligibility: joinBlocks(sections.eligibilityRaw) } : {}),
     ...(sections.selectionProcessRaw.length ? { selectionProcess: joinBlocks(sections.selectionProcessRaw) } : {}),
+    ...(sections.genericSections.length
+      ? {
+          genericSections: sections.genericSections.map((s) => ({
+            heading: s.heading,
+            content: joinBlocks(s.blocks),
+          })),
+        }
+      : {}),
     ...(sections.howToApplyRaw.length ? { howToApply: sections.howToApplyRaw } : {}),
     ...(sections.documentsRequiredRaw.length ? { documentsRequired: joinBlocks(sections.documentsRequiredRaw) } : {}),
     ...(sections.examPatternRaw.length ? { examPattern: joinBlocks(sections.examPatternRaw) } : {}),

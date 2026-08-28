@@ -114,6 +114,16 @@ export default async function AdmitCardDetailPage({
             </Section>
           )}
 
+          {/* Every source section that doesn't map to one of the specific
+              ones above — rendered generically, titled with the source's
+              own heading text, instead of being dropped for not matching
+              a hardcoded field. */}
+          {card.additionalSections?.map((section, i) => (
+            <Section key={i} title={section.heading} icon={<FileText size={16} />} accent="neutral">
+              <PipeTableOrText text={section.content} />
+            </Section>
+          ))}
+
           {card.conclusion && (
             <Section title="Conclusion" icon={<CheckCircle2 size={16} />} accent="green">
               <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{card.conclusion}</p>

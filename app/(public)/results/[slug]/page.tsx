@@ -106,6 +106,16 @@ export default async function ResultDetailPage({
             </Section>
           )}
 
+          {/* Every source section that doesn't map to one of the specific
+              ones above — rendered generically, titled with the source's
+              own heading text, instead of being dropped for not matching
+              a hardcoded field. */}
+          {result.additionalSections?.map((section, i) => (
+            <Section key={i} title={section.heading} icon={<FileText size={16} />} accent="neutral">
+              <PipeTableOrText text={section.content} />
+            </Section>
+          ))}
+
           {result.conclusion && (
             <Section title="Conclusion" icon={<CheckCircle2 size={16} />} accent="green">
               <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{result.conclusion}</p>

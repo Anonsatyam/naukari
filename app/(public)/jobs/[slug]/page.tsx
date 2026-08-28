@@ -369,6 +369,17 @@ export default async function JobDetailPage({
   </Section>
           )}
 
+          {/* Every source section that doesn't map to one of the specific
+              ones above — e.g. a "Physical Eligibility" table alongside
+              Education Eligibility — rendered generically, titled with
+              the source's own heading text, instead of being dropped for
+              not matching a hardcoded field. */}
+          {job.additionalSections?.map((section, i) => (
+            <Section key={i} title={section.heading} icon={<FileText size={16} />} accent="neutral">
+              <PipeTableOrText text={section.content} />
+            </Section>
+          ))}
+
           {job.conclusion && (
             <Section title="Conclusion" icon={<CheckCircle2 size={16} />} accent="green">
               <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{job.conclusion}</p>

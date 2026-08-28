@@ -1,4 +1,4 @@
-import { parsePipeTables } from "@/lib/pipeTables";
+import { parsePipeBlocks } from "@/lib/pipeTables";
 import Card from "@/components/Card";
 
 // Shared building blocks for the Job / Result / Admit Card detail
@@ -109,50 +109,67 @@ export function StepList({ items, fallback }: { items: string[]; fallback?: stri
 
 // Important Dates / Exam Pattern / Documents Required / the raw-text
 // fallbacks all come through as the pipe-encoded, TABLE_SEP-bounded
-// tables lib/pipeTables.ts's parsePipeTables understands (see
-// extractHtmlNotificationFields.ts) — rendered here as one or more
-// real tables, in source order, each with its own header and caption;
-// falls back to plain text for anything that isn't in that shape at
-// all (e.g. a hand-edited free-text value), so this never hides
-// content it can't parse.
+// blocks lib/pipeTables.ts's parsePipeBlocks understands (see
+// extractHtmlNotificationFields.ts) — rendered here as a real table or
+// a real bullet list per block, in source order, matching whichever
+// shape that block actually is (a source routinely mixes the two under
+// one heading — a few sentences of plain criteria followed by a
+// genuine sub-table); falls back to plain text only when nothing in
+// the pipe format could be recognized at all (e.g. a hand-edited
+// free-text value), so this never hides content it can't parse.
 export function PipeTableOrText({ text }: { text: string }) {
-  const tables = parsePipeTables(text);
-  if (tables.length === 0) {
+  const blocks = parsePipeBlocks(text);
+  if (blocks.length === 0) {
     return <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{text}</p>;
   }
   return (
     <div className="space-y-4">
-      {tables.map((t, i) => (
-        <div key={i} className="space-y-2">
-          {t.caption && <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{t.caption}</p>}
-          <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-[var(--color-primary)] text-left text-white">
-                    {t.header.map((cell, j) => (
-                      <th key={j} className="px-3 py-2 align-top font-semibold">
-                        {cell}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {t.body.map((row, r) => (
-                    <tr key={r}>
-                      {row.map((cell, c) => (
-                        <td key={c} className="whitespace-normal break-words px-3 py-2 align-top text-[var(--color-text-secondary)]">
+      {blocks.map((block, i) => {
+        if (block.type === "list") {
+          return (
+            <ul key={i} className="space-y-2">
+              {block.items.map((item, j) => (
+                <li key={j} className="flex gap-2.5 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-primary)]" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          );
+        }
+        const t = block.table;
+        return (
+          <div key={i} className="space-y-2">
+            {t.caption && <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{t.caption}</p>}
+            <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-[var(--color-primary)] text-left text-white">
+                      {t.header.map((cell, j) => (
+                        <th key={j} className="px-3 py-2 align-top font-semibold">
                           {cell}
-                        </td>
+                        </th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {t.body.map((row, r) => (
+                      <tr key={r}>
+                        {row.map((cell, c) => (
+                          <td key={c} className="whitespace-normal break-words px-3 py-2 align-top text-[var(--color-text-secondary)]">
+                            {cell}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

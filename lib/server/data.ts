@@ -533,6 +533,7 @@ export async function approveDraft(
       importantLinks: ensureOptionalArray(merged.importantLinks),
       faqs: ensureOptionalArray(merged.faqs),
       conclusion: replaceSourceSitePlug(merged.conclusion),
+      additionalSections: ensureOptionalArray(merged.genericSections),
     };
     const { data: inserted, error: insertError } = await supabase
       .from("results")
@@ -570,6 +571,7 @@ export async function approveDraft(
       importantLinks: ensureOptionalArray(merged.importantLinks),
       faqs: ensureOptionalArray(merged.faqs),
       conclusion: replaceSourceSitePlug(merged.conclusion),
+      additionalSections: ensureOptionalArray(merged.genericSections),
     };
     const { data: inserted, error: insertError } = await supabase
       .from("admit_cards")
@@ -715,6 +717,7 @@ export async function approveDraft(
     eligibilityRules: ensureArray(merged.eligibilityRules, []),
     faqs: ensureOptionalArray(merged.faqs),
     conclusion: replaceSourceSitePlug(merged.conclusion),
+    additionalSections: ensureOptionalArray(merged.genericSections),
     status: "published",
     createdByBot: true,
     publishedAt: now,

@@ -35,6 +35,15 @@ export interface ExtractedStructuredFields {
   // postDetails / eligibility already play there.
   faqText?: string[];
   conclusionText?: string;
+
+  // Every section on the source page whose heading didn't match one of
+  // the specific fields above — captured with the source's own heading
+  // text so it can be rendered as its own section on the public page,
+  // titled exactly what the source itself called it, without needing a
+  // dedicated field (and a matching code change) for every new heading
+  // a source happens to use. See extractHtmlNotificationFields.ts's
+  // genericSections for the full reasoning.
+  genericSections?: { heading: string; content: string }[];
 }
 
 const MONTH_NAMES: Record<string, number> = {

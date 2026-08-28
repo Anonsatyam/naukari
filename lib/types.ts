@@ -44,6 +44,21 @@ export interface ImportantLink {
   url: string;
 }
 
+// A source's own section that doesn't map to any of the specific
+// fields below — e.g. "Physical Eligibility", "Reservation Policy",
+// or literally anything else a source publishes that nobody's added a
+// dedicated field for. Rendered generically, titled with the source's
+// own heading text, on all three detail pages — see
+// components/DetailSections.tsx's PipeTableOrText, which already
+// handles both table- and list-shaped content. Shared across Job,
+// ResultItem, and AdmitCardItem so every entity type gets this the
+// same way, per the site's own philosophy of building the page from
+// whatever data is actually there instead of a fixed template.
+export interface AdditionalSection {
+  heading: string;
+  content: string;
+}
+
 export interface Job {
   id: string;
   slug: string;
@@ -123,6 +138,7 @@ export interface Job {
   eligibilityRules: EligibilityRule[];
   faqs?: FaqItem[];
   conclusion?: string;
+  additionalSections?: AdditionalSection[];
   status: JobStatus;
   createdByBot: boolean;
   publishedAt: string;
@@ -155,6 +171,7 @@ export interface ResultItem {
   importantLinks?: ImportantLink[];
   faqs?: FaqItem[];
   conclusion?: string;
+  additionalSections?: AdditionalSection[];
 }
 
 export interface AdmitCardItem {
@@ -181,6 +198,7 @@ export interface AdmitCardItem {
   importantLinks?: ImportantLink[];
   faqs?: FaqItem[];
   conclusion?: string;
+  additionalSections?: AdditionalSection[];
 }
 
 export type DraftType = "job" | "result" | "admit_card";
