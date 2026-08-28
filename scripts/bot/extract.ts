@@ -1,6 +1,18 @@
 export interface Candidate {
   title: string;
   url: string;
+  // Set when this candidate was found by crawling into a section link
+  // whose OWN identity (its listing page's URL, e.g. biharjob.co.in's
+  // /result/ or /admit-card/) already tells us what kind of posting
+  // everything on it is — a much more reliable signal than guessing
+  // from the posting's own title text, which routinely doesn't contain
+  // any of the classification keywords at all (an admit-card notice's
+  // title is often just "<Exam Name> 2026: Exam Notice", with no
+  // "admit card"/"call letter"/etc. wording anywhere in it). Left
+  // undefined for anything found on a source's homepage/generic
+  // listing, where title-keyword classification is still the only
+  // signal available.
+  sectionHint?: "job" | "result" | "admit_card";
 }
 
 // Source pages routinely prefix a title with a decorative "🔥" flag —

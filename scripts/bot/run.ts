@@ -77,6 +77,27 @@ function shouldUsePlaywright(url: string): boolean {
   }
 }
 
+/**
+ * When a section link's own URL identifies what kind of listing it
+ * is (biharjob.co.in's /result/ or /admit-card/ pages), every
+ * candidate crawled from it gets tagged with that as a sectionHint —
+ * see Candidate.sectionHint in extract.ts for why that beats guessing
+ * from the posting's own title. Anything else (the homepage's generic
+ * "Latest Jobs" listing, a "View More" link whose target doesn't
+ * match either pattern) is left unhinted, falling back to title-
+ * keyword classification exactly as before.
+ */
+function inferSectionDraftTypeHint(sectionUrl: string): "result" | "admit_card" | undefined {
+  try {
+    const path = new URL(sectionUrl).pathname.toLowerCase();
+    if (path.includes("admit-card") || path.includes("admit_card")) return "admit_card";
+    if (path.includes("result")) return "result";
+  } catch {
+    // ignore — no hint
+  }
+  return undefined;
+}
+
 async function postJson(path: string, body: unknown) {
   const res = await fetch(`${SITE_URL}${path}`, {
     method: "POST",
@@ -252,7 +273,10 @@ async function run() {
           const sectionResult = await fetchAndExtractCandidates(section.url);
           if ("candidates" in sectionResult) {
             const { listings } = splitSectionsFromListings(sectionResult.candidates);
-            crawledListings.push(...listings);
+            const sectionHint = inferSectionDraftTypeHint(section.url);
+            crawledListings.push(
+              ...(sectionHint ? listings.map((c) => ({ ...c, sectionHint })) : listings)
+            );
           }
         }
 

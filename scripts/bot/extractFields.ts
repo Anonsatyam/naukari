@@ -13,7 +13,13 @@ const RESULT_KEYWORDS = ["result", "cut off", "cutoff", "merit list", "shortlist
  * with a different approval flow and lands in a different public
  * section of the site.
  */
-export function classifyDraftType(title: string): DraftType {
+export function classifyDraftType(title: string, sectionHint?: DraftType): DraftType {
+  // The section a posting was actually found on (see Candidate.sectionHint
+  // in extract.ts) is a stronger signal than a title-keyword guess —
+  // trust it outright when available, rather than second-guessing a
+  // source's own categorization with a heuristic that can only ever
+  // recognize wording someone thought to list in advance.
+  if (sectionHint) return sectionHint;
   const lower = title.toLowerCase();
   if (ADMIT_CARD_KEYWORDS.some((kw) => lower.includes(kw))) return "admit_card";
   if (RESULT_KEYWORDS.some((kw) => lower.includes(kw))) return "result";
@@ -59,7 +65,7 @@ export interface ExtractedDraft {
 }
 
 export function extractFields(candidate: Candidate, orgHint: string): ExtractedDraft {
-  const draftType = classifyDraftType(candidate.title);
+  const draftType = classifyDraftType(candidate.title, candidate.sectionHint);
   const category = guessFromKeywords(candidate.title, CATEGORY_KEYWORDS);
   const qualification = guessFromKeywords(candidate.title, QUALIFICATION_KEYWORDS);
   const fieldsFound = [category, qualification].filter(Boolean).length;

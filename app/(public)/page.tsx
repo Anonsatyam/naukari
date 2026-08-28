@@ -49,8 +49,7 @@ export default async function Home() {
               in Bihar
             </h1>
             <p className="mt-4 text-base leading-relaxed text-[var(--color-text-secondary)] md:text-lg">
-              Structured job details, real search and filters, and a
-              straight answer on whether you&apos;re eligible — no login required.
+              Find the right job faster with verified details, smart filters, <br />and a clear eligibility check — no login required.
             </p>
 
             <form
