@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   Calendar,
+  CheckCircle2,
   ClipboardList,
   ExternalLink,
   FileText,
@@ -371,7 +372,7 @@ export default async function JobDetailPage({
           )}
 
           {job.conclusion && (
-            <Section title="Conclusion" accent="neutral">
+            <Section title="Conclusion" icon={<CheckCircle2 size={16} />} accent="neutral">
               <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{job.conclusion}</p>
             </Section>
           )}
