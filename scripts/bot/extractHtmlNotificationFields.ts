@@ -750,6 +750,7 @@ function parseSections(html: string): ParsedSections {
       continue;
     }
 
+    const startIdx = i;
     let j = i + 1;
     let absorbed = 0;
     while (
@@ -763,6 +764,7 @@ function parseSections(html: string): ParsedSections {
     }
     const segmentEnd = j < headingPositions.length ? headingPositions[j].start : html.length;
     const segment = html.slice(end, segmentEnd);
+    const hadAbsorbedSubheadings = j > startIdx + 1;
     // Any numbered sub-headings just absorbed into this segment (e.g.
     // Exam Pattern's own "1. Phase-I ..." / "2. Phase-II ...") are now
     // part of THIS field's content — advancing i past them stops the
@@ -782,7 +784,35 @@ function parseSections(html: string): ParsedSections {
       continue;
     }
 
-    sections[field].push(...extractBlocksFromSegment(segment));
+    if (!hadAbsorbedSubheadings) {
+      sections[field].push(...extractBlocksFromSegment(segment));
+      continue;
+    }
+
+    // A section with absorbed sub-headings (e.g. "1. Phase-I:
+    // Preliminary Examination Pattern" / "2. Phase-II: Main
+    // Examination Pattern" under Exam Pattern) is visibly divided into
+    // that many labeled parts on the source page — each with its own
+    // <h3>, styled just as prominently as the parent heading. Scanning
+    // the whole absorbed span as one blob (the pre-fix behavior) threw
+    // that division away: two tables came out back-to-back with
+    // nothing distinguishing which was Phase-I and which Phase-II.
+    // Processing each sub-heading's own slice separately and stamping
+    // its heading text onto its first table as a caption (reusing
+    // toPipeTable's existing single-cell-row caption detection —
+    // nothing new needed downstream) preserves that same division.
+    const preambleEnd = headingPositions[startIdx + 1].start;
+    const preamble = html.slice(end, preambleEnd);
+    sections[field].push(...extractBlocksFromSegment(preamble));
+
+    for (let k = startIdx + 1; k <= j - 1; k++) {
+      const subEnd = k + 1 <= j - 1 ? headingPositions[k + 1].start : segmentEnd;
+      const subSegment = html.slice(headingPositions[k].end, subEnd);
+      const subBlocks = extractBlocksFromSegment(subSegment);
+      if (subBlocks.length === 0) continue;
+      subBlocks[0] = [headingPositions[k].text, ...subBlocks[0]];
+      sections[field].push(...subBlocks);
+    }
   }
 
   return sections;
