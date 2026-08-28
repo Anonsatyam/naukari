@@ -10,7 +10,6 @@ import {
   GraduationCap,
   HelpCircle,
   Hourglass,
-  Link2,
   ListChecks,
   Users,
   Wallet,
@@ -84,6 +83,17 @@ export default async function JobDetailPage({
   const hasAgeGradeTable = Array.isArray(job.ageLimitByGrade) && job.ageLimitByGrade.length > 0;
   const hasAgeRelaxationTable = Array.isArray(job.ageRelaxationBreakdown) && job.ageRelaxationBreakdown.length > 0;
   const hasAgeLimitFallback = !hasAgeGradeTable && !hasAgeRelaxationTable && !!job.ageLimitText;
+
+  // The sidebar's Apply Officially / Official Notification buttons
+  // already cover those same two links whenever the source's own
+  // "Important Links" list includes them — this dedupes by URL so
+  // they don't appear twice (once as a fixed button, once again in a
+  // separate list), while any genuinely distinct link (the org's
+  // official website, an admit-card page, etc.) still shows up as its
+  // own button rather than being dropped.
+  const otherImportantLinks = (Array.isArray(job.importantLinks) ? job.importantLinks : []).filter(
+    (link) => link.url !== job.officialApplyUrl && link.url !== job.officialNotificationUrl
+  );
 
   return (
     <div className="container-page py-8">
@@ -335,25 +345,6 @@ export default async function JobDetailPage({
             <StepList items={job.howToApply} />
           </Section>
 
-          {Array.isArray(job.importantLinks) && job.importantLinks.length > 0 && (
-            <Section title="Important Links" icon={<Link2 size={16} />} accent="blue">
-              <div className="divide-y divide-[var(--color-border)]">
-                {job.importantLinks.map((link) => (
-                  <a
-                    key={link.label}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-between gap-3 py-2.5 text-sm hover:text-[var(--color-primary)]"
-                  >
-                    <span className="font-medium text-[var(--color-text-primary)]">{link.label}</span>
-                    <ExternalLink size={14} className="shrink-0 text-[var(--color-text-muted)]" />
-                  </a>
-                ))}
-              </div>
-            </Section>
-          )}
-
           {Array.isArray(job.faqs) && job.faqs.length > 0 && (
   <Section title="FAQs" icon={<HelpCircle size={16} />} accent="pink">
     <div className="divide-y divide-[var(--color-border)]">
@@ -405,6 +396,17 @@ export default async function JobDetailPage({
             >
               <FileText size={14} /> Official Notification
             </ButtonLink>
+            {otherImportantLinks.map((link) => (
+              <ButtonLink
+                key={link.label}
+                href={link.url}
+                target="_blank"
+                variant="secondary"
+                className="mt-2 w-full"
+              >
+                {link.label} <ExternalLink size={14} />
+              </ButtonLink>
+            ))}
             <div className="mt-3">
               <SourceVerified sourceUrl={job.sourceUrl} />
             </div>
