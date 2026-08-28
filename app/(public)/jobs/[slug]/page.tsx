@@ -129,7 +129,14 @@ export default async function JobDetailPage({
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
         {/* Main content */}
-        <div className="order-2 space-y-6 lg:order-1">
+        {/* min-w-0 overrides the grid item's default min-width:auto —
+            without it, a wide table's intrinsic content width (a
+            27-column vacancy table can't shrink below its own content)
+            forces this ENTIRE grid column to grow to fit it, dragging
+            every other section and the sidebar along with it, instead
+            of being contained by the table's own overflow-x-auto
+            wrapper the way it should be. */}
+        <div className="order-2 min-w-0 space-y-6 lg:order-1">
           <Section title="Important Dates" icon={<Calendar size={16} />} accent="blue">
             {job.importantDatesText ? (
               // The full dates table as the source actually published it —
