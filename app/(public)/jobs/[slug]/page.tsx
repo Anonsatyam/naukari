@@ -128,7 +128,7 @@ export default async function JobDetailPage({
               // {label, ISO date} shape below and would otherwise be lost.
               <PipeTableOrText text={job.importantDatesText} />
             ) : (
-              <div className="divide-y divide-[var(--color-border)]">
+              <div>
                 {(Array.isArray(job.importantDates) ? job.importantDates : []).map((d) => (
                   <div key={d.label} className="flex items-center justify-between py-2.5 text-sm">
                     <span className="text-[var(--color-text-secondary)]">{d.label}</span>
@@ -181,7 +181,7 @@ export default async function JobDetailPage({
                     <span>Min. Age</span>
                     <span>Max. Age</span>
                   </div>
-                  <div className="divide-y divide-[var(--color-border)]">
+                  <div>
                     {job.ageLimitByGrade!.map((row, i) => (
                       <div key={i} className="grid grid-cols-3 gap-3 px-4 py-2.5 text-sm">
                         <span className="font-medium text-[var(--color-text-primary)]">{row.grade}</span>
@@ -204,7 +204,7 @@ export default async function JobDetailPage({
                     <span>Category</span>
                     <span className="text-right">Relaxation</span>
                   </div>
-                  <div className="divide-y divide-[var(--color-border)]">
+                  <div>
                     {job.ageRelaxationBreakdown!.map((row) => (
                       <div key={row.category} className="grid grid-cols-2 px-4 py-2.5 text-sm">
                         <span className="text-[var(--color-text-secondary)]">{row.category}</span>
@@ -242,7 +242,7 @@ export default async function JobDetailPage({
                       {hasGrade && <span>Grade</span>}
                       <span className="text-right">Posts</span>
                     </div>
-                    <div className="divide-y divide-[var(--color-border)]">
+                    <div>
                       {job.vacancyBreakdown!.map((row) => (
                         <div key={row.category} className={`grid ${cols} gap-3 px-4 py-2.5 text-sm`}>
                           <span className="text-[var(--color-text-secondary)]">{row.category}</span>
@@ -555,7 +555,7 @@ function PipeTableOrText({ text }: { text: string }) {
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[var(--color-border)]">
+              <tbody>
                 {t.body.map((row, r) => (
                   <tr key={r}>
                     {row.map((cell, c) => (
