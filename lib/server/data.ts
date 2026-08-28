@@ -408,6 +408,31 @@ function ensureOptionalArray<T>(value: unknown): T[] | undefined {
   return Array.isArray(value) ? (value as T[]) : undefined;
 }
 
+// Finds a link in the bot's raw importantLinks list whose label reads
+// as "the apply link" / "the notification PDF" etc., so
+// officialApplyUrl/officialNotificationUrl can fall back to the real,
+// specific URL the source page actually links to — instead of
+// falling all the way back to the source article's own URL, which is
+// what happens below when neither field was extracted directly (seen
+// in practice: a job whose "Apply Officially" and "Official
+// Notification" buttons both silently pointed at the biharjob.co.in
+// listing page itself, while the correct IBPS registration link and
+// SBI notification PDF sat right there in importantLinks, unused).
+function findLinkByKeywords(links: unknown, keywords: string[]): string | undefined {
+  if (!Array.isArray(links)) return undefined;
+  for (const link of links) {
+    if (!link || typeof link !== "object") continue;
+    const label = (link as { label?: unknown }).label;
+    const url = (link as { url?: unknown }).url;
+    if (typeof label !== "string" || typeof url !== "string") continue;
+    if (keywords.some((kw) => label.toLowerCase().includes(kw))) return url;
+  }
+  return undefined;
+}
+
+const APPLY_LINK_KEYWORDS = ["apply", "online", "registration", "आवेदन", "रजिस्ट्रेशन"];
+const NOTIFICATION_LINK_KEYWORDS = ["notification", "notice", "advertisement", "pdf", "नोटिफिकेशन", "अधिसूचना"];
+
 function ensureApplicationFee(
   value: unknown,
   fallback: { general: number; reserved: number; note?: string }
@@ -610,8 +635,12 @@ export async function approveDraft(
     howToApply: ensureStringArray(merged.howToApply, [
       "See the official notification for the application procedure",
     ]),
-    officialNotificationUrl: merged.officialNotificationUrl ?? draft.sourceUrl,
-    officialApplyUrl: merged.officialApplyUrl ?? draft.sourceUrl,
+    officialNotificationUrl:
+      merged.officialNotificationUrl ??
+      findLinkByKeywords(merged.importantLinks, NOTIFICATION_LINK_KEYWORDS) ??
+      draft.sourceUrl,
+    officialApplyUrl:
+      merged.officialApplyUrl ?? findLinkByKeywords(merged.importantLinks, APPLY_LINK_KEYWORDS) ?? draft.sourceUrl,
     sourceUrl: draft.sourceUrl,
     importantLinks: ensureOptionalArray(merged.importantLinks),
     importantDates: ensureArray(merged.importantDates, []),
