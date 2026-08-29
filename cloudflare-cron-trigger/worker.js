@@ -26,7 +26,18 @@ const cronTriggerWorker = {
   // Lets you hit this worker's own URL directly in a browser to fire
   // one test run on demand, without waiting for the next scheduled
   // tick — useful for confirming the token/config actually works.
+  //
+  // A browser opening that URL also auto-requests /favicon.ico, which
+  // — since every request path used to hit this same handler — fired
+  // a second real trigger a couple seconds after the first (confirmed:
+  // two workflow runs landed from one page visit). Only the root path
+  // actually triggers; anything else (favicon, devtools probing, etc.)
+  // gets a cheap 204 with no GitHub call at all.
   async fetch(request, env) {
+    const { pathname } = new URL(request.url);
+    if (pathname !== "/") {
+      return new Response(null, { status: 204 });
+    }
     const result = await triggerBotWorkflow(env);
     return new Response(JSON.stringify(result, null, 2), {
       status: result.ok ? 200 : 500,
