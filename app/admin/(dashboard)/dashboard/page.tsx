@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { CheckCircle2, Clock, FileStack } from "lucide-react";
 import { getAdminStats, getPendingDrafts, getBotLog, getLastBotRunSummary } from "@/lib/server/data";
-import { formatDateTime } from "@/lib/utils";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
 import TriggerBotButton from "@/components/admin/TriggerBotButton";
+import LocalDateTime from "@/components/LocalDateTime";
 
 export default async function AdminDashboardPage() {
   const { pendingDrafts: pendingCount, publishedJobs: publishedCount } = await getAdminStats();
@@ -55,7 +55,7 @@ export default async function AdminDashboardPage() {
         ) : (
           <>
             <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-              {formatDateTime(lastRun.ranAt)}
+              <LocalDateTime iso={lastRun.ranAt} />
             </p>
             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div>
@@ -128,7 +128,7 @@ export default async function AdminDashboardPage() {
                   key={entry.id}
                   status={entry.status === "error" ? "warning" : entry.status}
                   text={entry.message}
-                  time={formatDateTime(entry.timestamp)}
+                  timeIso={entry.timestamp}
                 />
               ))}
             </div>
@@ -142,11 +142,11 @@ export default async function AdminDashboardPage() {
 function LogRow({
   status,
   text,
-  time,
+  timeIso,
 }: {
   status: "success" | "warning";
   text: string;
-  time: string;
+  timeIso: string;
 }) {
   return (
     <div className="flex items-start gap-3 p-4">
@@ -157,7 +157,9 @@ function LogRow({
       />
       <div className="min-w-0">
         <p className="text-[var(--color-text-primary)]">{text}</p>
-        <p className="text-xs text-[var(--color-text-muted)]">{time}</p>
+        <p className="text-xs text-[var(--color-text-muted)]">
+          <LocalDateTime iso={timeIso} />
+        </p>
       </div>
     </div>
   );
