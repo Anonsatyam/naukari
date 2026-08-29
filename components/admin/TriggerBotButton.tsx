@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Play, ExternalLink } from "lucide-react";
-import { Button } from "@/components/Button";
 
 type State = "idle" | "loading" | "success" | "error";
 
@@ -30,17 +29,21 @@ export default function TriggerBotButton() {
 
   return (
     <div>
-      <Button
+      {/* A plain <button>, not the shared Button component — its
+          variant classes (bg/border/text) would sit alongside these
+          same-property overrides in one class list, and which one
+          actually wins a same-property Tailwind conflict isn't
+          guaranteed by source order. Only declaring bg/text once each
+          here avoids that entirely. */}
+      <button
         type="button"
-        size="sm"
-        variant="secondary"
         onClick={trigger}
         disabled={state === "loading"}
-        className="border-transparent bg-[var(--color-success)] text-white"
+        className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)] bg-[var(--color-success)] px-3 py-1.5 text-sm font-semibold text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <Play size={14} />
+        <Play size={14} className="text-white" />
         {state === "loading" ? "Triggering…" : "Run Bot Now"}
-      </Button>
+      </button>
 
       {state === "success" && (
         <p className="mt-2 text-xs text-[var(--color-success)]">
