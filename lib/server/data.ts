@@ -211,17 +211,40 @@ export interface JobFilters {
 
 export async function getPublishedJobs(filters: JobFilters = {}): Promise<Job[]> {
   const supabase = getSupabasePublic();
-  let query = supabase.from("jobs").select("*").eq("status", "published");
 
-  if (filters.q) {
-    const q = filters.q;
-    query = query.or(`title.ilike.%${q}%,organization.ilike.%${q}%,department.ilike.%${q}%`);
+  // A fresh builder each call — supabase-js's query builder can't be
+  // safely re-ordered and re-awaited after its first execution (it
+  // silently carries over the first attempt's ORDER BY rather than
+  // replacing it), so the 42703 fallback below needs its own complete,
+  // independently-built query, not a second .order() appended onto the
+  // same base object.
+  const buildQuery = () => {
+    let q = supabase.from("jobs").select("*").eq("status", "published");
+    if (filters.q) {
+      const term = filters.q;
+      q = q.or(`title.ilike.%${term}%,organization.ilike.%${term}%,department.ilike.%${term}%`);
+    }
+    if (filters.category?.length) q = q.in("category", filters.category);
+    if (filters.department?.length) q = q.in("department", filters.department);
+    if (filters.qualification?.length) q = q.in("qualification", filters.qualification);
+    return q;
+  };
+
+  // source_order_key (see BotDraft.sourceOrderKey) reflects where the
+  // source itself displays a posting — sorted first, nulls last so a
+  // job with no bot origin doesn't jump to the top; published_at is
+  // only the tiebreaker/fallback for those.
+  let { data, error } = await buildQuery()
+    .order("source_order_key", { ascending: false, nullsFirst: false })
+    .order("published_at", { ascending: false });
+  if (error?.code === "42703") {
+    // source_order_key column not migrated in yet (see
+    // supabase/migrations/009_source_order_key.sql) — degrade to the
+    // old sort alone instead of 500ing every job listing page load
+    // until that migration is run; a code deploy and its migration
+    // don't always land at the same instant.
+    ({ data, error } = await buildQuery().order("published_at", { ascending: false }));
   }
-  if (filters.category?.length) query = query.in("category", filters.category);
-  if (filters.department?.length) query = query.in("department", filters.department);
-  if (filters.qualification?.length) query = query.in("qualification", filters.qualification);
-
-  const { data, error } = await query.order("published_at", { ascending: false });
   if (error) throw error;
   return (data ?? []).map(rowToJob);
 }
@@ -280,9 +303,18 @@ export async function getRelatedJobs(job: Job, limit: number = 3): Promise<Job[]
 
 export async function getResults(q?: string): Promise<ResultItem[]> {
   const supabase = getSupabasePublic();
-  let query = supabase.from("results").select("*");
-  if (q) query = query.or(`title.ilike.%${q}%,organization.ilike.%${q}%,category.ilike.%${q}%`);
-  const { data, error } = await query.order("result_date", { ascending: false });
+  // Fresh builder per attempt — see getPublishedJobs's buildQuery comment.
+  const buildQuery = () => {
+    let query = supabase.from("results").select("*");
+    if (q) query = query.or(`title.ilike.%${q}%,organization.ilike.%${q}%,category.ilike.%${q}%`);
+    return query;
+  };
+  let { data, error } = await buildQuery()
+    .order("source_order_key", { ascending: false, nullsFirst: false })
+    .order("result_date", { ascending: false });
+  if (error?.code === "42703") {
+    ({ data, error } = await buildQuery().order("result_date", { ascending: false }));
+  }
   if (error) throw error;
   return (data ?? []).map(rowToResult);
 }
@@ -296,9 +328,18 @@ export async function getResultBySlug(slug: string): Promise<ResultItem | undefi
 
 export async function getAdmitCards(q?: string): Promise<AdmitCardItem[]> {
   const supabase = getSupabasePublic();
-  let query = supabase.from("admit_cards").select("*");
-  if (q) query = query.or(`title.ilike.%${q}%,organization.ilike.%${q}%,category.ilike.%${q}%`);
-  const { data, error } = await query.order("release_date", { ascending: false });
+  // Fresh builder per attempt — see getPublishedJobs's buildQuery comment.
+  const buildQuery = () => {
+    let query = supabase.from("admit_cards").select("*");
+    if (q) query = query.or(`title.ilike.%${q}%,organization.ilike.%${q}%,category.ilike.%${q}%`);
+    return query;
+  };
+  let { data, error } = await buildQuery()
+    .order("source_order_key", { ascending: false, nullsFirst: false })
+    .order("release_date", { ascending: false });
+  if (error?.code === "42703") {
+    ({ data, error } = await buildQuery().order("release_date", { ascending: false }));
+  }
   if (error) throw error;
   return (data ?? []).map(rowToAdmitCard);
 }
@@ -534,12 +575,24 @@ export async function approveDraft(
       faqs: ensureOptionalArray(merged.faqs),
       conclusion: replaceSourceSitePlug(merged.conclusion),
       additionalSections: ensureOptionalArray(merged.genericSections),
+      sourceOrderKey: draft.sourceOrderKey,
     };
-    const { data: inserted, error: insertError } = await supabase
+    const resultRow = resultToRow(newResult);
+    let { data: inserted, error: insertError } = await supabase
       .from("results")
-      .insert(resultToRow(newResult))
+      .insert(resultRow)
       .select()
       .single();
+    if (insertError?.code === "42703") {
+      // See createDraft's identical fallback — a migration and its
+      // code deploy don't always land at the same instant.
+      delete resultRow.source_order_key;
+      ({ data: inserted, error: insertError } = await supabase
+        .from("results")
+        .insert(resultRow)
+        .select()
+        .single());
+    }
     if (insertError) throw insertError;
     await markApproved();
     return { type: "result", entity: rowToResult(inserted) };
@@ -572,12 +625,22 @@ export async function approveDraft(
       faqs: ensureOptionalArray(merged.faqs),
       conclusion: replaceSourceSitePlug(merged.conclusion),
       additionalSections: ensureOptionalArray(merged.genericSections),
+      sourceOrderKey: draft.sourceOrderKey,
     };
-    const { data: inserted, error: insertError } = await supabase
+    const cardRow = admitCardToRow(newCard);
+    let { data: inserted, error: insertError } = await supabase
       .from("admit_cards")
-      .insert(admitCardToRow(newCard))
+      .insert(cardRow)
       .select()
       .single();
+    if (insertError?.code === "42703") {
+      delete cardRow.source_order_key;
+      ({ data: inserted, error: insertError } = await supabase
+        .from("admit_cards")
+        .insert(cardRow)
+        .select()
+        .single());
+    }
     if (insertError) throw insertError;
     await markApproved();
     return { type: "admit_card", entity: rowToAdmitCard(inserted) };
@@ -718,17 +781,27 @@ export async function approveDraft(
     faqs: ensureOptionalArray(merged.faqs),
     conclusion: replaceSourceSitePlug(merged.conclusion),
     additionalSections: ensureOptionalArray(merged.genericSections),
+    sourceOrderKey: draft.sourceOrderKey,
     status: "published",
     createdByBot: true,
     publishedAt: now,
     updatedAt: now,
   };
 
-  const { data: insertedJob, error: insertError } = await supabase
+  const jobRow = jobToRow(newJob);
+  let { data: insertedJob, error: insertError } = await supabase
     .from("jobs")
-    .insert(jobToRow(newJob))
+    .insert(jobRow)
     .select()
     .single();
+  if (insertError?.code === "42703") {
+    delete jobRow.source_order_key;
+    ({ data: insertedJob, error: insertError } = await supabase
+      .from("jobs")
+      .insert(jobRow)
+      .select()
+      .single());
+  }
   if (insertError) throw insertError;
   await markApproved();
   return { type: "job", entity: rowToJob(insertedJob) };
@@ -760,25 +833,30 @@ export async function createDraft(input: {
   sourceUrl: string;
   confidence: BotDraft["confidence"];
   draftType?: DraftType;
+  sourceOrderKey?: number;
   extractedFields: Record<string, unknown>;
 }): Promise<BotDraft> {
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("bot_drafts")
-    .insert(
-      draftToRow({
-        jobTitle: input.jobTitle,
-        organization: input.organization,
-        sourceUrl: input.sourceUrl,
-        detectedAt: new Date().toISOString(),
-        status: "pending",
-        confidence: input.confidence,
-        draftType: input.draftType ?? "job",
-        extractedFields: input.extractedFields,
-      })
-    )
-    .select()
-    .single();
+  const row = draftToRow({
+    jobTitle: input.jobTitle,
+    organization: input.organization,
+    sourceUrl: input.sourceUrl,
+    detectedAt: new Date().toISOString(),
+    status: "pending",
+    confidence: input.confidence,
+    draftType: input.draftType ?? "job",
+    sourceOrderKey: input.sourceOrderKey,
+    extractedFields: input.extractedFields,
+  });
+  let { data, error } = await supabase.from("bot_drafts").insert(row).select().single();
+  if (error?.code === "42703") {
+    // source_order_key column not migrated in yet (see
+    // supabase/migrations/009_source_order_key.sql) — drop it and
+    // retry rather than let every bot run fail to create any drafts
+    // at all until that migration is run.
+    delete row.source_order_key;
+    ({ data, error } = await supabase.from("bot_drafts").insert(row).select().single());
+  }
   if (error) throw error;
   return rowToDraft(data);
 }

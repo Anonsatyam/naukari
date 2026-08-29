@@ -241,6 +241,21 @@ async function run() {
 
   console.log(`Bihar Sarkari Naukri bot — checking ${SOURCES.length} source(s) against ${SITE_URL}\n`);
 
+  // A stable base for this whole run's sourceOrderKey values (see
+  // Candidate.sectionHint's sibling concept on BotDraft.sourceOrderKey
+  // in lib/types.ts for the full reasoning) — captured once, not per
+  // candidate, so every candidate this run finds shares the same base
+  // and only their position within the source's own listing
+  // (candidateIndex) differentiates them. A LATER run's base is always
+  // larger by hours (the bot runs every 4 hours), which vastly exceeds
+  // any single run's candidate count (capped at MAX_CANDIDATES_PER_SOURCE),
+  // so subtracting the in-run index can never make a later run's
+  // candidates sort below an earlier run's — new postings always
+  // outrank old ones, and within one run, the source's own top-to-
+  // bottom order (candidateIndex 0 = topmost = newest on their site)
+  // is preserved.
+  const runOrderBase = Date.now();
+
   let created = 0;
   let skipped = 0;
   let expired = 0;
@@ -301,6 +316,11 @@ async function run() {
           if (i > 0) await sleep(DETAIL_FETCH_DELAY_MS);
 
           const draftInput = extractFields(candidate, source.orgHint);
+          // i = 0 is the topmost/newest posting on the source's own
+          // listing — giving it the LARGEST key (runOrderBase - 0)
+          // means sorting sourceOrderKey descending puts it first,
+          // matching the source's own order.
+          draftInput.sourceOrderKey = runOrderBase - i;
 
           const pdfFields = await tryExtractPdfFields(candidate);
           const fieldsFoundInPdf = Object.keys(pdfFields).length;

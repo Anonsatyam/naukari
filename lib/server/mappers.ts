@@ -47,6 +47,7 @@ export function rowToJob(row: any): Job {
     faqs: row.faqs ?? undefined,
     conclusion: row.conclusion ?? undefined,
     additionalSections: row.additional_sections ?? undefined,
+    sourceOrderKey: row.source_order_key ?? undefined,
     status: row.status,
     createdByBot: row.created_by_bot,
     publishedAt: row.published_at,
@@ -98,6 +99,7 @@ export function jobToRow(job: Partial<Job>): Record<string, unknown> {
   if (job.faqs !== undefined) row.faqs = job.faqs;
   if (job.conclusion !== undefined) row.conclusion = job.conclusion;
   if (job.additionalSections !== undefined) row.additional_sections = job.additionalSections;
+  if (job.sourceOrderKey !== undefined) row.source_order_key = job.sourceOrderKey;
   if (job.status !== undefined) row.status = job.status;
   if (job.createdByBot !== undefined) row.created_by_bot = job.createdByBot;
   if (job.publishedAt !== undefined) row.published_at = job.publishedAt;
@@ -126,6 +128,7 @@ export function rowToResult(row: any): ResultItem {
     faqs: row.faqs ?? undefined,
     conclusion: row.conclusion ?? undefined,
     additionalSections: row.additional_sections ?? undefined,
+    sourceOrderKey: row.source_order_key ?? undefined,
   };
 }
 
@@ -146,6 +149,7 @@ export function resultToRow(result: Partial<ResultItem>): Record<string, unknown
   if (result.faqs !== undefined) row.faqs = result.faqs;
   if (result.conclusion !== undefined) row.conclusion = result.conclusion;
   if (result.additionalSections !== undefined) row.additional_sections = result.additionalSections;
+  if (result.sourceOrderKey !== undefined) row.source_order_key = result.sourceOrderKey;
   return row;
 }
 
@@ -171,6 +175,7 @@ export function rowToAdmitCard(row: any): AdmitCardItem {
     faqs: row.faqs ?? undefined,
     conclusion: row.conclusion ?? undefined,
     additionalSections: row.additional_sections ?? undefined,
+    sourceOrderKey: row.source_order_key ?? undefined,
   };
 }
 
@@ -192,6 +197,7 @@ export function admitCardToRow(card: Partial<AdmitCardItem>): Record<string, unk
   if (card.faqs !== undefined) row.faqs = card.faqs;
   if (card.conclusion !== undefined) row.conclusion = card.conclusion;
   if (card.additionalSections !== undefined) row.additional_sections = card.additionalSections;
+  if (card.sourceOrderKey !== undefined) row.source_order_key = card.sourceOrderKey;
   return row;
 }
 
@@ -208,6 +214,7 @@ export function rowToDraft(row: any): BotDraft {
     status: row.status,
     confidence: row.confidence,
     draftType: row.draft_type ?? "job",
+    sourceOrderKey: row.source_order_key ?? undefined,
     extractedFields: row.extracted_fields ?? {},
   };
 }
@@ -221,6 +228,7 @@ export function draftToRow(draft: Partial<BotDraft>): Record<string, unknown> {
   if (draft.status !== undefined) row.status = draft.status;
   if (draft.confidence !== undefined) row.confidence = draft.confidence;
   if (draft.draftType !== undefined) row.draft_type = draft.draftType;
+  if (draft.sourceOrderKey !== undefined) row.source_order_key = draft.sourceOrderKey;
   if (draft.extractedFields !== undefined) row.extracted_fields = draft.extractedFields;
   return row;
 }

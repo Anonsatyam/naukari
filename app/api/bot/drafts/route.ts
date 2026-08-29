@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
     sourceUrl?: string;
     confidence?: "high" | "medium" | "low";
     draftType?: DraftType;
+    sourceOrderKey?: number;
     extractedFields?: Record<string, unknown>;
   };
   try {
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { jobTitle, organization, sourceUrl, confidence, draftType, extractedFields } = body;
+  const { jobTitle, organization, sourceUrl, confidence, draftType, sourceOrderKey, extractedFields } = body;
   if (!jobTitle || !organization || !sourceUrl) {
     return NextResponse.json(
       { error: "jobTitle, organization and sourceUrl are required" },
@@ -52,6 +53,7 @@ export async function POST(request: NextRequest) {
     sourceUrl,
     confidence: confidence ?? "medium",
     draftType: draftType ?? "job",
+    sourceOrderKey,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     extractedFields: (extractedFields ?? {}) as any,
   });

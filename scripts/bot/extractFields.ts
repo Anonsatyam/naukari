@@ -58,6 +58,10 @@ export interface ExtractedDraft {
   sourceUrl: string;
   confidence: "high" | "medium" | "low";
   draftType: DraftType;
+  // Set by run.ts after this is returned — see its own comment for why
+  // (it needs the candidate's position within this run's full listing,
+  // which extractFields itself has no knowledge of).
+  sourceOrderKey?: number;
   extractedFields: {
     category?: string;
     qualification?: string;

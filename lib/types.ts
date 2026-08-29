@@ -139,6 +139,9 @@ export interface Job {
   faqs?: FaqItem[];
   conclusion?: string;
   additionalSections?: AdditionalSection[];
+  // See BotDraft.sourceOrderKey — carried through on approval and used
+  // to sort the public listing by the source's own order.
+  sourceOrderKey?: number;
   status: JobStatus;
   createdByBot: boolean;
   publishedAt: string;
@@ -172,6 +175,7 @@ export interface ResultItem {
   faqs?: FaqItem[];
   conclusion?: string;
   additionalSections?: AdditionalSection[];
+  sourceOrderKey?: number;
 }
 
 export interface AdmitCardItem {
@@ -199,6 +203,7 @@ export interface AdmitCardItem {
   faqs?: FaqItem[];
   conclusion?: string;
   additionalSections?: AdditionalSection[];
+  sourceOrderKey?: number;
 }
 
 export type DraftType = "job" | "result" | "admit_card";
@@ -212,6 +217,15 @@ export interface BotDraft {
   status: "pending" | "approved" | "rejected";
   confidence: "high" | "medium" | "low";
   draftType: DraftType;
+  // Encodes this posting's position in the source's own listing at
+  // crawl time — see scripts/bot/run.ts for how it's computed. Carried
+  // through to the published Job/Result/AdmitCard record and used to
+  // sort the public listing pages, so their order matches the source's
+  // own top-to-bottom order regardless of what order an admin happens
+  // to approve drafts in (publishedAt/resultDate/releaseDate reflect
+  // approval time or a parsed content date, neither of which is the
+  // same thing as "where the source displays it").
+  sourceOrderKey?: number;
   extractedFields: Record<string, unknown>;
 }
 
