@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { CheckCircle2, FileStack } from "lucide-react";
-import { getAdminStats, getPendingDrafts, getBotLog } from "@/lib/server/data";
-import { formatDate } from "@/lib/utils";
+import { CheckCircle2, Clock, FileStack } from "lucide-react";
+import { getAdminStats, getPendingDrafts, getBotLog, getLastBotRunSummary } from "@/lib/server/data";
+import { formatDateTime } from "@/lib/utils";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
 
@@ -9,6 +9,7 @@ export default async function AdminDashboardPage() {
   const { pendingDrafts: pendingCount, publishedJobs: publishedCount } = await getAdminStats();
   const pendingDrafts = await getPendingDrafts();
   const botLog = await getBotLog(6);
+  const lastRun = await getLastBotRunSummary();
 
   const stats = [
     { label: "Pending Drafts", value: pendingCount, icon: FileStack, tone: "warning" as const },
@@ -36,6 +37,43 @@ export default async function AdminDashboardPage() {
           );
         })}
       </div>
+
+      <Card padding="p-4" className="mt-3 sm:max-w-2xl">
+        <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
+          <Clock size={15} className="text-[var(--color-text-muted)]" />
+          Last Bot Run
+        </div>
+        {!lastRun ? (
+          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+            No completed run yet — this fills in once the bot script finishes a full pass
+            (locally or via the scheduled GitHub Action).
+          </p>
+        ) : (
+          <>
+            <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+              {formatDateTime(lastRun.ranAt)}
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div>
+                <p className="text-lg font-bold text-[var(--color-success)]">{lastRun.newCount}</p>
+                <p className="text-xs text-[var(--color-text-secondary)]">New</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-[var(--color-text-secondary)]">{lastRun.duplicateCount}</p>
+                <p className="text-xs text-[var(--color-text-secondary)]">Duplicate</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-[var(--color-warning)]">{lastRun.expiredCount}</p>
+                <p className="text-xs text-[var(--color-text-secondary)]">Expired</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-[var(--color-danger)]">{lastRun.errorCount}</p>
+                <p className="text-xs text-[var(--color-text-secondary)]">Errors</p>
+              </div>
+            </div>
+          </>
+        )}
+      </Card>
 
       <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[1.4fr_1fr]">
         <Card padding="p-0">
@@ -86,7 +124,7 @@ export default async function AdminDashboardPage() {
                   key={entry.id}
                   status={entry.status === "error" ? "warning" : entry.status}
                   text={entry.message}
-                  time={formatDate(entry.timestamp)}
+                  time={formatDateTime(entry.timestamp)}
                 />
               ))}
             </div>

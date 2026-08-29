@@ -888,6 +888,49 @@ export async function getBotLog(limit: number = 10): Promise<BotLogEntry[]> {
   return (data ?? []).map(rowToLogEntry);
 }
 
+export interface BotRunSummary {
+  ranAt: string;
+  newCount: number;
+  duplicateCount: number;
+  expiredCount: number;
+  errorCount: number;
+}
+
+// Matches the exact message run.ts logs once at the end of every run
+// (see its own comment for why a dedicated summary entry exists at
+// all) — kept in sync with that format by hand, since bot_log has no
+// separate "kind" column to query by instead.
+const RUN_SUMMARY_PATTERN =
+  /^Bot run summary: (\d+) new draft\(s\), (\d+) duplicate\(s\) skipped, (\d+) expired skipped, (\d+) error\(s\)/;
+
+/** The most recent full-run summary, for "when did the bot last run,
+ * and how did it go" at a glance on the admin dashboard — as opposed
+ * to getBotLog's raw per-source/per-draft entries, which a single run
+ * can produce 100+ of and which bury this exact question immediately. */
+export async function getLastBotRunSummary(): Promise<BotRunSummary | undefined> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("bot_log")
+    .select("*")
+    .ilike("message", "Bot run summary:%")
+    .order("timestamp", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return undefined;
+
+  const match = (data.message as string).match(RUN_SUMMARY_PATTERN);
+  if (!match) return undefined;
+
+  return {
+    ranAt: data.timestamp,
+    newCount: Number(match[1]),
+    duplicateCount: Number(match[2]),
+    expiredCount: Number(match[3]),
+    errorCount: Number(match[4]),
+  };
+}
+
 // ---- Dashboard stats ----
 
 export async function getAdminStats() {

@@ -12,6 +12,21 @@ export function formatDate(iso: string): string {
   });
 }
 
+// Date + time, for anything that can happen more than once a day (the
+// bot runs every 4 hours) — formatDate alone can't tell two same-day
+// runs apart.
+export function formatDateTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export function formatCurrency(amount: number): string {
   if (!amount) return "As per rules";
   return `₹${amount.toLocaleString("en-IN")}`;

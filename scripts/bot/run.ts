@@ -384,6 +384,18 @@ async function run() {
   console.log(
     `\nDone. ${created} draft(s) created, ${skipped} skipped (already known), ${expired} skipped (deadline passed), ${errors} error(s).`
   );
+
+  // One persisted summary entry per run, distinct from the per-source/
+  // per-draft lines logged above — those get buried immediately (a
+  // single run can log 100+ of them, one per candidate), leaving no
+  // easy way to see "when did the bot last run, and how did it go" at
+  // a glance. getLastBotRunSummary() in lib/server/data.ts parses this
+  // exact message shape back out for the admin dashboard — keep them
+  // in sync if this format ever changes.
+  await logActivity(
+    "success",
+    `Bot run summary: ${created} new draft(s), ${skipped} duplicate(s) skipped, ${expired} expired skipped, ${errors} error(s)`
+  );
 }
 
 run();
