@@ -36,6 +36,7 @@ export default function TriggerBotButton() {
         variant="secondary"
         onClick={trigger}
         disabled={state === "loading"}
+        className="border-transparent bg-[var(--color-success)] text-white hover:border-transparent hover:bg-[var(--color-success)]/90"
       >
         <Play size={14} />
         {state === "loading" ? "Triggering…" : "Run Bot Now"}
