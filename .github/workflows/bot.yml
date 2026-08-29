@@ -2,9 +2,15 @@ name: Run recruitment bot
 
 on:
   schedule:
-    # Every 4 hours. GitHub's cron scheduling isn't guaranteed to the
-    # minute — fine for this, not fine if you ever need second-precision.
-    - cron: "0 */4 * * *"
+    # Every 4 hours, at :17 rather than :00 — GitHub's own docs warn
+    # that scheduled workflows queue up (and get delayed or dropped
+    # outright under high load) most at the top of every hour, since
+    # every other repo's cron piles onto that same minute too.
+    # Confirmed happening here: pulling actual run history showed only
+    # 8 of the ~16 runs expected over a ~65 hour window actually fired,
+    # with gaps growing past 13 hours between some of them. Moving off
+    # :00 is GitHub's documented mitigation for exactly this.
+    - cron: "17 */4 * * *"
   workflow_dispatch: {} # lets you trigger a run manually from the Actions tab
 
 jobs:
