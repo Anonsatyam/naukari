@@ -4,6 +4,7 @@ import { getAdminStats, getPendingDrafts, getBotLog, getLastBotRunSummary } from
 import { formatDateTime } from "@/lib/utils";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
+import TriggerBotButton from "@/components/admin/TriggerBotButton";
 
 export default async function AdminDashboardPage() {
   const { pendingDrafts: pendingCount, publishedJobs: publishedCount } = await getAdminStats();
@@ -39,9 +40,12 @@ export default async function AdminDashboardPage() {
       </div>
 
       <Card padding="p-4" className="mt-3 sm:max-w-2xl">
-        <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
-          <Clock size={15} className="text-[var(--color-text-muted)]" />
-          Last Bot Run
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
+            <Clock size={15} className="text-[var(--color-text-muted)]" />
+            Last Bot Run
+          </div>
+          <TriggerBotButton />
         </div>
         {!lastRun ? (
           <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
