@@ -144,15 +144,21 @@ export function parsePipeBlocks(text: string): PipeBlock[] {
   return blocks;
 }
 
-// Matches a table's own "Total"/"Grand Total" row label, in the common
-// English and Hindi phrasings seen across these notification tables
-// ("Total Vacancies", "Grand Total", कुल पद, कुल योग, कुल रिक्तियां...).
-// Shared by both the vacancy-breakdown parser (lib/server/data.ts,
+// Matches a table's own "Total" row label — deliberately just the bare
+// word (plus its common Hindi equivalents), not "total vacancies" /
+// "total posts" / "grand total" as fixed whole phrases: those all
+// still match (each contains the word "total"), but so does a plain
+// "Total" row with nothing else in it — which a Vacancy table's row
+// might spell out in full while an Exam Pattern or Fee table's just
+// calls "Total". A row-label pattern this narrow was fine back when
+// this only had to find one specific table's total row; it stopped
+// being fine once the same constant took on bolding a total row in
+// ANY table (see PipeTableOrText below) regardless of what section
+// it's in. Shared by the vacancy-breakdown parser (lib/server/data.ts,
 // which uses it to find the count column and to skip the total row
-// when building a category list) and PipeTableOrText below (which
-// bolds a table's own total row wherever one shows up), so both stay
-// in sync on what counts as "a total row" instead of drifting apart.
-export const TOTAL_ROW_LABEL = /total\s*vacanc\w*|total\s*posts?|grand\s*total|कुल\s*रिक्तिय|कुल\s*योग|कुल\s*पद/i;
+// when building a category list) and PipeTableOrText, so both stay in
+// sync on what counts as "a total row" instead of drifting apart.
+export const TOTAL_ROW_LABEL = /\btotal\b|कुल|योग/i;
 
 export function firstNumber(text: string | undefined): number | undefined {
   const match = text?.match(/\d[\d,]*/);
