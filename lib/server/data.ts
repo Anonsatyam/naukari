@@ -21,11 +21,13 @@ import {
   VacancyBreakdown,
   AgeLimitRow,
   AgeRelaxationRow,
+  ImportantLink,
 } from "@/lib/types";
 import { isRecent, isClosingSoon, getApplicationEndDate } from "@/lib/dateHelpers";
 import { deepDecodeEntities, decodeHtmlEntities } from "@/lib/entities";
 import { parsePipeTables, PipeTable, firstNumber, deriveAgeRange, deriveSalaryRange } from "@/lib/pipeTables";
 import { classifyQualification } from "@/lib/taxonomy";
+import { isSourceSiteUrl } from "@/lib/utils";
 
 // Re-exported so the admin draft review page (a client component,
 // which can't import this server-only module) can compute the same
@@ -526,6 +528,39 @@ function findLinkByKeywords(links: unknown, keywords: string[]): string | undefi
 const APPLY_LINK_KEYWORDS = ["apply", "online", "registration", "आवेदन", "रजिस्ट्रेशन"];
 const NOTIFICATION_LINK_KEYWORDS = ["notification", "notice", "advertisement", "pdf", "नोटिफिकेशन", "अधिसूचना"];
 
+// Drops any link that points back at the source site itself (see
+// isSourceSiteUrl's own comment) — applied once, here, to the raw
+// importantLinks list before it's either stored directly or scanned by
+// findLinkByKeywords below, so a stray self-referential link (a "Home"
+// / "View More" nav link the extractor picked up by mistake) can
+// neither show up as its own sidebar button nor get matched as "the"
+// apply/notification link.
+function sanitizeImportantLinks(links: unknown): ImportantLink[] | undefined {
+  if (!Array.isArray(links)) return undefined;
+  const cleaned = links.filter(
+    (link): link is ImportantLink =>
+      !!link &&
+      typeof link === "object" &&
+      typeof (link as { label?: unknown }).label === "string" &&
+      typeof (link as { url?: unknown }).url === "string" &&
+      !isSourceSiteUrl((link as { url: string }).url)
+  );
+  return cleaned.length > 0 ? cleaned : undefined;
+}
+
+// Resolves to the first candidate that's both present and NOT the
+// source site itself — used for officialApplyUrl/officialNotificationUrl
+// /officialLink so a genuine external link (however it was found) wins
+// over an accidental or absent one. Callers still fall back to
+// draft.sourceUrl themselves as the true last resort when every
+// candidate here comes back empty (there's nothing else to link to).
+function firstExternalUrl(...candidates: (string | undefined)[]): string | undefined {
+  for (const candidate of candidates) {
+    if (candidate && !isSourceSiteUrl(candidate)) return candidate;
+  }
+  return undefined;
+}
+
 // The source's own Conclusion paragraph routinely plugs itself by
 // name/domain ("अधिक जानकारी के लिए biharjob.co.in पर विजिट करें" and
 // similar) — harmless as a fact, but it's directing our own visitors
@@ -663,13 +698,22 @@ export async function approveDraft(
     // is for a result rather than a job application.
     const merged = { ...cleanedExtractedFields, ...cleanedEdits } as Partial<ResultItem> & Record<string, unknown>;
     const title = merged.title ?? cleanJobTitle;
+    const sanitizedLinks = sanitizeImportantLinks(merged.importantLinks);
     const newResult: Partial<ResultItem> = {
       slug: slugify(title),
       title,
       organization: merged.organization ?? draft.organization,
       category: merged.category ?? "Administrative",
       resultDate: merged.resultDate ?? new Date().toISOString().slice(0, 10),
-      officialLink: merged.officialLink ?? draft.sourceUrl,
+      officialLink:
+        firstExternalUrl(
+          merged.officialLink,
+          findLinkByKeywords(sanitizedLinks, NOTIFICATION_LINK_KEYWORDS),
+          findLinkByKeywords(sanitizedLinks, APPLY_LINK_KEYWORDS),
+          typeof merged.notificationPdfLink === "string" ? merged.notificationPdfLink : undefined,
+          typeof merged.applyOnlineLink === "string" ? merged.applyOnlineLink : undefined,
+          typeof merged.officialWebsiteLink === "string" ? merged.officialWebsiteLink : undefined
+        ) ?? draft.sourceUrl,
       sourceUrl: draft.sourceUrl,
       summary: merged.summary ?? `${title} — see the official notification for full details.`,
       importantDatesText: merged.importantDatesText,
@@ -678,7 +722,7 @@ export async function approveDraft(
       ...extractSharedNotificationFields(merged),
       examPattern: typeof merged.examPattern === "string" ? merged.examPattern : undefined,
       documentsRequired: typeof merged.documentsRequired === "string" ? merged.documentsRequired : undefined,
-      importantLinks: ensureOptionalArray(merged.importantLinks),
+      importantLinks: sanitizedLinks,
       faqs: ensureOptionalArray(merged.faqs),
       conclusion: replaceSourceSitePlug(merged.conclusion),
       additionalSections: ensureOptionalArray(merged.genericSections),
@@ -699,6 +743,7 @@ export async function approveDraft(
     const title = merged.title ?? cleanJobTitle;
     const now = new Date();
     const defaultExamDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const sanitizedLinks = sanitizeImportantLinks(merged.importantLinks);
     const newCard: Partial<AdmitCardItem> = {
       slug: slugify(title),
       title,
@@ -706,7 +751,15 @@ export async function approveDraft(
       category: merged.category ?? "Administrative",
       examDate: merged.examDate ?? defaultExamDate,
       releaseDate: merged.releaseDate ?? now.toISOString().slice(0, 10),
-      officialLink: merged.officialLink ?? draft.sourceUrl,
+      officialLink:
+        firstExternalUrl(
+          merged.officialLink,
+          findLinkByKeywords(sanitizedLinks, NOTIFICATION_LINK_KEYWORDS),
+          findLinkByKeywords(sanitizedLinks, APPLY_LINK_KEYWORDS),
+          typeof merged.notificationPdfLink === "string" ? merged.notificationPdfLink : undefined,
+          typeof merged.applyOnlineLink === "string" ? merged.applyOnlineLink : undefined,
+          typeof merged.officialWebsiteLink === "string" ? merged.officialWebsiteLink : undefined
+        ) ?? draft.sourceUrl,
       sourceUrl: draft.sourceUrl,
       importantDatesText: merged.importantDatesText,
       howToDownload: ensureOptionalArray(merged.howToApply),
@@ -718,7 +771,7 @@ export async function approveDraft(
       examDayInstructionsText: typeof merged.documentsRequired === "string" ? merged.documentsRequired : undefined,
       examPattern: merged.examPattern,
       ...extractSharedNotificationFields(merged),
-      importantLinks: ensureOptionalArray(merged.importantLinks),
+      importantLinks: sanitizedLinks,
       faqs: ensureOptionalArray(merged.faqs),
       conclusion: replaceSourceSitePlug(merged.conclusion),
       additionalSections: ensureOptionalArray(merged.genericSections),
@@ -743,6 +796,7 @@ export async function approveDraft(
   const merged = { ...cleanedExtractedFields, ...cleanedEdits } as Partial<Job> & Record<string, unknown>;
   const title = merged.title ?? cleanJobTitle;
   const now = new Date().toISOString();
+  const sanitizedLinks = sanitizeImportantLinks(merged.importantLinks);
 
   const newJob: Partial<Job> = {
     slug: slugify(title),
@@ -847,13 +901,19 @@ export async function approveDraft(
       "See the official notification for the application procedure",
     ]),
     officialNotificationUrl:
-      merged.officialNotificationUrl ??
-      findLinkByKeywords(merged.importantLinks, NOTIFICATION_LINK_KEYWORDS) ??
-      draft.sourceUrl,
+      firstExternalUrl(
+        merged.officialNotificationUrl,
+        findLinkByKeywords(sanitizedLinks, NOTIFICATION_LINK_KEYWORDS),
+        typeof merged.notificationPdfLink === "string" ? merged.notificationPdfLink : undefined
+      ) ?? draft.sourceUrl,
     officialApplyUrl:
-      merged.officialApplyUrl ?? findLinkByKeywords(merged.importantLinks, APPLY_LINK_KEYWORDS) ?? draft.sourceUrl,
+      firstExternalUrl(
+        merged.officialApplyUrl,
+        findLinkByKeywords(sanitizedLinks, APPLY_LINK_KEYWORDS),
+        typeof merged.applyOnlineLink === "string" ? merged.applyOnlineLink : undefined
+      ) ?? draft.sourceUrl,
     sourceUrl: draft.sourceUrl,
-    importantLinks: ensureOptionalArray(merged.importantLinks),
+    importantLinks: sanitizedLinks,
     importantDates: ensureArray(merged.importantDates, []),
     // The bot hands this over as string[] (one "label | value" row per
     // entry, see importantDatesText in extractHtmlNotificationFields.ts)

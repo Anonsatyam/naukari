@@ -19,7 +19,7 @@ import {
   isClosingSoon,
   getRelatedJobs,
 } from "@/lib/server/data";
-import { formatDate, daysUntil } from "@/lib/utils";
+import { formatDate, daysUntil, isSourceSiteUrl } from "@/lib/utils";
 import { ButtonLink } from "@/components/Button";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
@@ -94,8 +94,18 @@ export default async function JobDetailPage({
   // official website, an admit-card page, etc.) still shows up as its
   // own button rather than being dropped.
   const otherImportantLinks = (Array.isArray(job.importantLinks) ? job.importantLinks : []).filter(
-    (link) => link.url !== job.officialApplyUrl && link.url !== job.officialNotificationUrl
+    (link) => link.url !== job.officialApplyUrl && link.url !== job.officialNotificationUrl && !isSourceSiteUrl(link.url)
   );
+  // Extraction can fail to find a genuine external link, in which case
+  // these fall back to the source article's own URL (see
+  // lib/server/data.ts's firstExternalUrl) — approveDraft avoids that
+  // whenever it can, but a record published before that fix, or one
+  // where the source truly had no working link at all, can still carry
+  // it. Rather than show an "Apply Officially" button that actually
+  // lands a visitor back on the aggregator page, that button is hidden
+  // entirely in this last-resort case.
+  const hasRealApplyUrl = !isSourceSiteUrl(job.officialApplyUrl);
+  const hasRealNotificationUrl = !isSourceSiteUrl(job.officialNotificationUrl);
 
   return (
     <div className="container-page py-8">
@@ -333,17 +343,21 @@ export default async function JobDetailPage({
         {/* Sidebar */}
         <aside className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-24 lg:h-fit">
           <Card>
-            <ButtonLink href={job.officialApplyUrl} target="_blank" className="w-full">
-              Apply Officially <ExternalLink size={14} />
-            </ButtonLink>
-            <ButtonLink
-              href={job.officialNotificationUrl}
-              target="_blank"
-              variant="secondary"
-              className="mt-2 w-full"
-            >
-              <FileText size={14} /> Official Notification
-            </ButtonLink>
+            {hasRealApplyUrl && (
+              <ButtonLink href={job.officialApplyUrl} target="_blank" className="w-full">
+                Apply Officially <ExternalLink size={14} />
+              </ButtonLink>
+            )}
+            {hasRealNotificationUrl && (
+              <ButtonLink
+                href={job.officialNotificationUrl}
+                target="_blank"
+                variant="secondary"
+                className={hasRealApplyUrl ? "mt-2 w-full" : "w-full"}
+              >
+                <FileText size={14} /> Official Notification
+              </ButtonLink>
+            )}
             {otherImportantLinks.map((link) => (
               <ButtonLink
                 key={link.label}
@@ -355,6 +369,11 @@ export default async function JobDetailPage({
                 {link.label} <ExternalLink size={14} />
               </ButtonLink>
             ))}
+            {!hasRealApplyUrl && !hasRealNotificationUrl && otherImportantLinks.length === 0 && (
+              <p className="text-sm text-[var(--color-text-secondary)]">
+                No official link could be found for this posting yet — check the source notification for details.
+              </p>
+            )}
             <div className="mt-3">
               <SourceVerified sourceUrl={job.sourceUrl} />
             </div>

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Calendar, ExternalLink, ClipboardList, FileText, HelpCircle, ListChecks, CheckCircle2 } from "lucide-react";
 import { getAdmitCards, getAdmitCardBySlug } from "@/lib/server/data";
-import { formatDate } from "@/lib/utils";
+import { formatDate, isSourceSiteUrl } from "@/lib/utils";
 import { Section, StepList, PipeTableOrText } from "@/components/DetailSections";
 import {
   ApplicationFeeSection,
@@ -53,7 +53,14 @@ export default async function AdmitCardDetailPage({
   // Same dedup reasoning as the job page's sidebar: don't show an
   // importantLinks entry that's just the same URL as the primary
   // "Download Admit Card" button again as a second button.
-  const otherImportantLinks = (card.importantLinks ?? []).filter((link) => link.url !== card.officialLink);
+  const otherImportantLinks = (card.importantLinks ?? []).filter(
+    (link) => link.url !== card.officialLink && !isSourceSiteUrl(link.url)
+  );
+  // See the job page's identical comment — extraction can fail to find
+  // a genuine external link, in which case this falls back to the
+  // source article's own URL; hidden rather than shown as a misleading
+  // "Download Admit Card" button in that last-resort case.
+  const hasRealOfficialLink = !isSourceSiteUrl(card.officialLink);
 
   return (
     <div className="container-page py-8">
@@ -172,20 +179,27 @@ export default async function AdmitCardDetailPage({
         {/* Sidebar */}
         <aside className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-24 lg:h-fit">
           <Card>
-            <ButtonLink href={card.officialLink} target="_blank" className="w-full">
-              Download Admit Card <ExternalLink size={14} />
-            </ButtonLink>
-            {otherImportantLinks.map((link) => (
+            {hasRealOfficialLink && (
+              <ButtonLink href={card.officialLink} target="_blank" className="w-full">
+                Download Admit Card <ExternalLink size={14} />
+              </ButtonLink>
+            )}
+            {otherImportantLinks.map((link, i) => (
               <ButtonLink
                 key={link.label}
                 href={link.url}
                 target="_blank"
                 variant="secondary"
-                className="mt-2 w-full"
+                className={i === 0 && !hasRealOfficialLink ? "w-full" : "mt-2 w-full"}
               >
                 {link.label} <ExternalLink size={14} />
               </ButtonLink>
             ))}
+            {!hasRealOfficialLink && otherImportantLinks.length === 0 && (
+              <p className="text-sm text-[var(--color-text-secondary)]">
+                No official link could be found for this admit card yet — check the source notification for details.
+              </p>
+            )}
             <div className="mt-3">
               <SourceVerified sourceUrl={card.sourceUrl} />
             </div>
