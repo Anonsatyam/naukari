@@ -1,4 +1,4 @@
-import { Wallet, Hourglass, Users, ListChecks, ClipboardList, FileText } from "lucide-react";
+import { Wallet, Hourglass, Users, ListChecks, ClipboardList, FileText, GraduationCap } from "lucide-react";
 import { Section, StepList, PipeTableOrText } from "@/components/DetailSections";
 import { KeyValueRow } from "@/components/KeyValueRow";
 import { formatCurrency } from "@/lib/utils";
@@ -197,6 +197,15 @@ export function ExamPatternSection({
           ))}
         </ul>
       )}
+    </Section>
+  );
+}
+
+export function EligibilitySection({ eligibilityText }: { eligibilityText?: string }) {
+  if (!eligibilityText) return null;
+  return (
+    <Section title="Eligibility" icon={<GraduationCap size={16} />} accent="teal">
+      <PipeTableOrText text={eligibilityText} />
     </Section>
   );
 }

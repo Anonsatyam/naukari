@@ -195,6 +195,13 @@ export interface ResultItem {
   examPattern?: string;
   examPatternNotes?: string[];
   documentsRequired?: string;
+  // Raw "Eligibility" table/list verbatim — same bucket Job's own
+  // eligibilityText reads from. This is captured by the extractor for
+  // every source page regardless of draft type, but was never actually
+  // read into a Result record until now (a source's Result page
+  // routinely documents post-facto eligibility criteria, e.g. for a
+  // follow-up round).
+  eligibilityText?: string;
   importantLinks?: ImportantLink[];
   faqs?: FaqItem[];
   conclusion?: string;
@@ -237,6 +244,8 @@ export interface AdmitCardItem {
   applicationFeeText?: string;
   selectionProcess?: string[];
   selectionProcessText?: string;
+  // Same reasoning as ResultItem.eligibilityText above.
+  eligibilityText?: string;
   importantLinks?: ImportantLink[];
   faqs?: FaqItem[];
   conclusion?: string;

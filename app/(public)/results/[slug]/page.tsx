@@ -8,6 +8,7 @@ import {
   ApplicationFeeSection,
   AgeLimitSection,
   VacancyDetailsSection,
+  EligibilitySection,
   SelectionProcessSection,
   ExamPatternSection,
   DocumentsRequiredSection,
@@ -121,6 +122,7 @@ export default async function ResultDetailPage({
           />
           <ExamPatternSection examPattern={result.examPattern} examPatternNotes={result.examPatternNotes} />
           <DocumentsRequiredSection documentsRequired={result.documentsRequired} />
+          <EligibilitySection eligibilityText={result.eligibilityText} />
 
           {Array.isArray(result.faqs) && result.faqs.length > 0 && (
             <Section title="FAQs" icon={<HelpCircle size={16} />} accent="pink">

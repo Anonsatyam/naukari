@@ -8,6 +8,7 @@ import {
   ApplicationFeeSection,
   AgeLimitSection,
   VacancyDetailsSection,
+  EligibilitySection,
   SelectionProcessSection,
 } from "@/components/RichSections";
 
@@ -134,6 +135,7 @@ export default async function AdmitCardDetailPage({
             selectionProcess={card.selectionProcess}
             selectionProcessText={card.selectionProcessText}
           />
+          <EligibilitySection eligibilityText={card.eligibilityText} />
 
           {Array.isArray(card.faqs) && card.faqs.length > 0 && (
             <Section title="FAQs" icon={<HelpCircle size={16} />} accent="pink">

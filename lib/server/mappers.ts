@@ -137,6 +137,7 @@ export function rowToResult(row: any): ResultItem {
     examPattern: row.exam_pattern ?? undefined,
     examPatternNotes: row.exam_pattern_notes ?? undefined,
     documentsRequired: row.documents_required ?? undefined,
+    eligibilityText: row.eligibility_text ?? undefined,
     importantLinks: row.important_links ?? undefined,
     faqs: row.faqs ?? undefined,
     conclusion: row.conclusion ?? undefined,
@@ -171,6 +172,7 @@ export function resultToRow(result: Partial<ResultItem>): Record<string, unknown
   if (result.examPattern !== undefined) row.exam_pattern = result.examPattern;
   if (result.examPatternNotes !== undefined) row.exam_pattern_notes = result.examPatternNotes;
   if (result.documentsRequired !== undefined) row.documents_required = result.documentsRequired;
+  if (result.eligibilityText !== undefined) row.eligibility_text = result.eligibilityText;
   if (result.importantLinks !== undefined) row.important_links = result.importantLinks;
   if (result.faqs !== undefined) row.faqs = result.faqs;
   if (result.conclusion !== undefined) row.conclusion = result.conclusion;
@@ -208,6 +210,7 @@ export function rowToAdmitCard(row: any): AdmitCardItem {
     applicationFeeText: row.application_fee_text ?? undefined,
     selectionProcess: row.selection_process ?? undefined,
     selectionProcessText: row.selection_process_text ?? undefined,
+    eligibilityText: row.eligibility_text ?? undefined,
     importantLinks: row.important_links ?? undefined,
     faqs: row.faqs ?? undefined,
     conclusion: row.conclusion ?? undefined,
@@ -241,6 +244,7 @@ export function admitCardToRow(card: Partial<AdmitCardItem>): Record<string, unk
   if (card.applicationFeeText !== undefined) row.application_fee_text = card.applicationFeeText;
   if (card.selectionProcess !== undefined) row.selection_process = card.selectionProcess;
   if (card.selectionProcessText !== undefined) row.selection_process_text = card.selectionProcessText;
+  if (card.eligibilityText !== undefined) row.eligibility_text = card.eligibilityText;
   if (card.importantLinks !== undefined) row.important_links = card.importantLinks;
   if (card.faqs !== undefined) row.faqs = card.faqs;
   if (card.conclusion !== undefined) row.conclusion = card.conclusion;

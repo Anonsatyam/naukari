@@ -600,6 +600,10 @@ function extractSharedNotificationFields(merged: Record<string, unknown>) {
     selectionProcess: ensureOptionalArray<string>(merged.selectionProcess) ?? parseSelectionSteps(merged.selectionProcess),
     selectionProcessText: typeof merged.selectionProcess === "string" ? merged.selectionProcess : undefined,
     examPatternNotes: ensureOptionalArray<string>(merged.examPatternNotes),
+    // Same "eligibility" bucket Job's own eligibilityText reads —
+    // extracted for every source page regardless of draft type, but
+    // never actually read into a Result/AdmitCard record until now.
+    eligibilityText: typeof merged.eligibility === "string" ? merged.eligibility : undefined,
   };
 }
 
