@@ -27,13 +27,23 @@ export async function POST(
       job: approved.type === "job" ? approved.entity : undefined,
     });
   } catch (err) {
-    // Surface approveDraft's own message (e.g. "already published,
-    // marked rejected instead") rather than a bare 500 — the review
-    // page shows this verbatim, so a specific reason beats a generic
-    // "approve failed" every time one is available.
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Approve failed" },
-      { status: 409 }
-    );
+      console.error("[APPROVE FAILED]", err);
+
+        const error = err as {
+          message?: string;
+          code?: string;
+          details?: string;
+          hint?: string;
+        };
+
+        return NextResponse.json(
+          {
+            error: error.message || String(err),
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+          },
+          { status: 500 }
+        );
   }
 }
