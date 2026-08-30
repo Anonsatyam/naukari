@@ -131,6 +131,19 @@ export default async function ResultDetailPage({
           <DocumentsRequiredSection documentsRequired={result.documentsRequired} />
           <EligibilitySection eligibilityText={result.eligibilityText} />
 
+          {/* Every source section that doesn't map to one of the specific
+              ones above — rendered generically, titled with the source's
+              own heading text, instead of being dropped for not matching
+              a hardcoded field. Deliberately placed before FAQs/Conclusion
+              — FAQs is always the second-last section and Conclusion
+              always the last, regardless of what else the source
+              published. */}
+          {result.additionalSections?.map((section, i) => (
+            <Section key={i} title={section.heading} icon={<FileText size={16} />} accent="neutral">
+              <PipeTableOrText text={section.content} />
+            </Section>
+          ))}
+
           {Array.isArray(result.faqs) && result.faqs.length > 0 && (
             <Section title="FAQs" icon={<HelpCircle size={16} />} accent="pink">
               <div className="divide-y divide-[var(--color-border)]">
@@ -145,16 +158,6 @@ export default async function ResultDetailPage({
               </div>
             </Section>
           )}
-
-          {/* Every source section that doesn't map to one of the specific
-              ones above — rendered generically, titled with the source's
-              own heading text, instead of being dropped for not matching
-              a hardcoded field. */}
-          {result.additionalSections?.map((section, i) => (
-            <Section key={i} title={section.heading} icon={<FileText size={16} />} accent="neutral">
-              <PipeTableOrText text={section.content} />
-            </Section>
-          ))}
 
           {result.conclusion && (
             <Section title="Conclusion" icon={<CheckCircle2 size={16} />} accent="green">

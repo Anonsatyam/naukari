@@ -144,6 +144,19 @@ export default async function AdmitCardDetailPage({
           />
           <EligibilitySection eligibilityText={card.eligibilityText} />
 
+          {/* Every source section that doesn't map to one of the specific
+              ones above — rendered generically, titled with the source's
+              own heading text, instead of being dropped for not matching
+              a hardcoded field. Deliberately placed before FAQs/Conclusion
+              — FAQs is always the second-last section and Conclusion
+              always the last, regardless of what else the source
+              published. */}
+          {card.additionalSections?.map((section, i) => (
+            <Section key={i} title={section.heading} icon={<FileText size={16} />} accent="neutral">
+              <PipeTableOrText text={section.content} />
+            </Section>
+          ))}
+
           {Array.isArray(card.faqs) && card.faqs.length > 0 && (
             <Section title="FAQs" icon={<HelpCircle size={16} />} accent="pink">
               <div className="divide-y divide-[var(--color-border)]">
@@ -158,16 +171,6 @@ export default async function AdmitCardDetailPage({
               </div>
             </Section>
           )}
-
-          {/* Every source section that doesn't map to one of the specific
-              ones above — rendered generically, titled with the source's
-              own heading text, instead of being dropped for not matching
-              a hardcoded field. */}
-          {card.additionalSections?.map((section, i) => (
-            <Section key={i} title={section.heading} icon={<FileText size={16} />} accent="neutral">
-              <PipeTableOrText text={section.content} />
-            </Section>
-          ))}
 
           {card.conclusion && (
             <Section title="Conclusion" icon={<CheckCircle2 size={16} />} accent="green">

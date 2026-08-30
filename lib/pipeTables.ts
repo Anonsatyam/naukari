@@ -144,6 +144,16 @@ export function parsePipeBlocks(text: string): PipeBlock[] {
   return blocks;
 }
 
+// Matches a table's own "Total"/"Grand Total" row label, in the common
+// English and Hindi phrasings seen across these notification tables
+// ("Total Vacancies", "Grand Total", कुल पद, कुल योग, कुल रिक्तियां...).
+// Shared by both the vacancy-breakdown parser (lib/server/data.ts,
+// which uses it to find the count column and to skip the total row
+// when building a category list) and PipeTableOrText below (which
+// bolds a table's own total row wherever one shows up), so both stay
+// in sync on what counts as "a total row" instead of drifting apart.
+export const TOTAL_ROW_LABEL = /total\s*vacanc\w*|total\s*posts?|grand\s*total|कुल\s*रिक्तिय|कुल\s*योग|कुल\s*पद/i;
+
 export function firstNumber(text: string | undefined): number | undefined {
   const match = text?.match(/\d[\d,]*/);
   if (!match) return undefined;

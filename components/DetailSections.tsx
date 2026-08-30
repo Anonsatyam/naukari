@@ -1,4 +1,4 @@
-import { parsePipeBlocks } from "@/lib/pipeTables";
+import { parsePipeBlocks, TOTAL_ROW_LABEL } from "@/lib/pipeTables";
 import Card from "@/components/Card";
 
 // Shared building blocks for the Job / Result / Admit Card detail
@@ -154,15 +154,32 @@ export function PipeTableOrText({ text }: { text: string }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {t.body.map((row, r) => (
-                      <tr key={r}>
-                        {row.map((cell, c) => (
-                          <td key={c} className="whitespace-normal break-words px-3 py-2 align-top text-[var(--color-text-secondary)]">
-                            {cell}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
+                    {t.body.map((row, r) => {
+                      // A table's own closing "Total"/"Grand Total" row
+                      // (कुल योग, कुल पद, ...) is bolded — same treatment
+                      // the Post/Vacancy Details section's own structured
+                      // grid already gives its Total row, extended here to
+                      // every raw table this renders (Important Dates,
+                      // Application Fee, Age Limit, the full Vacancy
+                      // table, Selection Process, ...) since a source's
+                      // total row is just as much its own thing wherever
+                      // it appears.
+                      const isTotalRow = r === t.body.length - 1 && TOTAL_ROW_LABEL.test(row[0] ?? "");
+                      return (
+                        <tr key={r} className={isTotalRow ? "bg-[var(--color-background)] font-semibold" : undefined}>
+                          {row.map((cell, c) => (
+                            <td
+                              key={c}
+                              className={`whitespace-normal break-words px-3 py-2 align-top ${
+                                isTotalRow ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)]"
+                              }`}
+                            >
+                              {cell}
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

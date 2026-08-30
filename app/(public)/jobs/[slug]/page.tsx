@@ -292,6 +292,21 @@ export default async function JobDetailPage({
             <StepList items={job.howToApply} />
           </Section>
 
+          {/* Every source section that doesn't map to one of the specific
+              ones above — e.g. a "Physical Eligibility" table alongside
+              Education Eligibility — rendered generically, titled with
+              the source's own heading text, instead of being dropped for
+              not matching a hardcoded field. Deliberately placed before
+              FAQs/Conclusion (rather than after, where it used to sit) —
+              FAQs is always the second-last section and Conclusion
+              always the last, regardless of what else the source
+              published. */}
+          {job.additionalSections?.map((section, i) => (
+            <Section key={i} title={section.heading} icon={<FileText size={16} />} accent="neutral">
+              <PipeTableOrText text={section.content} />
+            </Section>
+          ))}
+
           {Array.isArray(job.faqs) && job.faqs.length > 0 && (
   <Section title="FAQs" icon={<HelpCircle size={16} />} accent="pink">
     <div className="divide-y divide-[var(--color-border)]">
@@ -308,17 +323,6 @@ export default async function JobDetailPage({
     </div>
   </Section>
           )}
-
-          {/* Every source section that doesn't map to one of the specific
-              ones above — e.g. a "Physical Eligibility" table alongside
-              Education Eligibility — rendered generically, titled with
-              the source's own heading text, instead of being dropped for
-              not matching a hardcoded field. */}
-          {job.additionalSections?.map((section, i) => (
-            <Section key={i} title={section.heading} icon={<FileText size={16} />} accent="neutral">
-              <PipeTableOrText text={section.content} />
-            </Section>
-          ))}
 
           {job.conclusion && (
             <Section title="Conclusion" icon={<CheckCircle2 size={16} />} accent="green">

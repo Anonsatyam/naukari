@@ -25,7 +25,7 @@ import {
 } from "@/lib/types";
 import { isRecent, isClosingSoon, getApplicationEndDate } from "@/lib/dateHelpers";
 import { deepDecodeEntities, decodeHtmlEntities } from "@/lib/entities";
-import { parsePipeTables, PipeTable, firstNumber, deriveAgeRange, deriveSalaryRange } from "@/lib/pipeTables";
+import { parsePipeTables, PipeTable, firstNumber, deriveAgeRange, deriveSalaryRange, TOTAL_ROW_LABEL } from "@/lib/pipeTables";
 import { classifyQualification } from "@/lib/taxonomy";
 import { isSourceSiteUrl } from "@/lib/utils";
 
@@ -102,14 +102,10 @@ function slugify(title: string): string {
 // pipe strings to render (it still does, for the raw-text *fallback*
 // display, via the same shared lib/pipeTables.ts parser).
 
-// "कुल पद" ("total posts") is at least as common on real notification
-// pages as "कुल योग"/"कुल रिक्तियां" — it was missing here, which meant a
-// perfectly well-shaped 2-3 column post/vacancy table failed to produce
-// a vacancyBreakdown at all (the header-column lookup below never
-// matched, so parseVacancyBreakdown bailed out with `undefined` and the
-// whole "Vacancy Details" section silently never rendered on the job
-// page for any source using that phrasing).
-const VACANCY_TOTAL_ROW_LABEL = /total\s*vacanc\w*|total\s*posts?|grand\s*total|कुल\s*रिक्तिय|कुल\s*योग|कुल\s*पद/i;
+// See TOTAL_ROW_LABEL's own comment (lib/pipeTables.ts) — shared with
+// PipeTableOrText so a table's total row is recognized consistently
+// wherever it turns up, not just here.
+const VACANCY_TOTAL_ROW_LABEL = TOTAL_ROW_LABEL;
 
 // Rows whose first cell is itself a category label ("Category" /
 // "कोटि" / "वर्ग" / "श्रेणी") mark a table that's entirely category ->
@@ -146,6 +142,18 @@ export function parseVacancyBreakdown(postDetails: unknown): { category: string;
   // dropped, same as the count column already resolves by header text
   // rather than position.
   const gradeColIndex = countColIndex === 2 ? 1 : -1;
+
+  // A table with MORE columns than label[, grade], total has genuine
+  // category-wise sub-columns this summary shape has no way to
+  // represent (e.g. a UR/SC/ST/OBC/EWS breakdown per division/post,
+  // not just one number) — collapsing it down to a single total per
+  // row would silently show LESS than the source publishes, exactly
+  // the gap this site exists to avoid. Bailing out to `undefined` here
+  // lets the caller fall back to postDetailsText's raw table instead,
+  // which was always captured with every column intact regardless of
+  // whether this function could summarize it.
+  const expectedColumns = gradeColIndex > 0 ? 3 : 2;
+  if (header.length > expectedColumns) return undefined;
 
   const breakdown: { category: string; count: number; grade?: string }[] = [];
   for (const row of body) {
