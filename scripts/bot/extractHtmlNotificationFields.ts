@@ -413,11 +413,32 @@ const ELIGIBILITY_EXCLUDE = ["physical", "शारीरिक"];
 
 function classifyHeading(headingText: string): MatchableSection | null {
   const lower = headingText.toLowerCase();
+  // A heading can accidentally contain keywords from more than one
+  // bucket — Indian govt-job sites often prefix every section heading
+  // with the full post title ("SBI Apprentice VACANCY 2026 Important
+  // Links"), so a short, common word like "vacancy" can collide with a
+  // completely different section's own heading. Seen in practice: a
+  // genuine "महत्वपूर्ण लिंक (Important Links For SBI Apprentice
+  // Vacancy 2026)" heading was classified as postDetailsRaw purely
+  // because its own branded title happened to contain "Vacancy" (and
+  // postDetailsRaw is declared earlier in HEADING_FIELD_MAP than
+  // importantLinksRaw) — silently merging the real links table into
+  // the Vacancy Details section as inert "Click Here" text instead of
+  // real sidebar buttons. Preferring the LONGEST matching keyword —
+  // the more specific, less coincidental match — resolves this
+  // correctly regardless of which bucket happens to be declared first,
+  // without having to hand-tune keyword lists or their order every
+  // time a new collision like this turns up.
+  let best: { field: MatchableSection; keywordLength: number } | null = null;
   for (const { field, keywords } of HEADING_FIELD_MAP) {
     if (field === "eligibilityRaw" && ELIGIBILITY_EXCLUDE.some((kw) => lower.includes(kw))) continue;
-    if (keywords.some((kw) => lower.includes(kw.toLowerCase()))) return field;
+    for (const kw of keywords) {
+      if (lower.includes(kw.toLowerCase()) && (!best || kw.length > best.keywordLength)) {
+        best = { field, keywordLength: kw.length };
+      }
+    }
   }
-  return null;
+  return best ? best.field : null;
 }
 
 const CELL_WITH_TAG_PATTERN = /<(td|th)\b([^>]*)>([\s\S]*?)<\/(?:td|th)>/gi;
