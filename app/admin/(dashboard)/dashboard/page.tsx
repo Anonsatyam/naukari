@@ -24,7 +24,12 @@ export default async function AdminDashboardPage() {
         Overview of bot activity and job publishing.
       </p>
 
-      <div className="mt-5 grid grid-cols-2 gap-3 sm:max-w-md">
+      {/* One row on desktop — the two stat cards plus Last Bot Run
+          (given two grid columns' worth of width, since it carries a
+          lot more: a timestamp, four counts, and the trigger button)
+          — wrapping to stacked cards only once the viewport is too
+          narrow to fit them side by side. */}
+      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => {
           const Icon = s.icon;
           return (
@@ -37,47 +42,47 @@ export default async function AdminDashboardPage() {
             </Card>
           );
         })}
-      </div>
 
-      <Card padding="p-4" className="mt-3 sm:max-w-2xl">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
-            <Clock size={15} className="text-[var(--color-text-muted)]" />
-            Last Bot Run
-          </div>
-          <TriggerBotButton />
-        </div>
-        {!lastRun ? (
-          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-            No completed run yet — this fills in once the bot script finishes a full pass
-            (locally or via the scheduled GitHub Action).
-          </p>
-        ) : (
-          <>
-            <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-              <LocalDateTime iso={lastRun.ranAt} />
-            </p>
-            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div>
-                <p className="text-lg font-bold text-[var(--color-success)]">{lastRun.newCount}</p>
-                <p className="text-xs text-[var(--color-text-secondary)]">New</p>
-              </div>
-              <div>
-                <p className="text-lg font-bold text-[var(--color-text-secondary)]">{lastRun.duplicateCount}</p>
-                <p className="text-xs text-[var(--color-text-secondary)]">Duplicate</p>
-              </div>
-              <div>
-                <p className="text-lg font-bold text-[var(--color-warning)]">{lastRun.expiredCount}</p>
-                <p className="text-xs text-[var(--color-text-secondary)]">Expired</p>
-              </div>
-              <div>
-                <p className="text-lg font-bold text-[var(--color-danger)]">{lastRun.errorCount}</p>
-                <p className="text-xs text-[var(--color-text-secondary)]">Errors</p>
-              </div>
+        <Card padding="p-4" className="sm:col-span-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
+              <Clock size={15} className="text-[var(--color-text-muted)]" />
+              Last Bot Run
             </div>
-          </>
-        )}
-      </Card>
+            <TriggerBotButton />
+          </div>
+          {!lastRun ? (
+            <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+              No completed run yet — this fills in once the bot script finishes a full pass
+              (locally or via the scheduled GitHub Action).
+            </p>
+          ) : (
+            <>
+              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                <LocalDateTime iso={lastRun.ranAt} />
+              </p>
+              <div className="mt-3 grid grid-cols-4 gap-3">
+                <div>
+                  <p className="text-lg font-bold text-[var(--color-success)]">{lastRun.newCount}</p>
+                  <p className="text-xs text-[var(--color-text-secondary)]">New</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-[var(--color-text-secondary)]">{lastRun.duplicateCount}</p>
+                  <p className="text-xs text-[var(--color-text-secondary)]">Duplicate</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-[var(--color-warning)]">{lastRun.expiredCount}</p>
+                  <p className="text-xs text-[var(--color-text-secondary)]">Expired</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-[var(--color-danger)]">{lastRun.errorCount}</p>
+                  <p className="text-xs text-[var(--color-text-secondary)]">Errors</p>
+                </div>
+              </div>
+            </>
+          )}
+        </Card>
+      </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[1.4fr_1fr]">
         <Card padding="p-0">
