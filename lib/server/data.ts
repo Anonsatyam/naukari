@@ -10,7 +10,18 @@ import {
   draftToRow,
   rowToLogEntry,
 } from "./mappers";
-import { Job, ResultItem, AdmitCardItem, BotDraft, BotLogEntry, DraftType, HotUpdateItem } from "@/lib/types";
+import {
+  Job,
+  ResultItem,
+  AdmitCardItem,
+  BotDraft,
+  BotLogEntry,
+  DraftType,
+  HotUpdateItem,
+  VacancyBreakdown,
+  AgeLimitRow,
+  AgeRelaxationRow,
+} from "@/lib/types";
 import { isRecent, isClosingSoon, getApplicationEndDate } from "@/lib/dateHelpers";
 import { deepDecodeEntities, decodeHtmlEntities } from "@/lib/entities";
 import { parsePipeTables, PipeTable, firstNumber, deriveAgeRange, deriveSalaryRange } from "@/lib/pipeTables";
@@ -26,6 +37,46 @@ export { deriveAgeRange, deriveSalaryRange };
 
 // Re-exported so existing callers importing these from this module keep working.
 export { isRecent, isClosingSoon, getApplicationEndDate };
+
+// A migration can add several new columns at once (see
+// 010_result_admitcard_notification_fields.sql, which added a dozen to
+// results/admit_cards in one go) — the single-column-strip pattern
+// earlier 42703 fallbacks used (delete just `source_order_key` and
+// retry once) only ever handled exactly one specific column going
+// missing. If a NEWLY-published field (e.g. applicationFee) is what's
+// actually missing instead, that pattern fails the retry too, and
+// approving a draft with any of this new content would 500 for every
+// admin until the migration is run — worse than the older behavior it
+// was meant to preserve. This generalizes it: parse the offending
+// column's name straight out of Postgres's own error message, strip
+// just that key, and retry, repeating (bounded) until the insert
+// either succeeds or a 42703 comes back with no column this can
+// identify — so a code deploy landing before its migration degrades to
+// "the new fields aren't saved yet" rather than "nothing can be
+// approved."
+const UNDEFINED_COLUMN_PATTERN = /column\s+"?([a-zA-Z0-9_.]+)"?\s+(?:of relation "?[a-zA-Z0-9_]+"?\s+)?does not exist/i;
+
+async function insertWithMissingColumnRetry<T>(
+  // PromiseLike, not Promise — supabase-js's query builder is thenable
+  // (awaitable) but isn't nominally a Promise (no .catch/.finally), so
+  // a callback returning it directly (rather than an async function
+  // wrapping it) wouldn't satisfy a stricter Promise<...> parameter type.
+  insert: (
+    row: Record<string, unknown>
+  ) => PromiseLike<{ data: T | null; error: { code?: string; message?: string } | null }>,
+  row: Record<string, unknown>
+): Promise<{ data: T | null; error: { code?: string; message?: string } | null }> {
+  const attemptRow = { ...row };
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const result = await insert(attemptRow);
+    if (result.error?.code !== "42703") return result;
+    const match = result.error.message?.match(UNDEFINED_COLUMN_PATTERN);
+    const column = match?.[1]?.split(".").pop();
+    if (!column || !(column in attemptRow)) return result; // can't identify/strip further — surface the error
+    delete attemptRow[column];
+  }
+  return insert(attemptRow);
+}
 
 function slugify(title: string): string {
   const base = title
@@ -504,6 +555,54 @@ function ensureApplicationFee(
   return fallback;
 }
 
+// Same shape check as ensureApplicationFee above, but for Result/
+// AdmitCard, where there's no sensible non-zero fallback to force —
+// unlike a Job, which always has an Application Fee section (with a
+// "See official notification" placeholder when the source genuinely
+// didn't publish one), a plain result/admit-card announcement often
+// has no fee at all, and the page should simply not render that
+// section rather than show a fabricated ₹0.
+function ensureOptionalApplicationFee(
+  value: unknown
+): { general: number; reserved: number; note?: string } | undefined {
+  if (
+    value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    ("general" in value || "reserved" in value)
+  ) {
+    return value as { general: number; reserved: number; note?: string };
+  }
+  return undefined;
+}
+
+// Shared by the Result and AdmitCard approveDraft branches below —
+// both bundle the exact same set of "full recruitment notification"
+// fields (Fee, Age Limit, Vacancy, Selection Process) using the exact
+// same HEADING_FIELD_MAP buckets Job already reads (see lib/types.ts's
+// ResultItem/AdmitCardItem comments for why). Centralized here so the
+// two branches can't drift out of parity with each other the way
+// Result/AdmitCard as a whole drifted out of parity with Job.
+function extractSharedNotificationFields(merged: Record<string, unknown>) {
+  return {
+    totalVacancies: typeof merged.totalVacancies === "number" ? merged.totalVacancies : undefined,
+    vacancyBreakdown:
+      ensureOptionalArray<VacancyBreakdown>(merged.vacancyBreakdown) ?? parseVacancyBreakdown(merged.postDetails),
+    postDetailsText: typeof merged.postDetails === "string" ? merged.postDetails : undefined,
+    ageLimitByGrade:
+      ensureOptionalArray<AgeLimitRow>(merged.ageLimitByGrade) ?? parseAgeLimitSections(merged.ageLimit).ageLimitByGrade,
+    ageRelaxationBreakdown:
+      ensureOptionalArray<AgeRelaxationRow>(merged.ageRelaxationBreakdown) ??
+      parseAgeLimitSections(merged.ageLimit).ageRelaxationBreakdown,
+    ageLimitText: typeof merged.ageLimit === "string" ? merged.ageLimit : undefined,
+    applicationFee: ensureOptionalApplicationFee(merged.applicationFee),
+    applicationFeeText: typeof merged.applicationFeeText === "string" ? merged.applicationFeeText : undefined,
+    selectionProcess: ensureOptionalArray<string>(merged.selectionProcess) ?? parseSelectionSteps(merged.selectionProcess),
+    selectionProcessText: typeof merged.selectionProcess === "string" ? merged.selectionProcess : undefined,
+    examPatternNotes: ensureOptionalArray<string>(merged.examPatternNotes),
+  };
+}
+
 /**
  * Approves a draft: merges the bot-extracted fields with whatever the
  * admin edited, fills in sensible defaults for anything still missing,
@@ -571,6 +670,10 @@ export async function approveDraft(
       summary: merged.summary ?? `${title} — see the official notification for full details.`,
       importantDatesText: merged.importantDatesText,
       howToCheck: ensureOptionalArray(merged.howToApply),
+      cutoffText: typeof merged.cutoffText === "string" ? merged.cutoffText : undefined,
+      ...extractSharedNotificationFields(merged),
+      examPattern: typeof merged.examPattern === "string" ? merged.examPattern : undefined,
+      documentsRequired: typeof merged.documentsRequired === "string" ? merged.documentsRequired : undefined,
       importantLinks: ensureOptionalArray(merged.importantLinks),
       faqs: ensureOptionalArray(merged.faqs),
       conclusion: replaceSourceSitePlug(merged.conclusion),
@@ -578,21 +681,10 @@ export async function approveDraft(
       sourceOrderKey: draft.sourceOrderKey,
     };
     const resultRow = resultToRow(newResult);
-    let { data: inserted, error: insertError } = await supabase
-      .from("results")
-      .insert(resultRow)
-      .select()
-      .single();
-    if (insertError?.code === "42703") {
-      // See createDraft's identical fallback — a migration and its
-      // code deploy don't always land at the same instant.
-      delete resultRow.source_order_key;
-      ({ data: inserted, error: insertError } = await supabase
-        .from("results")
-        .insert(resultRow)
-        .select()
-        .single());
-    }
+    const { data: inserted, error: insertError } = await insertWithMissingColumnRetry(
+      (row) => supabase.from("results").insert(row).select().single(),
+      resultRow
+    );
     if (insertError) throw insertError;
     await markApproved();
     return { type: "result", entity: rowToResult(inserted) };
@@ -621,6 +713,7 @@ export async function approveDraft(
       // of heading right alongside the release announcement.
       examDayInstructionsText: typeof merged.documentsRequired === "string" ? merged.documentsRequired : undefined,
       examPattern: merged.examPattern,
+      ...extractSharedNotificationFields(merged),
       importantLinks: ensureOptionalArray(merged.importantLinks),
       faqs: ensureOptionalArray(merged.faqs),
       conclusion: replaceSourceSitePlug(merged.conclusion),
@@ -628,19 +721,10 @@ export async function approveDraft(
       sourceOrderKey: draft.sourceOrderKey,
     };
     const cardRow = admitCardToRow(newCard);
-    let { data: inserted, error: insertError } = await supabase
-      .from("admit_cards")
-      .insert(cardRow)
-      .select()
-      .single();
-    if (insertError?.code === "42703") {
-      delete cardRow.source_order_key;
-      ({ data: inserted, error: insertError } = await supabase
-        .from("admit_cards")
-        .insert(cardRow)
-        .select()
-        .single());
-    }
+    const { data: inserted, error: insertError } = await insertWithMissingColumnRetry(
+      (row) => supabase.from("admit_cards").insert(row).select().single(),
+      cardRow
+    );
     if (insertError) throw insertError;
     await markApproved();
     return { type: "admit_card", entity: rowToAdmitCard(inserted) };
@@ -789,19 +873,10 @@ export async function approveDraft(
   };
 
   const jobRow = jobToRow(newJob);
-  let { data: insertedJob, error: insertError } = await supabase
-    .from("jobs")
-    .insert(jobRow)
-    .select()
-    .single();
-  if (insertError?.code === "42703") {
-    delete jobRow.source_order_key;
-    ({ data: insertedJob, error: insertError } = await supabase
-      .from("jobs")
-      .insert(jobRow)
-      .select()
-      .single());
-  }
+  const { data: insertedJob, error: insertError } = await insertWithMissingColumnRetry(
+    (row) => supabase.from("jobs").insert(row).select().single(),
+    jobRow
+  );
   if (insertError) throw insertError;
   await markApproved();
   return { type: "job", entity: rowToJob(insertedJob) };

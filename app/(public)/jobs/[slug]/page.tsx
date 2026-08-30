@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import {
   Calendar,
   CheckCircle2,
-  ClipboardList,
   ExternalLink,
   FileText,
   GraduationCap,
@@ -12,7 +11,6 @@ import {
   Hourglass,
   ListChecks,
   Users,
-  Wallet,
 } from "lucide-react";
 import {
   getPublishedJobs,
@@ -21,7 +19,7 @@ import {
   isClosingSoon,
   getRelatedJobs,
 } from "@/lib/server/data";
-import { formatCurrency, formatDate, daysUntil } from "@/lib/utils";
+import { formatDate, daysUntil } from "@/lib/utils";
 import { ButtonLink } from "@/components/Button";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
@@ -30,6 +28,13 @@ import { KeyValueRow } from "@/components/KeyValueRow";
 import SourceVerified from "@/components/SourceVerified";
 import JobCard from "@/components/JobCard";
 import { Section, StepList, PipeTableOrText } from "@/components/DetailSections";
+import {
+  ApplicationFeeSection,
+  VacancyDetailsSection,
+  SelectionProcessSection,
+  ExamPatternSection,
+  DocumentsRequiredSection,
+} from "@/components/RichSections";
 
 // Statically generated for speed/SEO, but re-checked against the
 // database every 5 minutes in the background so an admin edit or
@@ -76,9 +81,6 @@ export default async function JobDetailPage({
   const closingSoon = isClosingSoon(job);
   const remaining = endDate ? daysUntil(endDate) : null;
   const relatedJobs = await getRelatedJobs(job, 3);
-
-  const hasVacancyTable = Array.isArray(job.vacancyBreakdown) && job.vacancyBreakdown.length > 0;
-  const hasVacancyFallback = !hasVacancyTable && !!job.postDetailsText;
 
   const hasAgeGradeTable = Array.isArray(job.ageLimitByGrade) && job.ageLimitByGrade.length > 0;
   const hasAgeRelaxationTable = Array.isArray(job.ageRelaxationBreakdown) && job.ageRelaxationBreakdown.length > 0;
@@ -157,23 +159,7 @@ export default async function JobDetailPage({
             )}
           </Section>
 
-          <Section title="Application Fee" icon={<Wallet size={16} />} accent="green">
-            {job.applicationFeeText ? (
-              // The full fee table as the source actually published it
-              // already covers categories/footnotes (a PwBD/OH-only row,
-              // a payment-method note) — the two-number summary is only
-              // needed when there's no full table to fall back to.
-              <PipeTableOrText text={job.applicationFeeText} />
-            ) : (
-              <div className="space-y-3">
-                <KeyValueRow label="General / OBC" value={formatCurrency(job.applicationFee?.general ?? 0)} />
-                <KeyValueRow label="SC / ST / Reserved" value={formatCurrency(job.applicationFee?.reserved ?? 0)} />
-                {job.applicationFee?.note && (
-                  <p className="text-xs text-[var(--color-text-secondary)]">{job.applicationFee.note}</p>
-                )}
-              </div>
-            )}
-          </Section>
+          <ApplicationFeeSection fee={job.applicationFee} feeText={job.applicationFeeText} />
 
           <Section title="Age Limit Details" icon={<Hourglass size={16} />} accent="purple">
             {!hasAgeGradeTable && !hasAgeRelaxationTable && !hasAgeLimitFallback && (
@@ -248,43 +234,11 @@ export default async function JobDetailPage({
             </Link>
           </Section>
 
-          {(hasVacancyTable || hasVacancyFallback) && (() => {
-            const hasGrade = hasVacancyTable && job.vacancyBreakdown!.some((row) => row.grade);
-            const cols = hasGrade ? "grid-cols-[1fr_auto_auto]" : "grid-cols-2";
-            return (
-              <Section title="Post / Vacancy Details" icon={<Users size={16} />} accent="orange">
-                {hasVacancyTable ? (
-                  <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
-                    <div className={`grid ${cols} gap-3 bg-[var(--color-primary)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white`}>
-                      <span>Post / Category</span>
-                      {hasGrade && <span>Grade</span>}
-                      <span className="text-right">Posts</span>
-                    </div>
-                    <div>
-                      {job.vacancyBreakdown!.map((row) => (
-                        <div key={row.category} className={`grid ${cols} gap-3 px-4 py-2.5 text-sm`}>
-                          <span className="text-[var(--color-text-secondary)]">{row.category}</span>
-                          {hasGrade && <span className="text-[var(--color-text-secondary)]">{row.grade ?? "—"}</span>}
-                          <span className="text-right font-medium text-[var(--color-text-primary)]">
-                            {row.count.toLocaleString("en-IN")}
-                          </span>
-                        </div>
-                      ))}
-                      <div className={`grid ${cols} gap-3 bg-[var(--color-background)] px-4 py-2.5 text-sm font-semibold`}>
-                        <span className="text-[var(--color-text-primary)]">Total</span>
-                        {hasGrade && <span />}
-                        <span className="text-right text-[var(--color-text-primary)]">
-                          {job.totalVacancies ? job.totalVacancies.toLocaleString("en-IN") : "As notified"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <PipeTableOrText text={job.postDetailsText!} />
-                )}
-              </Section>
-            );
-          })()}
+          <VacancyDetailsSection
+            vacancyBreakdown={job.vacancyBreakdown}
+            postDetailsText={job.postDetailsText}
+            totalVacancies={job.totalVacancies}
+          />
 
           <Section title="Education Eligibility" icon={<GraduationCap size={16} />} accent="teal">
             <KeyValueRow label="Qualification" value={job.qualification || "As per notification"} />
@@ -309,38 +263,14 @@ export default async function JobDetailPage({
             )}
           </Section>
 
-          <Section title="Selection Process" icon={<ListChecks size={16} />} accent="blue">
-            {job.selectionProcessText ? (
-              // The source's own table, verbatim — selectionProcess (the
-              // numbered-steps fallback below) is a lossy one-line-per-
-              // stage reformatting of this, built only for sources with
-              // no table at all.
-              <PipeTableOrText text={job.selectionProcessText} />
-            ) : (
-              <StepList items={job.selectionProcess} />
-            )}
-          </Section>
+          <SelectionProcessSection
+            selectionProcess={job.selectionProcess}
+            selectionProcessText={job.selectionProcessText}
+          />
 
-          {job.examPattern && (
-            <Section title="Exam Pattern" icon={<ClipboardList size={16} />} accent="amber">
-              <PipeTableOrText text={job.examPattern} />
-              {Array.isArray(job.examPatternNotes) && job.examPatternNotes.length > 0 && (
-                <ul className="mt-4 space-y-1.5 border-t border-[var(--color-border)] pt-4">
-                  {job.examPatternNotes.map((note, i) => (
-                    <li key={i} className="text-xs leading-relaxed text-[var(--color-text-secondary)]">
-                      • {note}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Section>
-          )}
+          <ExamPatternSection examPattern={job.examPattern} examPatternNotes={job.examPatternNotes} />
 
-          {job.documentsRequired && (
-            <Section title="Documents Required" icon={<FileText size={16} />} accent="neutral">
-              <PipeTableOrText text={job.documentsRequired} />
-            </Section>
-          )}
+          <DocumentsRequiredSection documentsRequired={job.documentsRequired} />
 
           {job.syllabusSummary && (
             <Section title="Syllabus" accent="neutral">

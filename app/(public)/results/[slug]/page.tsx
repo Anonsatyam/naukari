@@ -4,6 +4,14 @@ import { Calendar, ExternalLink, FileText, HelpCircle, ListChecks, CheckCircle2 
 import { getResults, getResultBySlug } from "@/lib/server/data";
 import { formatDate } from "@/lib/utils";
 import { Section, StepList, PipeTableOrText } from "@/components/DetailSections";
+import {
+  ApplicationFeeSection,
+  AgeLimitSection,
+  VacancyDetailsSection,
+  SelectionProcessSection,
+  ExamPatternSection,
+  DocumentsRequiredSection,
+} from "@/components/RichSections";
 
 export const revalidate = 300;
 import { ButtonLink } from "@/components/Button";
@@ -90,6 +98,29 @@ export default async function ResultDetailPage({
               <PipeTableOrText text={result.cutoffText} />
             </Section>
           )}
+
+          {/* Same sections a Job page shows — a source frequently
+              bundles a full recruitment notification (fee, age limit,
+              vacancy, selection process, exam pattern, documents) into
+              what's nominally a "Result" page; these self-hide when
+              this particular result genuinely has none of it. */}
+          <ApplicationFeeSection fee={result.applicationFee} feeText={result.applicationFeeText} />
+          <AgeLimitSection
+            ageLimitByGrade={result.ageLimitByGrade}
+            ageRelaxationBreakdown={result.ageRelaxationBreakdown}
+            ageLimitText={result.ageLimitText}
+          />
+          <VacancyDetailsSection
+            vacancyBreakdown={result.vacancyBreakdown}
+            postDetailsText={result.postDetailsText}
+            totalVacancies={result.totalVacancies}
+          />
+          <SelectionProcessSection
+            selectionProcess={result.selectionProcess}
+            selectionProcessText={result.selectionProcessText}
+          />
+          <ExamPatternSection examPattern={result.examPattern} examPatternNotes={result.examPatternNotes} />
+          <DocumentsRequiredSection documentsRequired={result.documentsRequired} />
 
           {Array.isArray(result.faqs) && result.faqs.length > 0 && (
             <Section title="FAQs" icon={<HelpCircle size={16} />} accent="pink">

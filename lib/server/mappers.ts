@@ -124,6 +124,19 @@ export function rowToResult(row: any): ResultItem {
     importantDatesText: row.important_dates_text ?? undefined,
     howToCheck: row.how_to_check ?? undefined,
     cutoffText: row.cutoff_text ?? undefined,
+    totalVacancies: row.total_vacancies ?? undefined,
+    vacancyBreakdown: row.vacancy_breakdown ?? undefined,
+    postDetailsText: row.post_details_text ?? undefined,
+    ageLimitByGrade: row.age_limit_by_grade ?? undefined,
+    ageRelaxationBreakdown: row.age_relaxation_breakdown ?? undefined,
+    ageLimitText: row.age_limit_text ?? undefined,
+    applicationFee: row.application_fee ?? undefined,
+    applicationFeeText: row.application_fee_text ?? undefined,
+    selectionProcess: row.selection_process ?? undefined,
+    selectionProcessText: row.selection_process_text ?? undefined,
+    examPattern: row.exam_pattern ?? undefined,
+    examPatternNotes: row.exam_pattern_notes ?? undefined,
+    documentsRequired: row.documents_required ?? undefined,
     importantLinks: row.important_links ?? undefined,
     faqs: row.faqs ?? undefined,
     conclusion: row.conclusion ?? undefined,
@@ -145,6 +158,19 @@ export function resultToRow(result: Partial<ResultItem>): Record<string, unknown
   if (result.importantDatesText !== undefined) row.important_dates_text = result.importantDatesText;
   if (result.howToCheck !== undefined) row.how_to_check = result.howToCheck;
   if (result.cutoffText !== undefined) row.cutoff_text = result.cutoffText;
+  if (result.totalVacancies !== undefined) row.total_vacancies = result.totalVacancies;
+  if (result.vacancyBreakdown !== undefined) row.vacancy_breakdown = result.vacancyBreakdown;
+  if (result.postDetailsText !== undefined) row.post_details_text = result.postDetailsText;
+  if (result.ageLimitByGrade !== undefined) row.age_limit_by_grade = result.ageLimitByGrade;
+  if (result.ageRelaxationBreakdown !== undefined) row.age_relaxation_breakdown = result.ageRelaxationBreakdown;
+  if (result.ageLimitText !== undefined) row.age_limit_text = result.ageLimitText;
+  if (result.applicationFee !== undefined) row.application_fee = result.applicationFee;
+  if (result.applicationFeeText !== undefined) row.application_fee_text = result.applicationFeeText;
+  if (result.selectionProcess !== undefined) row.selection_process = result.selectionProcess;
+  if (result.selectionProcessText !== undefined) row.selection_process_text = result.selectionProcessText;
+  if (result.examPattern !== undefined) row.exam_pattern = result.examPattern;
+  if (result.examPatternNotes !== undefined) row.exam_pattern_notes = result.examPatternNotes;
+  if (result.documentsRequired !== undefined) row.documents_required = result.documentsRequired;
   if (result.importantLinks !== undefined) row.important_links = result.importantLinks;
   if (result.faqs !== undefined) row.faqs = result.faqs;
   if (result.conclusion !== undefined) row.conclusion = result.conclusion;
@@ -171,6 +197,17 @@ export function rowToAdmitCard(row: any): AdmitCardItem {
     howToDownload: row.how_to_download ?? undefined,
     examDayInstructionsText: row.exam_day_instructions_text ?? undefined,
     examPattern: row.exam_pattern ?? undefined,
+    examPatternNotes: row.exam_pattern_notes ?? undefined,
+    totalVacancies: row.total_vacancies ?? undefined,
+    vacancyBreakdown: row.vacancy_breakdown ?? undefined,
+    postDetailsText: row.post_details_text ?? undefined,
+    ageLimitByGrade: row.age_limit_by_grade ?? undefined,
+    ageRelaxationBreakdown: row.age_relaxation_breakdown ?? undefined,
+    ageLimitText: row.age_limit_text ?? undefined,
+    applicationFee: row.application_fee ?? undefined,
+    applicationFeeText: row.application_fee_text ?? undefined,
+    selectionProcess: row.selection_process ?? undefined,
+    selectionProcessText: row.selection_process_text ?? undefined,
     importantLinks: row.important_links ?? undefined,
     faqs: row.faqs ?? undefined,
     conclusion: row.conclusion ?? undefined,
@@ -193,6 +230,17 @@ export function admitCardToRow(card: Partial<AdmitCardItem>): Record<string, unk
   if (card.howToDownload !== undefined) row.how_to_download = card.howToDownload;
   if (card.examDayInstructionsText !== undefined) row.exam_day_instructions_text = card.examDayInstructionsText;
   if (card.examPattern !== undefined) row.exam_pattern = card.examPattern;
+  if (card.examPatternNotes !== undefined) row.exam_pattern_notes = card.examPatternNotes;
+  if (card.totalVacancies !== undefined) row.total_vacancies = card.totalVacancies;
+  if (card.vacancyBreakdown !== undefined) row.vacancy_breakdown = card.vacancyBreakdown;
+  if (card.postDetailsText !== undefined) row.post_details_text = card.postDetailsText;
+  if (card.ageLimitByGrade !== undefined) row.age_limit_by_grade = card.ageLimitByGrade;
+  if (card.ageRelaxationBreakdown !== undefined) row.age_relaxation_breakdown = card.ageRelaxationBreakdown;
+  if (card.ageLimitText !== undefined) row.age_limit_text = card.ageLimitText;
+  if (card.applicationFee !== undefined) row.application_fee = card.applicationFee;
+  if (card.applicationFeeText !== undefined) row.application_fee_text = card.applicationFeeText;
+  if (card.selectionProcess !== undefined) row.selection_process = card.selectionProcess;
+  if (card.selectionProcessText !== undefined) row.selection_process_text = card.selectionProcessText;
   if (card.importantLinks !== undefined) row.important_links = card.importantLinks;
   if (card.faqs !== undefined) row.faqs = card.faqs;
   if (card.conclusion !== undefined) row.conclusion = card.conclusion;

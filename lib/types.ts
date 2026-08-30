@@ -171,6 +171,30 @@ export interface ResultItem {
   // Raw merit-list/cutoff table verbatim, when the source publishes
   // category-wise cutoff marks alongside the result declaration.
   cutoffText?: string;
+  // The rest of these mirror the exact same fields/buckets Job already
+  // has (same HEADING_FIELD_MAP keywords, same extraction — see
+  // extractHtmlNotificationFields.ts) — a source frequently bundles a
+  // full recruitment notification's worth of sections (Application Fee,
+  // Age Limit, Vacancy Details, Exam Pattern, Selection Process) into
+  // what's nominally a "Result" or "Admit Card" page. These were always
+  // captured by the bot but silently discarded on approval since
+  // nothing here read them; now wired the same way Job's are. Optional
+  // (unlike Job's required equivalents) since a plain result/admit-card
+  // announcement genuinely may not have any of this — each section only
+  // renders on the page when actually present, no forced placeholder.
+  totalVacancies?: number;
+  vacancyBreakdown?: VacancyBreakdown[];
+  postDetailsText?: string;
+  ageLimitByGrade?: AgeLimitRow[];
+  ageRelaxationBreakdown?: AgeRelaxationRow[];
+  ageLimitText?: string;
+  applicationFee?: { general: number; reserved: number; note?: string };
+  applicationFeeText?: string;
+  selectionProcess?: string[];
+  selectionProcessText?: string;
+  examPattern?: string;
+  examPatternNotes?: string[];
+  documentsRequired?: string;
   importantLinks?: ImportantLink[];
   faqs?: FaqItem[];
   conclusion?: string;
@@ -199,6 +223,20 @@ export interface AdmitCardItem {
   // already produces for this kind of section.
   examDayInstructionsText?: string;
   examPattern?: string;
+  examPatternNotes?: string[];
+  // Same reasoning as ResultItem's identical block above — a source's
+  // admit-card release announcement routinely bundles the whole
+  // recruitment notification's Fee/Age/Vacancy/Selection sections too.
+  totalVacancies?: number;
+  vacancyBreakdown?: VacancyBreakdown[];
+  postDetailsText?: string;
+  ageLimitByGrade?: AgeLimitRow[];
+  ageRelaxationBreakdown?: AgeRelaxationRow[];
+  ageLimitText?: string;
+  applicationFee?: { general: number; reserved: number; note?: string };
+  applicationFeeText?: string;
+  selectionProcess?: string[];
+  selectionProcessText?: string;
   importantLinks?: ImportantLink[];
   faqs?: FaqItem[];
   conclusion?: string;

@@ -4,6 +4,12 @@ import { Calendar, ExternalLink, ClipboardList, FileText, HelpCircle, ListChecks
 import { getAdmitCards, getAdmitCardBySlug } from "@/lib/server/data";
 import { formatDate } from "@/lib/utils";
 import { Section, StepList, PipeTableOrText } from "@/components/DetailSections";
+import {
+  ApplicationFeeSection,
+  AgeLimitSection,
+  VacancyDetailsSection,
+  SelectionProcessSection,
+} from "@/components/RichSections";
 
 export const revalidate = 300;
 import { ButtonLink } from "@/components/Button";
@@ -96,8 +102,38 @@ export default async function AdmitCardDetailPage({
           {card.examPattern && (
             <Section title="Exam Pattern" icon={<ClipboardList size={16} />} accent="amber">
               <PipeTableOrText text={card.examPattern} />
+              {Array.isArray(card.examPatternNotes) && card.examPatternNotes.length > 0 && (
+                <ul className="mt-4 space-y-1.5 border-t border-[var(--color-border)] pt-4">
+                  {card.examPatternNotes.map((note, i) => (
+                    <li key={i} className="text-xs leading-relaxed text-[var(--color-text-secondary)]">
+                      • {note}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </Section>
           )}
+
+          {/* Same sections a Job page shows — a source frequently
+              bundles a full recruitment notification (fee, age limit,
+              vacancy, selection process) into what's nominally an
+              "Admit Card" page; these self-hide when this particular
+              admit card genuinely has none of it. */}
+          <ApplicationFeeSection fee={card.applicationFee} feeText={card.applicationFeeText} />
+          <AgeLimitSection
+            ageLimitByGrade={card.ageLimitByGrade}
+            ageRelaxationBreakdown={card.ageRelaxationBreakdown}
+            ageLimitText={card.ageLimitText}
+          />
+          <VacancyDetailsSection
+            vacancyBreakdown={card.vacancyBreakdown}
+            postDetailsText={card.postDetailsText}
+            totalVacancies={card.totalVacancies}
+          />
+          <SelectionProcessSection
+            selectionProcess={card.selectionProcess}
+            selectionProcessText={card.selectionProcessText}
+          />
 
           {Array.isArray(card.faqs) && card.faqs.length > 0 && (
             <Section title="FAQs" icon={<HelpCircle size={16} />} accent="pink">
