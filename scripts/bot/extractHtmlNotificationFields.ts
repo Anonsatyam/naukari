@@ -743,6 +743,30 @@ function parseSections(html: string): ParsedSections {
         const segmentEnd = i + 1 < headingPositions.length ? headingPositions[i + 1].start : html.length;
         const segment = html.slice(end, segmentEnd);
         const blocks = extractBlocksFromSegment(segment);
+
+        // Structural fallback for an "Important Links"-shaped table
+        // whose own heading wording isn't one importantLinksRaw's
+        // keyword list covers (biharjob.co.in isn't consistent about
+        // this — "Some Useful Links", "उपयोगी लिंक", a plain "लिंक"
+        // column header with no distinct section heading at all).
+        // Rather than hardcode yet another heading phrase — the exact
+        // pattern this generic mechanism exists to avoid — detect it
+        // by SHAPE instead: a table whose rows are (almost) entirely
+        // label-cell-plus-link-cell pairs IS an important-links table
+        // regardless of what its heading says, so it's captured the
+        // same way important-links sections always are (and therefore
+        // rendered as real, clickable sidebar buttons) instead of as
+        // an inert text table with "Click Here" as unclickable prose.
+        // The `- 1` tolerance allows for exactly one non-link row (the
+        // table's own header row, e.g. "विवरण | लिंक", which never has
+        // an anchor of its own).
+        const linkPairs = extractLinkPairs(segment);
+        const rowCount = blocks.reduce((sum, block) => sum + block.length, 0);
+        if (linkPairs.length > 0 && linkPairs.length >= rowCount - 1) {
+          sections.importantLinksRaw.push(...linkPairs);
+          continue;
+        }
+
         if (blocks.length > 0) {
           sections.genericSections.push({ heading: headingText, blocks });
         }
