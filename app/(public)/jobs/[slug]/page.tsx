@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Fragment } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -20,6 +21,7 @@ import {
   getRelatedJobs,
 } from "@/lib/server/data";
 import { formatDate, daysUntil, isSourceSiteUrl } from "@/lib/utils";
+import { resolveSectionOrder, parseGenericKey } from "@/lib/sectionOrder";
 import { ButtonLink } from "@/components/Button";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
@@ -35,6 +37,24 @@ import {
   ExamPatternSection,
   DocumentsRequiredSection,
 } from "@/components/RichSections";
+
+// The page's own fixed order — used verbatim for any record with no
+// sectionOrder at all (published before this feature existed), and as
+// the fallback tail for anything a record's own sectionOrder doesn't
+// mention (an admin-only field with no source heading, like
+// syllabusSummary). See lib/sectionOrder.ts's resolveSectionOrder.
+const JOB_DEFAULT_ORDER = [
+  "importantDatesRaw",
+  "applicationFeeRaw",
+  "ageLimitRaw",
+  "postDetailsRaw",
+  "eligibilityRaw",
+  "selectionProcessRaw",
+  "examPatternRaw",
+  "documentsRequiredRaw",
+  "syllabusSummary",
+  "howToApplyRaw",
+];
 
 // Statically generated for speed/SEO, but re-checked against the
 // database every 5 minutes in the background so an admin edit or
@@ -85,6 +105,9 @@ export default async function JobDetailPage({
   const hasAgeGradeTable = Array.isArray(job.ageLimitByGrade) && job.ageLimitByGrade.length > 0;
   const hasAgeRelaxationTable = Array.isArray(job.ageRelaxationBreakdown) && job.ageRelaxationBreakdown.length > 0;
   const hasAgeLimitFallback = !hasAgeGradeTable && !hasAgeRelaxationTable && !!job.ageLimitText;
+
+  const additionalSections = job.additionalSections ?? [];
+  const orderedSectionKeys = resolveSectionOrder(job.sectionOrder, JOB_DEFAULT_ORDER, additionalSections.length);
 
   // The sidebar's Apply Officially / Official Notification buttons
   // already cover those same two links whenever the source's own
@@ -149,163 +172,183 @@ export default async function JobDetailPage({
             of being contained by the table's own overflow-x-auto
             wrapper the way it should be. */}
         <div className="order-2 min-w-0 space-y-6 lg:order-1">
-          <Section title="Important Dates" icon={<Calendar size={16} />} accent="blue">
-            {job.importantDatesText ? (
-              // The full dates table as the source actually published it —
-              // includes rows (PET schedule, provisional allotment, a
-              // month-only value, a relative "2 days after registration
-              // closes" edit window) that don't fit the canonical
-              // {label, ISO date} shape below and would otherwise be lost.
-              <PipeTableOrText text={job.importantDatesText} />
-            ) : (
-              <div>
-                {(Array.isArray(job.importantDates) ? job.importantDates : []).map((d) => (
-                  <div key={d.label} className="flex items-center justify-between py-2.5 text-sm">
-                    <span className="text-[var(--color-text-secondary)]">{d.label}</span>
-                    <span className="font-medium text-[var(--color-text-primary)]">{formatDate(d.date)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Section>
+          {(() => {
+            // Every "regular" section, keyed by the same raw field name
+            // extraction records in sectionOrder — rendered by walking
+            // orderedSectionKeys (the source's own order, with a fixed
+            // fallback tail) instead of this fixed list's own order.
+            // FAQs/Conclusion are deliberately NOT here — always pinned
+            // to the very end below, regardless of source order.
+            const sectionRenderers: Record<string, React.ReactNode> = {
+              importantDatesRaw: (
+                <Section title="Important Dates" icon={<Calendar size={16} />} accent="blue">
+                  {job.importantDatesText ? (
+                    // The full dates table as the source actually published it —
+                    // includes rows (PET schedule, provisional allotment, a
+                    // month-only value, a relative "2 days after registration
+                    // closes" edit window) that don't fit the canonical
+                    // {label, ISO date} shape below and would otherwise be lost.
+                    <PipeTableOrText text={job.importantDatesText} />
+                  ) : (
+                    <div>
+                      {(Array.isArray(job.importantDates) ? job.importantDates : []).map((d) => (
+                        <div key={d.label} className="flex items-center justify-between py-2.5 text-sm">
+                          <span className="text-[var(--color-text-secondary)]">{d.label}</span>
+                          <span className="font-medium text-[var(--color-text-primary)]">{formatDate(d.date)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Section>
+              ),
+              applicationFeeRaw: <ApplicationFeeSection fee={job.applicationFee} feeText={job.applicationFeeText} />,
+              ageLimitRaw: (
+                <Section title="Age Limit Details" icon={<Hourglass size={16} />} accent="purple">
+                  {!hasAgeGradeTable && !hasAgeRelaxationTable && !hasAgeLimitFallback && (
+                    <div className="space-y-3">
+                      <KeyValueRow
+                        label="Age Limit"
+                        value={job.minAge && job.maxAge ? `${job.minAge} to ${job.maxAge} years` : "As per official notification"}
+                      />
+                      {job.ageAsOnDate && (
+                        <KeyValueRow label="Age Reckoned As On" value={formatDate(job.ageAsOnDate)} />
+                      )}
+                    </div>
+                  )}
 
-          <ApplicationFeeSection fee={job.applicationFee} feeText={job.applicationFeeText} />
+                  {hasAgeGradeTable && (
+                    <div className="mt-4">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                        Grade-wise Age Limit
+                      </p>
+                      <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
+                        <div className="grid grid-cols-3 gap-3 bg-[var(--color-primary)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white">
+                          <span>Grade / Cadre</span>
+                          <span>Min. Age</span>
+                          <span>Max. Age</span>
+                        </div>
+                        <div>
+                          {job.ageLimitByGrade!.map((row, i) => (
+                            <div key={i} className="grid grid-cols-3 gap-3 px-4 py-2.5 text-sm">
+                              <span className="font-medium text-[var(--color-text-primary)]">{row.grade}</span>
+                              <span className="text-[var(--color-text-secondary)]">{row.minAge}</span>
+                              <span className="text-[var(--color-text-secondary)]">{row.maxAge}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-          <Section title="Age Limit Details" icon={<Hourglass size={16} />} accent="purple">
-            {!hasAgeGradeTable && !hasAgeRelaxationTable && !hasAgeLimitFallback && (
-              <div className="space-y-3">
-                <KeyValueRow
-                  label="Age Limit"
-                  value={job.minAge && job.maxAge ? `${job.minAge} to ${job.maxAge} years` : "As per official notification"}
+                  {hasAgeRelaxationTable && (
+                    <div className="mt-4">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                        Age Relaxation
+                      </p>
+                      <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
+                        <div className="grid grid-cols-2 bg-[var(--color-primary)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white">
+                          <span>Category</span>
+                          <span className="text-right">Relaxation</span>
+                        </div>
+                        <div>
+                          {job.ageRelaxationBreakdown!.map((row) => (
+                            <div key={row.category} className="grid grid-cols-2 px-4 py-2.5 text-sm">
+                              <span className="text-[var(--color-text-secondary)]">{row.category}</span>
+                              <span className="text-right font-medium text-[var(--color-text-primary)]">{row.relaxation}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {hasAgeLimitFallback && (
+                    <div className="mt-4">
+                      <PipeTableOrText text={job.ageLimitText!} />
+                    </div>
+                  )}
+
+                  <Link
+                    href={`/eligibility-checker?job=${job.id}`}
+                    className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--color-primary)]"
+                  >
+                    Check your eligibility for this job →
+                  </Link>
+                </Section>
+              ),
+              postDetailsRaw: (
+                <VacancyDetailsSection
+                  vacancyBreakdown={job.vacancyBreakdown}
+                  postDetailsText={job.postDetailsText}
+                  totalVacancies={job.totalVacancies}
                 />
-                {job.ageAsOnDate && (
-                  <KeyValueRow label="Age Reckoned As On" value={formatDate(job.ageAsOnDate)} />
-                )}
-              </div>
-            )}
+              ),
+              eligibilityRaw: (
+                <Section title="Education Eligibility" icon={<GraduationCap size={16} />} accent="teal">
+                  <KeyValueRow label="Qualification" value={job.qualification || "As per notification"} />
 
-            {hasAgeGradeTable && (
-              <div className="mt-4">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                  Grade-wise Age Limit
-                </p>
-                <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
-                  <div className="grid grid-cols-3 gap-3 bg-[var(--color-primary)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white">
-                    <span>Grade / Cadre</span>
-                    <span>Min. Age</span>
-                    <span>Max. Age</span>
-                  </div>
-                  <div>
-                    {job.ageLimitByGrade!.map((row, i) => (
-                      <div key={i} className="grid grid-cols-3 gap-3 px-4 py-2.5 text-sm">
-                        <span className="font-medium text-[var(--color-text-primary)]">{row.grade}</span>
-                        <span className="text-[var(--color-text-secondary)]">{row.minAge}</span>
-                        <span className="text-[var(--color-text-secondary)]">{row.maxAge}</span>
+                  {Array.isArray(job.eligibilityDetails) && job.eligibilityDetails.length > 0 ? (
+                    // An admin-curated bullet list — shown in preference to the
+                    // raw table below since it represents deliberate cleanup.
+                    <ul className="mt-4 space-y-2">
+                      {job.eligibilityDetails.map((point, i) => (
+                        <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-accent-teal)]" />
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    job.eligibilityText && (
+                      <div className="mt-4">
+                        <PipeTableOrText text={job.eligibilityText} />
                       </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+                    )
+                  )}
+                </Section>
+              ),
+              selectionProcessRaw: (
+                <SelectionProcessSection
+                  selectionProcess={job.selectionProcess}
+                  selectionProcessText={job.selectionProcessText}
+                />
+              ),
+              examPatternRaw: <ExamPatternSection examPattern={job.examPattern} examPatternNotes={job.examPatternNotes} />,
+              documentsRequiredRaw: <DocumentsRequiredSection documentsRequired={job.documentsRequired} />,
+              syllabusSummary: job.syllabusSummary ? (
+                <Section title="Syllabus" accent="neutral">
+                  <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{job.syllabusSummary}</p>
+                </Section>
+              ) : null,
+              howToApplyRaw: (
+                <Section title="How to Apply" icon={<ListChecks size={16} />} accent="green">
+                  <StepList items={job.howToApply} />
+                </Section>
+              ),
+            };
 
-            {hasAgeRelaxationTable && (
-              <div className="mt-4">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                  Age Relaxation
-                </p>
-                <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
-                  <div className="grid grid-cols-2 bg-[var(--color-primary)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white">
-                    <span>Category</span>
-                    <span className="text-right">Relaxation</span>
-                  </div>
-                  <div>
-                    {job.ageRelaxationBreakdown!.map((row) => (
-                      <div key={row.category} className="grid grid-cols-2 px-4 py-2.5 text-sm">
-                        <span className="text-[var(--color-text-secondary)]">{row.category}</span>
-                        <span className="text-right font-medium text-[var(--color-text-primary)]">{row.relaxation}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {hasAgeLimitFallback && (
-              <div className="mt-4">
-                <PipeTableOrText text={job.ageLimitText!} />
-              </div>
-            )}
-
-            <Link
-              href={`/eligibility-checker?job=${job.id}`}
-              className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--color-primary)]"
-            >
-              Check your eligibility for this job →
-            </Link>
-          </Section>
-
-          <VacancyDetailsSection
-            vacancyBreakdown={job.vacancyBreakdown}
-            postDetailsText={job.postDetailsText}
-            totalVacancies={job.totalVacancies}
-          />
-
-          <Section title="Education Eligibility" icon={<GraduationCap size={16} />} accent="teal">
-            <KeyValueRow label="Qualification" value={job.qualification || "As per notification"} />
-
-            {Array.isArray(job.eligibilityDetails) && job.eligibilityDetails.length > 0 ? (
-              // An admin-curated bullet list — shown in preference to the
-              // raw table below since it represents deliberate cleanup.
-              <ul className="mt-4 space-y-2">
-                {job.eligibilityDetails.map((point, i) => (
-                  <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-accent-teal)]" />
-                    <span>{point}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              job.eligibilityText && (
-                <div className="mt-4">
-                  <PipeTableOrText text={job.eligibilityText} />
-                </div>
-              )
-            )}
-          </Section>
-
-          <SelectionProcessSection
-            selectionProcess={job.selectionProcess}
-            selectionProcessText={job.selectionProcessText}
-          />
-
-          <ExamPatternSection examPattern={job.examPattern} examPatternNotes={job.examPatternNotes} />
-
-          <DocumentsRequiredSection documentsRequired={job.documentsRequired} />
-
-          {job.syllabusSummary && (
-            <Section title="Syllabus" accent="neutral">
-              <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{job.syllabusSummary}</p>
-            </Section>
-          )}
-
-          <Section title="How to Apply" icon={<ListChecks size={16} />} accent="green">
-            <StepList items={job.howToApply} />
-          </Section>
-
-          {/* Every source section that doesn't map to one of the specific
-              ones above — e.g. a "Physical Eligibility" table alongside
-              Education Eligibility — rendered generically, titled with
-              the source's own heading text, instead of being dropped for
-              not matching a hardcoded field. Deliberately placed before
-              FAQs/Conclusion (rather than after, where it used to sit) —
-              FAQs is always the second-last section and Conclusion
-              always the last, regardless of what else the source
-              published. */}
-          {job.additionalSections?.map((section, i) => (
-            <Section key={i} title={section.heading} icon={<FileText size={16} />} accent="neutral">
-              <PipeTableOrText text={section.content} />
-            </Section>
-          ))}
+            return orderedSectionKeys.map((key) => {
+              const genericIdx = parseGenericKey(key);
+              if (genericIdx !== null) {
+                // Every source section that doesn't map to one of the
+                // specific ones above — e.g. a "Physical Eligibility"
+                // table alongside Education Eligibility — rendered
+                // generically, titled with the source's own heading
+                // text, instead of being dropped for not matching a
+                // hardcoded field. Rendered here, interleaved at
+                // exactly the position the source itself used, rather
+                // than always lumped together at one fixed spot.
+                const section = additionalSections[genericIdx];
+                if (!section) return null;
+                return (
+                  <Section key={key} title={section.heading} icon={<FileText size={16} />} accent="neutral">
+                    <PipeTableOrText text={section.content} />
+                  </Section>
+                );
+              }
+              return <Fragment key={key}>{sectionRenderers[key] ?? null}</Fragment>;
+            });
+          })()}
 
           {Array.isArray(job.faqs) && job.faqs.length > 0 && (
   <Section title="FAQs" icon={<HelpCircle size={16} />} accent="pink">

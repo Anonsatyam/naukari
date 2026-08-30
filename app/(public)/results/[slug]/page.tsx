@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { Fragment } from "react";
 import { notFound } from "next/navigation";
 import { Calendar, ExternalLink, FileText, HelpCircle, ListChecks, CheckCircle2 } from "lucide-react";
 import { getResults, getResultBySlug } from "@/lib/server/data";
 import { formatDate, isSourceSiteUrl } from "@/lib/utils";
+import { resolveSectionOrder, parseGenericKey } from "@/lib/sectionOrder";
 import { Section, StepList, PipeTableOrText } from "@/components/DetailSections";
 import {
   ApplicationFeeSection,
@@ -21,6 +23,26 @@ import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
 import { KeyValueRow } from "@/components/KeyValueRow";
 import SourceVerified from "@/components/SourceVerified";
+
+// The page's own fixed order — used verbatim for any record with no
+// sectionOrder at all (published before this feature existed), and as
+// the fallback tail for anything a record's own sectionOrder doesn't
+// mention. "cutoffText" has no matching raw extraction key (it's never
+// actually populated by extraction today) — kept here purely so it
+// still renders at this fixed spot if it's ever set some other way.
+// See lib/sectionOrder.ts's resolveSectionOrder.
+const RESULT_DEFAULT_ORDER = [
+  "importantDatesRaw",
+  "howToApplyRaw",
+  "cutoffText",
+  "applicationFeeRaw",
+  "ageLimitRaw",
+  "postDetailsRaw",
+  "selectionProcessRaw",
+  "examPatternRaw",
+  "documentsRequiredRaw",
+  "eligibilityRaw",
+];
 
 export async function generateStaticParams() {
   try {
@@ -64,6 +86,9 @@ export default async function ResultDetailPage({
   // "View Official Result" button in that last-resort case.
   const hasRealOfficialLink = !isSourceSiteUrl(result.officialLink);
 
+  const additionalSections = result.additionalSections ?? [];
+  const orderedSectionKeys = resolveSectionOrder(result.sectionOrder, RESULT_DEFAULT_ORDER, additionalSections.length);
+
   return (
     <div className="container-page py-8">
       <Breadcrumb
@@ -86,63 +111,86 @@ export default async function ResultDetailPage({
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
         {/* Main content */}
         <div className="order-2 min-w-0 space-y-6 lg:order-1">
-          <Section title="Important Dates" icon={<Calendar size={16} />} accent="blue">
-            {result.importantDatesText ? (
-              <PipeTableOrText text={result.importantDatesText} />
-            ) : (
-              <KeyValueRow label="Result Declared" value={formatDate(result.resultDate)} />
-            )}
-          </Section>
+          {(() => {
+            // Every "regular" section, keyed by the same raw field name
+            // extraction records in sectionOrder — rendered by walking
+            // orderedSectionKeys (the source's own order, with a fixed
+            // fallback tail) instead of this fixed list's own order.
+            // FAQs/Conclusion are deliberately NOT here — always pinned
+            // to the very end below, regardless of source order.
+            const sectionRenderers: Record<string, React.ReactNode> = {
+              importantDatesRaw: (
+                <Section title="Important Dates" icon={<Calendar size={16} />} accent="blue">
+                  {result.importantDatesText ? (
+                    <PipeTableOrText text={result.importantDatesText} />
+                  ) : (
+                    <KeyValueRow label="Result Declared" value={formatDate(result.resultDate)} />
+                  )}
+                </Section>
+              ),
+              howToApplyRaw: (
+                <Section title="How to Check Result" icon={<ListChecks size={16} />} accent="green">
+                  <StepList
+                    items={result.howToCheck ?? []}
+                    fallback="Visit the official result link below and follow the on-page instructions."
+                  />
+                </Section>
+              ),
+              cutoffText: result.cutoffText ? (
+                <Section title="Cut Off / Merit Details" icon={<FileText size={16} />} accent="purple">
+                  <PipeTableOrText text={result.cutoffText} />
+                </Section>
+              ) : null,
+              // Same sections a Job page shows — a source frequently
+              // bundles a full recruitment notification (fee, age limit,
+              // vacancy, selection process, exam pattern, documents) into
+              // what's nominally a "Result" page; these self-hide when
+              // this particular result genuinely has none of it.
+              applicationFeeRaw: <ApplicationFeeSection fee={result.applicationFee} feeText={result.applicationFeeText} />,
+              ageLimitRaw: (
+                <AgeLimitSection
+                  ageLimitByGrade={result.ageLimitByGrade}
+                  ageRelaxationBreakdown={result.ageRelaxationBreakdown}
+                  ageLimitText={result.ageLimitText}
+                />
+              ),
+              postDetailsRaw: (
+                <VacancyDetailsSection
+                  vacancyBreakdown={result.vacancyBreakdown}
+                  postDetailsText={result.postDetailsText}
+                  totalVacancies={result.totalVacancies}
+                />
+              ),
+              selectionProcessRaw: (
+                <SelectionProcessSection
+                  selectionProcess={result.selectionProcess}
+                  selectionProcessText={result.selectionProcessText}
+                />
+              ),
+              examPatternRaw: <ExamPatternSection examPattern={result.examPattern} examPatternNotes={result.examPatternNotes} />,
+              documentsRequiredRaw: <DocumentsRequiredSection documentsRequired={result.documentsRequired} />,
+              eligibilityRaw: <EligibilitySection eligibilityText={result.eligibilityText} />,
+            };
 
-          <Section title="How to Check Result" icon={<ListChecks size={16} />} accent="green">
-            <StepList
-              items={result.howToCheck ?? []}
-              fallback="Visit the official result link below and follow the on-page instructions."
-            />
-          </Section>
-
-          {result.cutoffText && (
-            <Section title="Cut Off / Merit Details" icon={<FileText size={16} />} accent="purple">
-              <PipeTableOrText text={result.cutoffText} />
-            </Section>
-          )}
-
-          {/* Same sections a Job page shows — a source frequently
-              bundles a full recruitment notification (fee, age limit,
-              vacancy, selection process, exam pattern, documents) into
-              what's nominally a "Result" page; these self-hide when
-              this particular result genuinely has none of it. */}
-          <ApplicationFeeSection fee={result.applicationFee} feeText={result.applicationFeeText} />
-          <AgeLimitSection
-            ageLimitByGrade={result.ageLimitByGrade}
-            ageRelaxationBreakdown={result.ageRelaxationBreakdown}
-            ageLimitText={result.ageLimitText}
-          />
-          <VacancyDetailsSection
-            vacancyBreakdown={result.vacancyBreakdown}
-            postDetailsText={result.postDetailsText}
-            totalVacancies={result.totalVacancies}
-          />
-          <SelectionProcessSection
-            selectionProcess={result.selectionProcess}
-            selectionProcessText={result.selectionProcessText}
-          />
-          <ExamPatternSection examPattern={result.examPattern} examPatternNotes={result.examPatternNotes} />
-          <DocumentsRequiredSection documentsRequired={result.documentsRequired} />
-          <EligibilitySection eligibilityText={result.eligibilityText} />
-
-          {/* Every source section that doesn't map to one of the specific
-              ones above — rendered generically, titled with the source's
-              own heading text, instead of being dropped for not matching
-              a hardcoded field. Deliberately placed before FAQs/Conclusion
-              — FAQs is always the second-last section and Conclusion
-              always the last, regardless of what else the source
-              published. */}
-          {result.additionalSections?.map((section, i) => (
-            <Section key={i} title={section.heading} icon={<FileText size={16} />} accent="neutral">
-              <PipeTableOrText text={section.content} />
-            </Section>
-          ))}
+            return orderedSectionKeys.map((key) => {
+              const genericIdx = parseGenericKey(key);
+              if (genericIdx !== null) {
+                // Every source section that doesn't map to one of the
+                // specific ones above — rendered generically, titled
+                // with the source's own heading text, interleaved at
+                // exactly the position the source itself used, rather
+                // than always lumped together at one fixed spot.
+                const section = additionalSections[genericIdx];
+                if (!section) return null;
+                return (
+                  <Section key={key} title={section.heading} icon={<FileText size={16} />} accent="neutral">
+                    <PipeTableOrText text={section.content} />
+                  </Section>
+                );
+              }
+              return <Fragment key={key}>{sectionRenderers[key] ?? null}</Fragment>;
+            });
+          })()}
 
           {Array.isArray(result.faqs) && result.faqs.length > 0 && (
             <Section title="FAQs" icon={<HelpCircle size={16} />} accent="pink">

@@ -139,6 +139,22 @@ export interface Job {
   faqs?: FaqItem[];
   conclusion?: string;
   additionalSections?: AdditionalSection[];
+  // The source's own top-to-bottom order for the sections above — one
+  // entry per raw field key the extractor recognizes ("applicationFeeRaw",
+  // "ageLimitRaw", ...) plus "generic:<index>" for each additionalSections
+  // entry, in the exact sequence the source page displayed them (see
+  // extractHtmlNotificationFields.ts's ParsedSections.sectionOrder).
+  // Lets the detail page render sections in the source's own order
+  // (e.g. a "Physical Eligibility" table sitting between Education
+  // Eligibility and Exam Pattern, exactly where the source put it)
+  // instead of always the one fixed template order — see
+  // lib/sectionOrder.ts's resolveSectionOrder, which every detail page
+  // uses to turn this into a final render order, falling back to that
+  // fixed order for anything not covered here (a record published
+  // before this field existed, an admin-added field with no heading of
+  // its own, FAQs/Conclusion which are always pinned to the very end
+  // regardless of source order).
+  sectionOrder?: string[];
   // See BotDraft.sourceOrderKey — carried through on approval and used
   // to sort the public listing by the source's own order.
   sourceOrderKey?: number;
@@ -206,6 +222,8 @@ export interface ResultItem {
   faqs?: FaqItem[];
   conclusion?: string;
   additionalSections?: AdditionalSection[];
+  // See Job.sectionOrder's comment.
+  sectionOrder?: string[];
   sourceOrderKey?: number;
 }
 
@@ -250,6 +268,8 @@ export interface AdmitCardItem {
   faqs?: FaqItem[];
   conclusion?: string;
   additionalSections?: AdditionalSection[];
+  // See Job.sectionOrder's comment.
+  sectionOrder?: string[];
   sourceOrderKey?: number;
 }
 

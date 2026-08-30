@@ -389,6 +389,15 @@ interface ParsedSections {
   // title — the fix for one specific missing heading shouldn't require
   // a matching fix for the next one nobody's seen yet.
   genericSections: { heading: string; blocks: string[][] }[];
+  // The source's own top-to-bottom section order — one entry per
+  // matched field the FIRST time it's encountered (a field can only
+  // appear once here even if the source somehow repeats a heading,
+  // since the final `fields` object collapses repeats into one joined
+  // value anyway), plus one "generic:<index>" entry per genericSections
+  // entry at the exact point it was encountered. Lets the public pages
+  // render sections in the source's own order instead of a fixed
+  // template — see components using resolveSectionOrder.
+  sectionOrder: string[];
 }
 
 // genericSections is populated directly (see the `!field` branch
@@ -397,7 +406,7 @@ interface ParsedSections {
 // `sections[field].push(...)` for an actually-matched heading is known
 // to be pushing into one of the `string[][]`/`string[]` fields above,
 // not genericSections' different shape.
-type MatchableSection = Exclude<keyof ParsedSections, "genericSections">;
+type MatchableSection = Exclude<keyof ParsedSections, "genericSections" | "sectionOrder">;
 
 // "शारीरिक योग्यता" (Physical Eligibility) and "शैक्षणिक योग्यता"
 // (Education Eligibility) both contain "योग्यता" — matched here by the
@@ -669,6 +678,10 @@ function parseSections(html: string): ParsedSections {
     faqRaw: [],
     conclusionRaw: [],
     genericSections: [],
+    sectionOrder: [],
+  };
+  const recordOrder = (key: string) => {
+    if (!sections.sectionOrder.includes(key)) sections.sectionOrder.push(key);
   };
 
   const headingPositions: { field: MatchableSection | null; text: string; start: number; end: number }[] = [];
@@ -785,11 +798,13 @@ function parseSections(html: string): ParsedSections {
         const rowCount = blocks.reduce((sum, block) => sum + block.length, 0);
         if (linkPairs.length > 0 && linkPairs.length >= rowCount - 1) {
           sections.importantLinksRaw.push(...linkPairs);
+          recordOrder("importantLinksRaw");
           continue;
         }
 
         if (blocks.length > 0) {
           sections.genericSections.push({ heading: headingText, blocks });
+          recordOrder(`generic:${sections.genericSections.length - 1}`);
         }
       }
       continue;
@@ -820,17 +835,20 @@ function parseSections(html: string): ParsedSections {
 
     if (field === "importantLinksRaw") {
       sections.importantLinksRaw.push(...extractLinkPairs(segment));
+      recordOrder(field);
       continue;
     }
     if (field === "howToApplyRaw") {
       // "How to Apply" is almost always a numbered <ol>, not a table
       const listMatch = segment.match(/<ol\b[^>]*>([\s\S]*?)<\/ol>/i);
       sections[field].push(...(listMatch ? listToItems(listMatch[1]) : []));
+      recordOrder(field);
       continue;
     }
 
     if (!hadAbsorbedSubheadings) {
       sections[field].push(...extractBlocksFromSegment(segment));
+      recordOrder(field);
       continue;
     }
 
@@ -849,6 +867,7 @@ function parseSections(html: string): ParsedSections {
     const preambleEnd = headingPositions[startIdx + 1].start;
     const preamble = html.slice(end, preambleEnd);
     sections[field].push(...extractBlocksFromSegment(preamble));
+    recordOrder(field);
 
     for (let k = startIdx + 1; k <= j - 1; k++) {
       const subEnd = k + 1 <= j - 1 ? headingPositions[k + 1].start : segmentEnd;
@@ -999,6 +1018,7 @@ export function extractHtmlNotificationFields(html: string): HtmlNotificationExt
     ...(guessLink(importantLinks, ["official website", "official portal"])
       ? { officialWebsiteLink: guessLink(importantLinks, ["official website", "official portal"]) }
       : {}),
+    ...(sections.sectionOrder.length ? { sectionOrder: sections.sectionOrder } : {}),
   };
 
   return { organization, fields };

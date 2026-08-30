@@ -44,6 +44,16 @@ export interface ExtractedStructuredFields {
   // a source happens to use. See extractHtmlNotificationFields.ts's
   // genericSections for the full reasoning.
   genericSections?: { heading: string; content: string }[];
+
+  // The source's own top-to-bottom section order — see
+  // extractHtmlNotificationFields.ts's ParsedSections.sectionOrder for
+  // the full reasoning. Entries are either a known field name above
+  // (e.g. "applicationFeeRaw") or "generic:<index>" into
+  // genericSections. Only ever produced by the HTML-page extractor
+  // (PDF-sourced drafts have no comparable notion of "section order"
+  // to preserve, since a PDF's own field extraction isn't heading-
+  // driven the way this is).
+  sectionOrder?: string[];
 }
 
 const MONTH_NAMES: Record<string, number> = {

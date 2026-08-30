@@ -734,6 +734,7 @@ export async function approveDraft(
       faqs: ensureOptionalArray(merged.faqs),
       conclusion: replaceSourceSitePlug(merged.conclusion),
       additionalSections: ensureOptionalArray(merged.genericSections),
+      sectionOrder: ensureOptionalArray<string>(merged.sectionOrder),
       sourceOrderKey: draft.sourceOrderKey,
     };
     const resultRow = resultToRow(newResult);
@@ -783,6 +784,7 @@ export async function approveDraft(
       faqs: ensureOptionalArray(merged.faqs),
       conclusion: replaceSourceSitePlug(merged.conclusion),
       additionalSections: ensureOptionalArray(merged.genericSections),
+      sectionOrder: ensureOptionalArray<string>(merged.sectionOrder),
       sourceOrderKey: draft.sourceOrderKey,
     };
     const cardRow = admitCardToRow(newCard);
@@ -937,6 +939,7 @@ export async function approveDraft(
     faqs: ensureOptionalArray(merged.faqs),
     conclusion: replaceSourceSitePlug(merged.conclusion),
     additionalSections: ensureOptionalArray(merged.genericSections),
+    sectionOrder: ensureOptionalArray<string>(merged.sectionOrder),
     sourceOrderKey: draft.sourceOrderKey,
     status: "published",
     createdByBot: true,

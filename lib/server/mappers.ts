@@ -47,6 +47,7 @@ export function rowToJob(row: any): Job {
     faqs: row.faqs ?? undefined,
     conclusion: row.conclusion ?? undefined,
     additionalSections: row.additional_sections ?? undefined,
+    sectionOrder: row.section_order ?? undefined,
     sourceOrderKey: row.source_order_key ?? undefined,
     status: row.status,
     createdByBot: row.created_by_bot,
@@ -99,6 +100,7 @@ export function jobToRow(job: Partial<Job>): Record<string, unknown> {
   if (job.faqs !== undefined) row.faqs = job.faqs;
   if (job.conclusion !== undefined) row.conclusion = job.conclusion;
   if (job.additionalSections !== undefined) row.additional_sections = job.additionalSections;
+  if (job.sectionOrder !== undefined) row.section_order = job.sectionOrder;
   if (job.sourceOrderKey !== undefined) row.source_order_key = job.sourceOrderKey;
   if (job.status !== undefined) row.status = job.status;
   if (job.createdByBot !== undefined) row.created_by_bot = job.createdByBot;
@@ -142,6 +144,7 @@ export function rowToResult(row: any): ResultItem {
     faqs: row.faqs ?? undefined,
     conclusion: row.conclusion ?? undefined,
     additionalSections: row.additional_sections ?? undefined,
+    sectionOrder: row.section_order ?? undefined,
     sourceOrderKey: row.source_order_key ?? undefined,
   };
 }
@@ -177,6 +180,7 @@ export function resultToRow(result: Partial<ResultItem>): Record<string, unknown
   if (result.faqs !== undefined) row.faqs = result.faqs;
   if (result.conclusion !== undefined) row.conclusion = result.conclusion;
   if (result.additionalSections !== undefined) row.additional_sections = result.additionalSections;
+  if (result.sectionOrder !== undefined) row.section_order = result.sectionOrder;
   if (result.sourceOrderKey !== undefined) row.source_order_key = result.sourceOrderKey;
   return row;
 }
@@ -215,6 +219,7 @@ export function rowToAdmitCard(row: any): AdmitCardItem {
     faqs: row.faqs ?? undefined,
     conclusion: row.conclusion ?? undefined,
     additionalSections: row.additional_sections ?? undefined,
+    sectionOrder: row.section_order ?? undefined,
     sourceOrderKey: row.source_order_key ?? undefined,
   };
 }
@@ -249,6 +254,7 @@ export function admitCardToRow(card: Partial<AdmitCardItem>): Record<string, unk
   if (card.faqs !== undefined) row.faqs = card.faqs;
   if (card.conclusion !== undefined) row.conclusion = card.conclusion;
   if (card.additionalSections !== undefined) row.additional_sections = card.additionalSections;
+  if (card.sectionOrder !== undefined) row.section_order = card.sectionOrder;
   if (card.sourceOrderKey !== undefined) row.source_order_key = card.sourceOrderKey;
   return row;
 }
