@@ -543,10 +543,15 @@ export default function DraftReviewPage({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error("Approve failed");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Approve failed");
       setDecision("approved");
-    } catch {
-      setError("Could not approve this draft. Please try again.");
+    } catch (err) {
+      // Show the server's own reason when it has one (e.g. "already
+      // published, marked rejected instead") rather than this generic
+      // fallback, which used to be the ONLY thing shown regardless of
+      // why the approve actually failed.
+      setError(err instanceof Error ? err.message : "Could not approve this draft. Please try again.");
     } finally {
       setSubmitting(false);
     }

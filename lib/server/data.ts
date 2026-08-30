@@ -671,6 +671,24 @@ export async function approveDraft(
   if (!draftRow) return undefined;
   const draft = rowToDraft(draftRow);
 
+  // Guards against the exact failure mode draftExistsForSource's own
+  // comment describes: a stale duplicate draft for a source that's
+  // already published (its own bot_drafts row having gone missing is
+  // what let the bot re-create this one in the first place). Without
+  // this, approving it would attempt a second insert with the same
+  // slug, hit the table's unique constraint, throw a raw Postgres
+  // error, and leave the draft stuck at "pending" forever with no
+  // indication of why — exactly what this was reported as ("clicking
+  // Approve does nothing, the admin drafts list still shows pending").
+  // Rejecting it outright (rather than leaving it pending) is correct
+  // either way: there is nothing left for an admin to approve here.
+  if (draft.status === "pending" && (await isSourceAlreadyPublished(draft.sourceUrl))) {
+    await supabase.from("bot_drafts").update({ status: "rejected" }).eq("id", id);
+    throw new Error(
+      "A job/result/admit card for this exact source is already published — this draft was a stale duplicate and has been marked rejected instead."
+    );
+  }
+
   // Belt-and-suspenders with the bot's own extraction fix: that stops
   // NEW drafts from ever containing raw entity codes (&#8220; etc), but
   // any draft already sitting in bot_drafts from before that fix
@@ -959,6 +977,36 @@ export async function approveDraft(
 
 // ---- Bot ingestion ----
 
+// Whether a job/result/admit card is ALREADY published for this exact
+// source URL — checked independently of bot_drafts, so it stays
+// correct even if a draft's own bot_drafts row is ever missing (see
+// draftExistsForSource's comment for why that can happen and what it
+// causes if this check doesn't also exist on its own).
+async function isSourceAlreadyPublished(sourceUrl: string): Promise<boolean> {
+  const supabase = getSupabaseAdmin();
+  const [jobResult, resultResult, admitCardResult] = await Promise.all([
+    supabase.from("jobs").select("id", { count: "exact", head: true }).eq("source_url", sourceUrl),
+    supabase.from("results").select("id", { count: "exact", head: true }).eq("source_url", sourceUrl),
+    supabase.from("admit_cards").select("id", { count: "exact", head: true }).eq("source_url", sourceUrl),
+  ]);
+  if (jobResult.error) throw jobResult.error;
+  if (resultResult.error) throw resultResult.error;
+  if (admitCardResult.error) throw admitCardResult.error;
+  return (jobResult.count ?? 0) > 0 || (resultResult.count ?? 0) > 0 || (admitCardResult.count ?? 0) > 0;
+}
+
+// Real bug found while investigating "approved drafts still show pending":
+// this only ever checked the `jobs` table for an already-published
+// match, never `results` or `admit_cards`. Whenever a Result or Admit
+// Card's own bot_drafts row went missing for any reason (bot_drafts has
+// no delete anywhere in this codebase, but the table can still end up
+// short a row some other way — a manual cleanup in the Supabase SQL
+// editor, a restore, ...), the bot had no way left to recognize that
+// source as already handled, and quietly re-drafted the exact same
+// already-published posting as a brand new "pending" draft on every
+// subsequent run — forever, since nothing ever marked it approved
+// again. Checking all three published tables, not just jobs, is what
+// actually prevents this regardless of what happens to bot_drafts.
 export async function draftExistsForSource(sourceUrl: string): Promise<boolean> {
   const supabase = getSupabaseAdmin();
 
@@ -969,12 +1017,7 @@ export async function draftExistsForSource(sourceUrl: string): Promise<boolean> 
   if (draftError) throw draftError;
   if ((draftCount ?? 0) > 0) return true;
 
-  const { count: jobCount, error: jobError } = await supabase
-    .from("jobs")
-    .select("id", { count: "exact", head: true })
-    .eq("source_url", sourceUrl);
-  if (jobError) throw jobError;
-  return (jobCount ?? 0) > 0;
+  return isSourceAlreadyPublished(sourceUrl);
 }
 
 export async function createDraft(input: {
