@@ -182,7 +182,7 @@ export function RowsEditor<T extends Record<string, string>>({
 
 export function SectionDivider({ label }: { label: string }) {
   return (
-    <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">{label}</p>
+    <p className="mb-3 text-xs font-bold uppercase tracking-wide text-[var(--color-text-primary)]">{label}</p>
   );
 }
 

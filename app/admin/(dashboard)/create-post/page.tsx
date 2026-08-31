@@ -259,7 +259,7 @@ export default function CreatePostPage() {
                   <IconButton icon={<Trash2 size={15} />} label="Remove date" tone="danger" onClick={() => removeKeyDate(i)} />
                 </div>
               ))}
-              <Button type="button" variant="secondary" size="sm" onClick={addKeyDate}>
+              <Button type="button" size="sm" onClick={addKeyDate}>
                 <Plus size={14} /> Add Date
               </Button>
             </div>
