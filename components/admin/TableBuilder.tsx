@@ -159,7 +159,7 @@ export function TableBuilder({
       {hint && <p className="text-xs text-[var(--color-text-secondary)]">{hint}</p>}
 
       <div className="overflow-x-auto rounded-lg border border-[var(--color-border)]">
-        <table className="w-full min-w-[560px] text-xs">
+        <table className="w-full text-xs">
           <thead>
             <tr className="bg-[var(--color-background)]">
               {value.columns.map((col, i) => (

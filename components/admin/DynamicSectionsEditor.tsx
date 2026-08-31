@@ -150,8 +150,8 @@ export function DynamicSectionsEditor({
     <div className="space-y-4">
       {sections.map((section, i) => (
         <div key={section.id} className="rounded-lg border border-[var(--color-border)] p-3">
-          <div className="flex items-start gap-2">
-            <div className="flex-1">
+          <div className="flex flex-wrap items-start gap-2">
+            <div className="min-w-0 flex-1">
               <TextField
                 label="Section Name"
                 value={section.heading}
@@ -159,7 +159,7 @@ export function DynamicSectionsEditor({
                 placeholder="e.g. Important Dates, Age Limit, Physical Test..."
               />
             </div>
-            <div className="w-40">
+            <div className="w-full sm:w-40">
               <SelectField
                 label="Content Type"
                 value={section.kind}
@@ -170,7 +170,7 @@ export function DynamicSectionsEditor({
                 }))}
               />
             </div>
-            <div className="mt-5 flex shrink-0 items-center gap-1">
+            <div className="flex shrink-0 items-center gap-1 sm:mt-5">
               <IconButton icon={<ArrowUp size={15} />} label="Move section up" onClick={() => move(section.id, -1)} disabled={i === 0} />
               <IconButton
                 icon={<ArrowDown size={15} />}
