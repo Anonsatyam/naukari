@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Upload, ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,7 @@ export default function ImageDropzone({
   onFile: (file: File) => void;
   className?: string;
 }) {
+  const t = useTranslations("toolsShared");
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
@@ -49,7 +51,7 @@ export default function ImageDropzone({
       </span>
       <p className="text-sm font-semibold text-[var(--color-text-primary)]">{label}</p>
       <p className="text-xs text-[var(--color-text-secondary)]">
-        Click to browse, or drag and drop a JPG or PNG here
+        {t("dropHint")}
       </p>
       <input
         ref={inputRef}

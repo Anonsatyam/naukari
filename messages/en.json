@@ -129,20 +129,56 @@
     "signatureMergeTitle": "Merge Signature on Photo",
     "signatureMergeDesc": "Overlay your signature onto a photo — with optional white-background removal so it blends in cleanly."
   },
+  "toolsShared": {
+    "dropHint": "Click to browse, or drag and drop a JPG or PNG here",
+    "changePhoto": "Change Photo"
+  },
   "photoResizerPage": {
     "breadcrumb": "Photo & Signature Resizer",
     "heading": "Photo & Signature Resizer",
-    "body": "Upload a photo, choose a preset or set your own size, then drag the box to crop. We'll resize to the exact dimensions and compress to fit the target file size."
+    "body": "Upload a photo, choose a preset or set your own size, then drag the box to crop. We'll resize to the exact dimensions and compress to fit the target file size.",
+    "uploadLabel": "Upload a photo to crop and resize",
+    "dragHint": "Drag inside the box to move it, drag the corner handle to resize.",
+    "resetCrop": "Reset Crop",
+    "outputSize": "Output Size",
+    "presetPassport": "Passport Photo (200×230, 20–50 KB)",
+    "presetSignature": "Signature (140×60, 10–20 KB)",
+    "presetSmallPhoto": "Small Photo (100×120, 20–50 KB)",
+    "customDimensions": "Custom dimensions & size",
+    "widthLabel": "Width (px)",
+    "heightLabel": "Height (px)",
+    "minSizeLabel": "Min Size (KB)",
+    "maxSizeLabel": "Max Size (KB)",
+    "processing": "Processing…",
+    "cropButton": "Crop, Resize & Compress",
+    "targetLabel": "Target: {min}–{max} KB",
+    "couldntFit": "— couldn't fit the target range at readable quality.",
+    "download": "Download"
   },
   "nameDatePhotoPage": {
     "breadcrumb": "Name & Date on Photo",
     "heading": "Name & Date on Photo",
-    "body": "Upload a photo, type your name and date, and drag the label to position it. Download the finished photo when you're happy with it."
+    "body": "Upload a photo, type your name and date, and drag the label to position it. Download the finished photo when you're happy with it.",
+    "uploadLabel": "Upload a photo to add your name and date",
+    "dragHint": "Drag on the photo to reposition the label.",
+    "nameLabel": "Name",
+    "namePlaceholder": "e.g. Rahul Kumar",
+    "dateLabel": "Date",
+    "textSizeLabel": "Text Size",
+    "downloadPhoto": "Download Photo"
   },
   "signatureMergePage": {
     "breadcrumb": "Merge Signature on Photo",
     "heading": "Merge Signature on Photo",
-    "body": "Upload a photo and your signature, then drag and resize the signature onto the photo. Turn on background removal if your signature was scanned on white paper."
+    "body": "Upload a photo and your signature, then drag and resize the signature onto the photo. Turn on background removal if your signature was scanned on white paper.",
+    "uploadBaseLabel": "Upload the base photo",
+    "uploadSignatureLabel": "Upload your signature",
+    "dragHint": "Drag the signature to reposition it.",
+    "signatureUploaded": "Signature uploaded",
+    "replace": "Replace",
+    "removeWhiteLabel": "Make white background transparent",
+    "signatureSizeLabel": "Signature Size",
+    "downloadPhoto": "Download Photo"
   },
   "eligibilityCheckerPage": {
     "breadcrumb": "Eligibility Checker",

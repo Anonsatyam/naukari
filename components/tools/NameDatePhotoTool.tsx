@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Download } from "lucide-react";
 import ImageDropzone from "./ImageDropzone";
 import Card from "@/components/Card";
@@ -46,6 +47,8 @@ function drawLabel(
 }
 
 export default function NameDatePhotoTool() {
+  const t = useTranslations("nameDatePhotoPage");
+  const tShared = useTranslations("toolsShared");
   const [loaded, setLoaded] = useState<LoadedImage | null>(null);
   const [name, setName] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -94,7 +97,7 @@ export default function NameDatePhotoTool() {
       <Card>
         {!loaded ? (
           <ImageDropzone
-            label="Upload a photo to add your name and date"
+            label={t("uploadLabel")}
             onFile={handleFile}
           />
         ) : (
@@ -108,11 +111,11 @@ export default function NameDatePhotoTool() {
               className="mx-auto cursor-grab touch-none rounded-lg border border-[var(--color-border)] active:cursor-grabbing"
             />
             <p className="mt-3 text-center text-xs text-[var(--color-text-secondary)]">
-              Drag on the photo to reposition the label.
+              {t("dragHint")}
             </p>
             <div className="mt-4 flex justify-center">
               <Button variant="secondary" size="sm" onClick={() => setLoaded(null)}>
-                Change Photo
+                {tShared("changePhoto")}
               </Button>
             </div>
           </div>
@@ -122,15 +125,15 @@ export default function NameDatePhotoTool() {
       <div className="space-y-4">
         <Card className="space-y-4">
           <TextField
-            label="Name"
-            placeholder="e.g. Rahul Kumar"
+            label={t("nameLabel")}
+            placeholder={t("namePlaceholder")}
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          <TextField label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <TextField label={t("dateLabel")} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-              Text Size
+              {t("textSizeLabel")}
             </label>
             <input
               type="range"
@@ -145,7 +148,7 @@ export default function NameDatePhotoTool() {
         </Card>
 
         <Button onClick={handleDownload} disabled={!loaded} className="w-full">
-          <Download size={14} /> Download Photo
+          <Download size={14} /> {t("downloadPhoto")}
         </Button>
       </div>
     </div>

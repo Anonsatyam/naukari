@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Download, RotateCcw, CheckCircle2, AlertTriangle } from "lucide-react";
 import ImageDropzone from "./ImageDropzone";
 import Card from "@/components/Card";
@@ -16,7 +17,7 @@ import {
 } from "@/lib/image-tools";
 
 interface Preset {
-  label: string;
+  labelKey: "presetPassport" | "presetSignature" | "presetSmallPhoto";
   width: number;
   height: number;
   minKB: number;
@@ -24,9 +25,9 @@ interface Preset {
 }
 
 const PRESETS: Preset[] = [
-  { label: "Passport Photo (200×230, 20–50 KB)", width: 200, height: 230, minKB: 20, maxKB: 50 },
-  { label: "Signature (140×60, 10–20 KB)", width: 140, height: 60, minKB: 10, maxKB: 20 },
-  { label: "Small Photo (100×120, 20–50 KB)", width: 100, height: 120, minKB: 20, maxKB: 50 },
+  { labelKey: "presetPassport", width: 200, height: 230, minKB: 20, maxKB: 50 },
+  { labelKey: "presetSignature", width: 140, height: 60, minKB: 10, maxKB: 20 },
+  { labelKey: "presetSmallPhoto", width: 100, height: 120, minKB: 20, maxKB: 50 },
 ];
 
 interface CropBox {
@@ -40,6 +41,8 @@ const PREVIEW_MAX_WIDTH = 440;
 const HANDLE_SIZE = 16;
 
 export default function PhotoResizerTool() {
+  const t = useTranslations("photoResizerPage");
+  const tShared = useTranslations("toolsShared");
   const [loaded, setLoaded] = useState<LoadedImage | null>(null);
   const [presetIndex, setPresetIndex] = useState(0);
   const [customWidth, setCustomWidth] = useState(200);
@@ -50,7 +53,7 @@ export default function PhotoResizerTool() {
   const target =
     presetIndex >= 0
       ? PRESETS[presetIndex]
-      : { label: "Custom", width: customWidth, height: customHeight, minKB: customMinKB, maxKB: customMaxKB };
+      : { width: customWidth, height: customHeight, minKB: customMinKB, maxKB: customMaxKB };
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [previewSize, setPreviewSize] = useState({ width: 0, height: 0 });
@@ -255,7 +258,7 @@ export default function PhotoResizerTool() {
       <Card>
         {!loaded ? (
           <ImageDropzone
-            label="Upload a photo to crop and resize"
+            label={t("uploadLabel")}
             onFile={handleFile}
           />
         ) : (
@@ -269,11 +272,11 @@ export default function PhotoResizerTool() {
               className="mx-auto cursor-move touch-none rounded-lg border border-[var(--color-border)]"
             />
             <p className="mt-3 text-center text-xs text-[var(--color-text-secondary)]">
-              Drag inside the box to move it, drag the corner handle to resize.
+              {t("dragHint")}
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               <Button variant="secondary" size="sm" onClick={resetCrop}>
-                <RotateCcw size={14} /> Reset Crop
+                <RotateCcw size={14} /> {t("resetCrop")}
               </Button>
               <Button
                 variant="secondary"
@@ -283,7 +286,7 @@ export default function PhotoResizerTool() {
                   setResult(null);
                 }}
               >
-                Change Photo
+                {tShared("changePhoto")}
               </Button>
             </div>
           </div>
@@ -292,11 +295,11 @@ export default function PhotoResizerTool() {
 
       <div className="space-y-4">
         <Card>
-          <p className="mb-3 text-sm font-semibold text-[var(--color-text-primary)]">Output Size</p>
+          <p className="mb-3 text-sm font-semibold text-[var(--color-text-primary)]">{t("outputSize")}</p>
           <div className="space-y-2">
             {PRESETS.map((p, i) => (
               <button
-                key={p.label}
+                key={p.labelKey}
                 type="button"
                 onClick={() => selectPreset(i)}
                 className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
@@ -305,7 +308,7 @@ export default function PhotoResizerTool() {
                     : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]"
                 }`}
               >
-                {p.label}
+                {t(p.labelKey)}
               </button>
             ))}
             <button
@@ -317,7 +320,7 @@ export default function PhotoResizerTool() {
                   : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]"
               }`}
             >
-              Custom dimensions &amp; size
+              {t("customDimensions")}
             </button>
           </div>
 
@@ -325,14 +328,14 @@ export default function PhotoResizerTool() {
             <div className="mt-3 space-y-3 border-t border-[var(--color-border)] pt-3">
               <div className="grid grid-cols-2 gap-3">
                 <TextField
-                  label="Width (px)"
+                  label={t("widthLabel")}
                   type="number"
                   min={20}
                   value={customWidth}
                   onChange={(e) => setCustomAndRefit({ width: Number(e.target.value) || 1 })}
                 />
                 <TextField
-                  label="Height (px)"
+                  label={t("heightLabel")}
                   type="number"
                   min={20}
                   value={customHeight}
@@ -341,14 +344,14 @@ export default function PhotoResizerTool() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <TextField
-                  label="Min Size (KB)"
+                  label={t("minSizeLabel")}
                   type="number"
                   min={1}
                   value={customMinKB}
                   onChange={(e) => setCustomMinKB(Number(e.target.value) || 1)}
                 />
                 <TextField
-                  label="Max Size (KB)"
+                  label={t("maxSizeLabel")}
                   type="number"
                   min={1}
                   value={customMaxKB}
@@ -360,7 +363,7 @@ export default function PhotoResizerTool() {
         </Card>
 
         <Button onClick={handleApply} disabled={!loaded || processing} className="w-full">
-          {processing ? "Processing…" : "Crop, Resize & Compress"}
+          {processing ? t("processing") : t("cropButton")}
         </Button>
 
         {result && (
@@ -386,8 +389,8 @@ export default function PhotoResizerTool() {
                   {formatBytes(result.blob.size)} · {target.width}×{target.height}px
                 </p>
                 <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
-                  Target: {target.minKB}–{target.maxKB} KB
-                  {!withinRange && " — couldn't fit the target range at readable quality."}
+                  {t("targetLabel", { min: target.minKB, max: target.maxKB })}
+                  {!withinRange && ` ${t("couldntFit")}`}
                 </p>
               </div>
             </div>
@@ -395,7 +398,7 @@ export default function PhotoResizerTool() {
               className="mt-3 w-full"
               onClick={() => downloadBlob(result.blob, `photo-${target.width}x${target.height}.jpg`)}
             >
-              <Download size={14} /> Download
+              <Download size={14} /> {t("download")}
             </Button>
           </Card>
         )}

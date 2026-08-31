@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Download } from "lucide-react";
 import ImageDropzone from "./ImageDropzone";
 import Card from "@/components/Card";
@@ -31,6 +32,8 @@ function makeWhiteTransparent(image: HTMLImageElement, width: number, height: nu
 }
 
 export default function SignatureMergeTool() {
+  const t = useTranslations("signatureMergePage");
+  const tShared = useTranslations("toolsShared");
   const [photo, setPhoto] = useState<LoadedImage | null>(null);
   const [signature, setSignature] = useState<LoadedImage | null>(null);
   const [removeWhite, setRemoveWhite] = useState(true);
@@ -115,7 +118,7 @@ export default function SignatureMergeTool() {
       <Card>
         {!photo ? (
           <ImageDropzone
-            label="Upload the base photo"
+            label={t("uploadBaseLabel")}
             onFile={handlePhotoFile}
           />
         ) : (
@@ -129,7 +132,7 @@ export default function SignatureMergeTool() {
               className="mx-auto cursor-grab touch-none rounded-lg border border-[var(--color-border)] active:cursor-grabbing"
             />
             <p className="mt-3 text-center text-xs text-[var(--color-text-secondary)]">
-              Drag the signature to reposition it.
+              {t("dragHint")}
             </p>
             <div className="mt-4 flex justify-center">
               <Button
@@ -140,7 +143,7 @@ export default function SignatureMergeTool() {
                   setSignature(null);
                 }}
               >
-                Change Photo
+                {tShared("changePhoto")}
               </Button>
             </div>
           </div>
@@ -151,31 +154,31 @@ export default function SignatureMergeTool() {
         <Card className="space-y-4">
           {!signature ? (
             <ImageDropzone
-              label="Upload your signature"
+              label={t("uploadSignatureLabel")}
               onFile={async (file) => setSignature(await loadImageFromFile(file))}
             />
           ) : (
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-medium text-[var(--color-text-primary)]">Signature uploaded</p>
+              <p className="text-sm font-medium text-[var(--color-text-primary)]">{t("signatureUploaded")}</p>
               <button
                 type="button"
                 onClick={() => setSignature(null)}
                 className="text-xs font-semibold text-[var(--color-primary)]"
               >
-                Replace
+                {t("replace")}
               </button>
             </div>
           )}
 
           <CheckboxField
-            label="Make white background transparent"
+            label={t("removeWhiteLabel")}
             checked={removeWhite}
             onChange={(e) => setRemoveWhite(e.target.checked)}
           />
 
           <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-              Signature Size
+              {t("signatureSizeLabel")}
             </label>
             <input
               type="range"
@@ -190,7 +193,7 @@ export default function SignatureMergeTool() {
         </Card>
 
         <Button onClick={handleDownload} disabled={!photo || !signature} className="w-full">
-          <Download size={14} /> Download Photo
+          <Download size={14} /> {t("downloadPhoto")}
         </Button>
       </div>
     </div>
