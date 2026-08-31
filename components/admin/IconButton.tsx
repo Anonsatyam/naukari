@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
 const TONE_CLASSES = {
@@ -32,11 +34,26 @@ export function IconButton({
   type?: "button" | "submit";
   className?: string;
 }) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number } | null>(null);
+
+  const showTooltip = () => {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setTooltipPos({ top: rect.top - 6, left: rect.right });
+  };
+  const hideTooltip = () => setTooltipPos(null);
+
   return (
-    <span className="group/tooltip relative inline-flex">
+    <>
       <button
+        ref={buttonRef}
         type={type}
         onClick={onClick}
+        onMouseEnter={showTooltip}
+        onMouseLeave={hideTooltip}
+        onFocus={showTooltip}
+        onBlur={hideTooltip}
         disabled={disabled}
         aria-label={label}
         title={label}
@@ -49,12 +66,17 @@ export function IconButton({
       >
         {icon}
       </button>
-      <span
-        role="tooltip"
-        className="pointer-events-none absolute bottom-full right-0 z-50 mb-1.5 whitespace-nowrap rounded-md bg-[var(--color-text-primary)] px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover/tooltip:opacity-100"
-      >
-        {label}
-      </span>
-    </span>
+      {tooltipPos &&
+        createPortal(
+          <span
+            role="tooltip"
+            className="pointer-events-none fixed z-[100] -translate-x-full -translate-y-full whitespace-nowrap rounded-md bg-[var(--color-text-primary)] px-2 py-1 text-[11px] font-medium text-white shadow-lg"
+            style={{ top: tooltipPos.top, left: tooltipPos.left }}
+          >
+            {label}
+          </span>,
+          document.body
+        )}
+    </>
   );
 }
