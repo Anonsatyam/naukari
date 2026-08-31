@@ -52,7 +52,7 @@ export default function Header() {
           </span>
           <span className="flex flex-col leading-tight">
             <span className="text-[15px] font-bold text-[var(--color-text-primary)]">
-              Bihar Sarkari Naukri
+              Sarkari Naukri
             </span>
             <span className="text-[11px] text-[var(--color-text-secondary)]">
               Verified government job updates

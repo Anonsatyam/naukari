@@ -7,10 +7,10 @@ export default function Footer() {
         <div className="grid gap-8 md:grid-cols-3">
           <div>
             <p className="text-[15px] font-bold text-[var(--color-text-primary)]">
-              Bihar Sarkari Naukri
+              Sarkari Naukri
             </p>
             <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-              Structured, verified government job information for Bihar —
+              Structured, verified government job information —
               sourced directly from official notifications.
             </p>
           </div>
@@ -37,7 +37,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-8 flex flex-col gap-2 border-t border-[var(--color-border)] pt-6 text-xs text-[var(--color-text-muted)] sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 Bihar Sarkari Naukri. Built for Bihar, made by a Bihari.</p>
+          <p>© 2026 Sarkari Naukri — made by a Bihari.</p>
           <div className="flex gap-4">
             <Link href="/about" className="hover:text-[var(--color-primary)]">About</Link>
             <Link href="/about#disclaimer" className="hover:text-[var(--color-primary)]">Disclaimer</Link>

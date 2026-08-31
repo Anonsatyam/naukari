@@ -53,7 +53,7 @@ function LoginForm() {
             Admin Sign In
           </h1>
           <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-            Bihar Sarkari Naukri — admin panel
+            Sarkari Naukri — admin panel
           </p>
         </div>
 

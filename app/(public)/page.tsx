@@ -4,6 +4,7 @@ import JobCard from "@/components/JobCard";
 import ListItemCard from "@/components/ListItemCard";
 import HotUpdates from "@/components/HotUpdates";
 import RotatingHeroWord from "@/components/RotatingHeroWord";
+import RotatingStateName from "@/components/RotatingStateName";
 import { ButtonLink } from "@/components/Button";
 import { getPublishedJobs, getResults, getAdmitCards, getHotUpdates } from "@/lib/server/data";
 import { isClosingSoon, isRecent } from "@/lib/dateHelpers";
@@ -36,12 +37,12 @@ export default async function Home() {
         <div className="container-page py-14 md:py-20">
           <div className="mx-auto max-w-2xl text-center">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-success-tint)] px-3 py-1 text-xs font-semibold text-[var(--color-success)]">
-              Bihar · verified from official sources
+              Verified from official sources
             </span>
             <h1 className="font-display mt-5 text-3xl font-extrabold leading-tight text-[var(--color-text-primary)] md:text-5xl">
               Sarkari <RotatingHeroWord />
               <br />
-              in Bihar
+              in <RotatingStateName className="text-[var(--color-primary)]" />
             </h1>
             <p className="mt-4 text-base leading-relaxed text-[var(--color-text-secondary)] md:text-lg">
               Find the right job faster with verified details, smart filters, <br />and a clear eligibility check — no login required.
@@ -56,7 +57,7 @@ export default async function Home() {
                 <input
                   type="text"
                   name="q"
-                  placeholder="Search by job title, department or organization"
+                  placeholder="Search Job/Result/Admit card by title, department or organization"
                   className="w-full bg-transparent text-sm text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-muted)]"
                 />
               </div>
@@ -98,7 +99,7 @@ export default async function Home() {
         <section className="container-page py-10">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-xl font-bold text-[var(--color-text-primary)]">
-              Latest Bihar Jobs
+              Latest Jobs
             </h2>
             <Link
               href="/jobs"

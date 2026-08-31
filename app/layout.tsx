@@ -3,11 +3,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Bihar Sarkari Naukri — Bihar Government Jobs, Results & Admit Cards",
-    template: "%s | Bihar Sarkari Naukri",
+    default: "Sarkari Naukri — Government Jobs, Results & Admit Cards",
+    template: "%s | Sarkari Naukri",
   },
   description:
-    "Structured, verified Bihar government job listings, results and admit cards — sourced directly from official notifications. No login required.",
+    "Structured, verified government job listings, results and admit cards — sourced directly from official notifications. No login required.",
 };
 
 export default function RootLayout({

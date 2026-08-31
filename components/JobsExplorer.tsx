@@ -70,7 +70,7 @@ export default function JobsExplorer() {
       <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Jobs" }]} />
       <div className="mb-6">
         <h1 className="font-display text-2xl font-bold text-[var(--color-text-primary)] md:text-3xl">
-          Bihar Government Jobs
+          Government Jobs
         </h1>
         <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
           {loading ? "Searching…" : `${filtered.length} job${filtered.length === 1 ? "" : "s"} found`}

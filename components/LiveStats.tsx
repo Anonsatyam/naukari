@@ -62,7 +62,7 @@ export default function LiveStats({ stats }: { stats: LiveStatItem[] }) {
               </span>
             </span>
             <span className="text-xs text-[var(--color-text-muted)]">
-              Bihar job market at a glance
+              Sarkari job market at a glance
             </span>
           </div>
 

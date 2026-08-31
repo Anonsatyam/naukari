@@ -3,8 +3,8 @@ import EligibilityChecker from "@/components/EligibilityChecker";
 import Breadcrumb from "@/components/Breadcrumb";
 
 export const metadata: Metadata = {
-  title: "Eligibility Checker — Bihar Government Jobs",
-  description: "Check your eligibility for any Bihar government job with a clear, reasoned breakdown.",
+  title: "Eligibility Checker — Government Jobs",
+  description: "Check your eligibility for any government job with a clear, reasoned breakdown.",
 };
 
 export default async function EligibilityCheckerPage({

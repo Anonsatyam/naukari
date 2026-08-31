@@ -5,7 +5,7 @@ import Breadcrumb from "@/components/Breadcrumb";
 
 export const metadata: Metadata = {
   title: "About Us",
-  description: "About Bihar Sarkari Naukri — an independent, structured Bihar government jobs information platform.",
+  description: "About Sarkari Naukri — an independent, structured government jobs information platform.",
 };
 
 export default function AboutPage() {
@@ -14,11 +14,11 @@ export default function AboutPage() {
       <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "About" }]} />
 
       <h1 className="font-display text-2xl font-bold text-[var(--color-text-primary)] md:text-3xl">
-        About Bihar Sarkari Naukri
+        About Sarkari Naukri
       </h1>
       <p className="mt-3 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-        Bihar Sarkari Naukri is an independent information platform built to
-        make government job information in Bihar clear, structured and easy
+        Sarkari Naukri is an independent information platform built to
+        make government job information clear, structured and easy
         to act on — without ads-driven clutter or ambiguous listings.
       </p>
 
@@ -26,7 +26,7 @@ export default function AboutPage() {
         <InfoCard
           icon={<Target size={18} />}
           title="Our Mission"
-          body="Give every Bihar job seeker a clean, mobile-first way to find, understand and check eligibility for government jobs — with zero login required."
+          body="Give every job seeker a clean, mobile-first way to find, understand and check eligibility for government jobs — with zero login required."
         />
         <InfoCard
           icon={<ShieldCheck size={18} />}
@@ -59,8 +59,8 @@ export default function AboutPage() {
           <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
             Spotted an error in a listing, or a notification we missed? Reach
             us at{" "}
-            <a href="mailto:hello@biharsarkarinaukri.example" className="font-medium text-[var(--color-primary)]">
-              hello@biharsarkarinaukri.example
+            <a href="mailto:hello@sarkarinaukri.example" className="font-medium text-[var(--color-primary)]">
+              hello@sarkarinaukri.example
             </a>
             .
           </p>
