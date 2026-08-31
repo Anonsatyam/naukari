@@ -272,5 +272,23 @@
     "ageAsOn": "Age reckoned as on {date}",
     "stepListFallback": "See the official notification for details.",
     "open": "Open"
+  },
+  "aboutPage": {
+    "breadcrumb": "About",
+    "heading": "About {brand}",
+    "intro": "{brand} is an independent information platform built to make government job information clear, structured and easy to act on — without ads-driven clutter or ambiguous listings.",
+    "missionTitle": "Our Mission",
+    "missionBody": "Give every job seeker a clean, mobile-first way to find, understand and check eligibility for government jobs — with zero login required.",
+    "verifyTitle": "How We Verify",
+    "verifyBody": "Every listing is drafted from an official recruitment notification and reviewed by a human editor before publishing. The source link is always shown.",
+    "disclaimerTitle": "Disclaimer",
+    "disclaimerBody": "This website is an independent, privately run platform and is not affiliated with, endorsed by, or an official website of the Government of Bihar or any government department. Job information is compiled from publicly available official notifications for informational purposes only. Applicants must always verify details on the official notification and apply only through the official application link provided on each listing before taking any action or making any payment.",
+    "contactTitle": "Contact",
+    "contactBody": "Spotted an error in a listing, or a notification we missed? Reach us at"
+  },
+  "documentViewerPage": {
+    "defaultHeading": "Document",
+    "download": "Download",
+    "openInNewTab": "Open in new tab"
   }
 }

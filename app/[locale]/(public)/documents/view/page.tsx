@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Download, ExternalLink, FileText } from "lucide-react";
 import { isOwnDocumentUrl } from "@/lib/utils";
 import Card from "@/components/Card";
@@ -18,12 +19,17 @@ export default async function DocumentViewPage({
   const { src, title } = await searchParams;
   if (!src || !isOwnDocumentUrl(src)) notFound();
 
+  const t = await getTranslations("documentViewerPage");
+  const tCommon = await getTranslations("common");
+  const locale = await getLocale();
+  const localePath = (path: string) => (locale === "en" ? path : `/${locale}${path}`);
+
   const downloadUrl = `${src}${src.includes("?") ? "&" : "?"}download`;
-  const heading = title?.trim() || "Document";
+  const heading = title?.trim() || t("defaultHeading");
 
   return (
     <div className="container-page py-8">
-      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: heading }]} />
+      <Breadcrumb items={[{ label: tCommon("home"), href: localePath("/") }, { label: heading }]} />
 
       <Card padding="p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -33,10 +39,10 @@ export default async function DocumentViewPage({
           </p>
           <div className="flex flex-wrap gap-2">
             <ButtonLink href={downloadUrl}>
-              <Download size={14} /> Download
+              <Download size={14} /> {t("download")}
             </ButtonLink>
             <ButtonLink href={src} target="_blank" variant="secondary">
-              Open in new tab <ExternalLink size={14} />
+              {t("openInNewTab")} <ExternalLink size={14} />
             </ButtonLink>
           </div>
         </div>
