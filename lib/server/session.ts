@@ -1,15 +1,7 @@
-// Minimal signed-cookie session — no auth library dependency needed for a
-// single admin role. Uses Web Crypto (crypto.subtle) rather than Node's
-// `crypto` module so this works identically in Next.js Middleware (Edge
-// runtime) and in API routes (Node runtime).
-//
-// Phase 4 note: this whole file gets replaced by Supabase Auth. Nothing
-// that imports SESSION_COOKIE_NAME or calls these two functions should need
-// to change when that happens — only this file's internals do.
 
 export const SESSION_COOKIE_NAME = "admin_session";
 
-const SESSION_TTL_MS = 1000 * 60 * 60 * 8; // 8 hours
+const SESSION_TTL_MS = 1000 * 60 * 60 * 8;
 
 function getSecret(): string {
   const secret = process.env.SESSION_SECRET;

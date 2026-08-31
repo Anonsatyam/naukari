@@ -33,11 +33,6 @@ export function canvasToBlob(
   });
 }
 
-/**
- * Repeatedly re-encodes a canvas as JPEG at decreasing quality until the
- * result fits at or under maxKB (best effort — won't force it under any cost).
- * Returns the smallest-quality-search result found within a handful of tries.
- */
 export async function compressToTargetSize(
   canvas: HTMLCanvasElement,
   maxKB: number
@@ -54,15 +49,14 @@ export async function compressToTargetSize(
 
     if (blob.size <= maxBytes) {
       best = { blob, quality: mid };
-      lo = mid; // try to push quality up while staying under the limit
+      lo = mid;
     } else {
-      hi = mid; // too big, reduce quality
+      hi = mid;
     }
   }
 
   if (best) return best;
 
-  // Even at the lowest quality tried, still too big — return the smallest we found.
   const fallback = await canvasToBlob(canvas, "image/jpeg", 0.05);
   return { blob: fallback, quality: 0.05 };
 }

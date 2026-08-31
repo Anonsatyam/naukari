@@ -24,11 +24,6 @@ export default async function AdminDashboardPage() {
         Overview of bot activity and job publishing.
       </p>
 
-      {/* One row on desktop — the two stat cards plus Last Bot Run
-          (given two grid columns' worth of width, since it carries a
-          lot more: a timestamp, four counts, and the trigger button)
-          — wrapping to stacked cards only once the viewport is too
-          narrow to fit them side by side. */}
       <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => {
           const Icon = s.icon;

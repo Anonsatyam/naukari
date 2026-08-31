@@ -13,13 +13,6 @@ export interface PlaywrightFetchResult {
 
 let sharedBrowser: Browser | null = null;
 
-/**
- * One shared Chromium instance for the whole bot run, reused across
- * every Playwright-fetched page rather than launching a fresh browser
- * per page — that would be far slower and heavier than it needs to be.
- * Lazily launched: if no source in this run needs Playwright, this
- * never gets called at all.
- */
 async function getSharedBrowser(): Promise<Browser> {
   if (!sharedBrowser) {
     sharedBrowser = await chromium.launch({
@@ -37,22 +30,10 @@ export async function closeSharedBrowser(): Promise<void> {
   }
 }
 
-/**
- * Fetches a page using a real headless browser instead of a raw HTTP
- * request. This exists specifically for the hypothesis that certain
- * sources' redirect loops are caused by cookie/session handling a
- * plain HTTP client doesn't do — see the "shouldUsePlaywright" check
- * in run.ts for exactly which sources this applies to. It's
- * meaningfully slower and heavier than the normal fetch path, so it's
- * deliberately not the default for every source.
- */
 export async function fetchPageWithPlaywright(url: string): Promise<PlaywrightFetchResult> {
   const browser = await getSharedBrowser();
   const context = await browser.newContext({
     userAgent: USER_AGENT,
-    // Same certificate tolerance as fetchInsecure.ts, and for the same
-    // reason — several of these government sites have known broken
-    // TLS chains. See the comment there for the full reasoning.
     ignoreHTTPSErrors: true,
   });
   const page = await context.newPage();
@@ -68,9 +49,6 @@ export async function fetchPageWithPlaywright(url: string): Promise<PlaywrightFe
       throw new Error("No response received");
     }
 
-    // Give any post-load redirects/scripts a moment to settle, but
-    // don't fail the whole fetch if the page never goes fully idle —
-    // some sites keep background polling running indefinitely.
     await page.waitForLoadState("networkidle", { timeout: 8000 }).catch(() => {});
 
     return {

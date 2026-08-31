@@ -4,8 +4,8 @@ import { useCallback, useRef, useState } from "react";
 import { clamp } from "./image-tools";
 
 export interface NormalizedPosition {
-  x: number; // 0–1 within the target element
-  y: number; // 0–1 within the target element
+  x: number;
+  y: number;
 }
 
 export function useDragPosition(initial: NormalizedPosition) {

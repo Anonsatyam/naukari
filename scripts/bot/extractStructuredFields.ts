@@ -3,16 +3,6 @@ export interface ExtractedStructuredFields {
   applicationFee?: { general?: number; reserved?: number };
   totalVacancies?: number;
 
-  // --- Added for HTML-page sources (e.g. abc.com), where the
-  // structured fields live directly in the post's own HTML tables
-  // rather than in a linked PDF. Kept as raw joined strings/arrays
-  // rather than trying to force them through the PDF-oriented
-  // {label,date} / {general,reserved} shapes above, since these pages
-  // present dates and fees per-category in ways that don't collapse
-  // cleanly into a single normalized date or two numbers (e.g. STET's
-  // per-paper, per-category fee table). Both sets of fields can be
-  // present at once — they aren't mutually exclusive with the
-  // PDF-derived fields above.
   importantDatesText?: string;
   applicationFeeText?: string;
   ageLimit?: string;
@@ -27,44 +17,13 @@ export interface ExtractedStructuredFields {
   documentsRequired?: string;
   examPattern?: string;
 
-  // Raw reference text for sections with no single normalized shape —
-  // an FAQ's question/answer pairing and a closing summary paragraph
-  // vary too much page to page to parse reliably, so these are surfaced
-  // as-is for the admin to transcribe into the review page's FAQs /
-  // Conclusion inputs, the same "read-only reference" role ageLimit /
-  // postDetails / eligibility already play there.
   faqText?: string[];
   conclusionText?: string;
 
-  // Every section on the source page whose heading didn't match one of
-  // the specific fields above — captured with the source's own heading
-  // text so it can be rendered as its own section on the public page,
-  // titled exactly what the source itself called it, without needing a
-  // dedicated field (and a matching code change) for every new heading
-  // a source happens to use. See extractHtmlNotificationFields.ts's
-  // genericSections for the full reasoning.
   genericSections?: { heading: string; content: string }[];
 
-  // The source's own top-to-bottom section order — see
-  // extractHtmlNotificationFields.ts's ParsedSections.sectionOrder for
-  // the full reasoning. Entries are either a known field name above
-  // (e.g. "applicationFeeRaw") or "generic:<index>" into
-  // genericSections. Only ever produced by the HTML-page extractor
-  // (PDF-sourced drafts have no comparable notion of "section order"
-  // to preserve, since a PDF's own field extraction isn't heading-
-  // driven the way this is).
   sectionOrder?: string[];
 
-  // Tier 2 discrepancy safety net: a cheap signal for whether
-  // extraction likely left something out of this draft, computed once
-  // at scrape time (see ParsedSections.headingStats) so it's available
-  // on the drafts list and single-draft review page regardless of
-  // whether the draft goes through single-draft review or bulk-approve
-  // — the FAQ/Conclusion workflow gap fixed earlier this session was
-  // exactly this mistake: a signal that only reached the admin if they
-  // happened to open the one page bulk-approve skips entirely. Only
-  // present for HTML-page extraction (a PDF-sourced draft has no
-  // comparable heading structure to count).
   verification?: { sourceHeadingCount: number; capturedHeadingCount: number; possibleGap: boolean };
 }
 
@@ -87,9 +46,6 @@ function normalizeDate(day: string, monthRaw: string, year: string): string | nu
   return `${y}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
-// A date written as digits/digits/digits, OR digit(s)-month-name-year,
-// OR month-name digit(s), year — covers the handful of formats these
-// notifications actually use in practice.
 const DATE_PATTERN =
   /(\d{1,2})\s*[/\-.\s]\s*([A-Za-z]{3,9}|\d{1,2})\s*[/\-.,\s]+\s*(\d{2,4})/;
 
@@ -115,14 +71,12 @@ function findDatesNearLabels(text: string): { label: string; date: string }[] {
       if (iso && !results.some((r) => r.label === label)) {
         results.push({ label, date: iso });
       }
-      break; // one date per label — first match in the document wins
+      break;
     }
   }
   return results;
 }
 
-// {1,5} not {2,5} — same fix as the HTML-path extractor: a ₹0/free-of-cost
-// row is a single digit and was silently unmatched at a 2-digit minimum.
 const FEE_AMOUNT = /(?:rs\.?|₹|inr)\s*[.:]?\s*(\d{1,5})/i;
 
 function findApplicationFee(text: string): { general?: number; reserved?: number } {
@@ -148,10 +102,6 @@ const VACANCY_PATTERN_A = /(\d{1,6})[ \t]*(?:total[ \t]+)?(?:vacancies|vacancy|p
 const VACANCY_PATTERN_B = /(?:total[ \t]+)?(?:vacancies|vacancy|posts?)[ \t]*[:\-]?[ \t]*(\d{1,6})/i;
 
 function findTotalVacancies(text: string): number | undefined {
-  // Matched per-line, same as dates and fees above — a bare \s* here
-  // would happily bridge across a blank line and grab a nearby date's
-  // year instead of the actual vacancy count, which is exactly the bug
-  // this line-by-line approach exists to prevent.
   const lines = text.split(/\r?\n/);
   for (const line of lines) {
     const b = line.match(VACANCY_PATTERN_B);
@@ -164,17 +114,6 @@ function findTotalVacancies(text: string): number | undefined {
   return undefined;
 }
 
-/**
- * Rule-based extraction of structured fields from notification text —
- * whatever pdf-parse pulled out of the linked PDF, or the fetched
- * HTML page as a fallback. This is deliberately simple pattern
- * matching, not real document understanding: it does reasonably well
- * on clean, text-based, standard-phrasing notifications, and will
- * miss or get things wrong on scanned PDFs, unusual phrasing, or
- * complex multi-row tables (e.g. district-wise vacancy breakdowns).
- * That's an inherent limit of a free, rule-based approach — not a bug
- * to chase further without changing the underlying approach.
- */
 export function extractStructuredFields(text: string): ExtractedStructuredFields {
   if (!text || text.trim().length === 0) return {};
 

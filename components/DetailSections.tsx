@@ -1,24 +1,9 @@
 import { parsePipeBlocks, TOTAL_ROW_LABEL } from "@/lib/pipeTables";
 import Card from "@/components/Card";
 
-// Shared building blocks for the Job / Result / Admit Card detail
-// pages — a color-coded collapsible-feeling "Section" card, a numbered
-// how-to StepList, and a PipeTableOrText renderer for the bot's raw
-// pipe-encoded table text. Originally built for the job details page
-// alone; pulled out here so Result and Admit Card detail pages render
-// their own rich sections (Important Dates, How to Check Result /
-// How to Download Admit Card, Important Links, FAQs, Conclusion) the
-// exact same way instead of re-implementing this from scratch.
 
 export type Accent = "blue" | "green" | "purple" | "orange" | "teal" | "amber" | "pink" | "neutral";
 
-// Each section on a detail page gets a color-coded icon chip so a page
-// carrying several sections stays visually scannable — colors pull
-// from the same CSS-variable palette (globals.css) the rest of the
-// site already uses (the semantic tones directly, four new --color-
-// accent-* tones for the rest). Sections don't get a colored left-edge
-// border on top of that — just the plain card border every other card
-// on the site uses.
 const ACCENTS: Record<Accent, { iconBg: string; iconText: string }> = {
   blue: {
     iconBg: "bg-[var(--color-primary-tint)]",
@@ -82,9 +67,6 @@ export function Section({
 }
 
 export function StepList({ items, fallback }: { items: string[]; fallback?: string }) {
-  // Belt-and-suspenders: approveDraft validates this shape before
-  // insert, but this guards any record already in the database from
-  // before that fix, and any other path that might ever write here.
   const safeItems = Array.isArray(items) ? items : [];
   if (safeItems.length === 0) {
     return (
@@ -107,16 +89,6 @@ export function StepList({ items, fallback }: { items: string[]; fallback?: stri
   );
 }
 
-// Important Dates / Exam Pattern / Documents Required / the raw-text
-// fallbacks all come through as the pipe-encoded, TABLE_SEP-bounded
-// blocks lib/pipeTables.ts's parsePipeBlocks understands (see
-// extractHtmlNotificationFields.ts) — rendered here as a real table or
-// a real bullet list per block, in source order, matching whichever
-// shape that block actually is (a source routinely mixes the two under
-// one heading — a few sentences of plain criteria followed by a
-// genuine sub-table); falls back to plain text only when nothing in
-// the pipe format could be recognized at all (e.g. a hand-edited
-// free-text value), so this never hides content it can't parse.
 export function PipeTableOrText({ text }: { text: string }) {
   const blocks = parsePipeBlocks(text);
   if (blocks.length === 0) {
@@ -155,15 +127,6 @@ export function PipeTableOrText({ text }: { text: string }) {
                   </thead>
                   <tbody>
                     {t.body.map((row, r) => {
-                      // A table's own closing "Total"/"Grand Total" row
-                      // (कुल योग, कुल पद, ...) is bolded — same treatment
-                      // the Post/Vacancy Details section's own structured
-                      // grid already gives its Total row, extended here to
-                      // every raw table this renders (Important Dates,
-                      // Application Fee, Age Limit, the full Vacancy
-                      // table, Selection Process, ...) since a source's
-                      // total row is just as much its own thing wherever
-                      // it appears.
                       const isTotalRow = r === t.body.length - 1 && TOTAL_ROW_LABEL.test(row[0] ?? "");
                       return (
                         <tr key={r} className={isTotalRow ? "bg-[var(--color-background)] font-semibold" : undefined}>

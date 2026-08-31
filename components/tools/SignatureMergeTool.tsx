@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Download } from "lucide-react";
 import ImageDropzone from "./ImageDropzone";
 import Card from "@/components/Card";
@@ -12,7 +12,6 @@ import { loadImageFromFile, canvasToBlob, downloadBlob, LoadedImage } from "@/li
 const PREVIEW_MAX_WIDTH = 480;
 const WHITE_THRESHOLD = 235;
 
-/** Returns a canvas with near-white pixels made transparent. */
 function makeWhiteTransparent(image: HTMLImageElement, width: number, height: number): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -35,7 +34,7 @@ export default function SignatureMergeTool() {
   const [photo, setPhoto] = useState<LoadedImage | null>(null);
   const [signature, setSignature] = useState<LoadedImage | null>(null);
   const [removeWhite, setRemoveWhite] = useState(true);
-  const [sizePct, setSizePct] = useState(0.3); // signature width as a fraction of photo width
+  const [sizePct, setSizePct] = useState(0.3);
 
   const { targetRef, position, setPosition, onPointerDown, onPointerMove, onPointerUp } =
     useDragPosition({ x: 0.75, y: 0.85 });
@@ -50,25 +49,28 @@ export default function SignatureMergeTool() {
     setPosition({ x: 0.75, y: 0.85 });
   };
 
-  const drawComposite = (
-    ctx: CanvasRenderingContext2D,
-    canvasWidth: number,
-    canvasHeight: number,
-    photoImg: HTMLImageElement,
-    sigSource: CanvasImageSource,
-    sigNaturalWidth: number,
-    sigNaturalHeight: number
-  ) => {
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-    ctx.drawImage(photoImg, 0, 0, canvasWidth, canvasHeight);
+  const drawComposite = useCallback(
+    (
+      ctx: CanvasRenderingContext2D,
+      canvasWidth: number,
+      canvasHeight: number,
+      photoImg: HTMLImageElement,
+      sigSource: CanvasImageSource,
+      sigNaturalWidth: number,
+      sigNaturalHeight: number
+    ) => {
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+      ctx.drawImage(photoImg, 0, 0, canvasWidth, canvasHeight);
 
-    const sigWidth = canvasWidth * sizePct;
-    const sigHeight = sigWidth * (sigNaturalHeight / sigNaturalWidth);
-    const x = Math.min(Math.max(position.x * canvasWidth - sigWidth / 2, 0), canvasWidth - sigWidth);
-    const y = Math.min(Math.max(position.y * canvasHeight - sigHeight / 2, 0), canvasHeight - sigHeight);
+      const sigWidth = canvasWidth * sizePct;
+      const sigHeight = sigWidth * (sigNaturalHeight / sigNaturalWidth);
+      const x = Math.min(Math.max(position.x * canvasWidth - sigWidth / 2, 0), canvasWidth - sigWidth);
+      const y = Math.min(Math.max(position.y * canvasHeight - sigHeight / 2, 0), canvasHeight - sigHeight);
 
-    ctx.drawImage(sigSource, x, y, sigWidth, sigHeight);
-  };
+      ctx.drawImage(sigSource, x, y, sigWidth, sigHeight);
+    },
+    [sizePct, position]
+  );
 
   useEffect(() => {
     const canvas = targetRef.current;
@@ -89,8 +91,7 @@ export default function SignatureMergeTool() {
       : signature.image;
 
     drawComposite(ctx, previewSize.width, previewSize.height, photo.image, sigSource, signature.width, signature.height);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [photo, signature, previewSize, removeWhite, sizePct, position, targetRef]);
+  }, [photo, signature, previewSize, removeWhite, targetRef, drawComposite]);
 
   const handleDownload = async () => {
     if (!photo || !signature) return;

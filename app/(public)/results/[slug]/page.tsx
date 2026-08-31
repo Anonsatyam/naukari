@@ -24,13 +24,6 @@ import Breadcrumb from "@/components/Breadcrumb";
 import { KeyValueRow } from "@/components/KeyValueRow";
 import SourceVerified from "@/components/SourceVerified";
 
-// The page's own fixed order — used verbatim for any record with no
-// sectionOrder at all (published before this feature existed), and as
-// the fallback tail for anything a record's own sectionOrder doesn't
-// mention. "cutoffText" has no matching raw extraction key (it's never
-// actually populated by extraction today) — kept here purely so it
-// still renders at this fixed spot if it's ever set some other way.
-// See lib/sectionOrder.ts's resolveSectionOrder.
 const RESULT_DEFAULT_ORDER = [
   "importantDatesRaw",
   "howToApplyRaw",
@@ -74,22 +67,7 @@ export default async function ResultDetailPage({
   const result = await getResultBySlug(slug);
   if (!result) notFound();
 
-  // The source's own Important Links table already has its own
-  // "Download Result" (or equivalent) row — showing that verbatim
-  // AND a separately-labeled "View Official Result" button synthesized
-  // from officialLink duplicated the same destination under two
-  // different names, neither of which matched what biharjob.co.in
-  // itself shows. Once the source publishes a real links list, that
-  // list IS the sidebar — same labels, same set, same order — with no
-  // synthesized button layered on top of it.
   const sourceLinks = (result.importantLinks ?? []).filter((link) => !isSourceSiteUrl(link.url));
-  // The synthesized "View Official Result" button is now only a
-  // fallback for the rarer case where extraction found no Important
-  // Links list at all — still needed so a page never has literally
-  // zero way to reach the result. See the job page's identical
-  // comment on why officialLink itself can still be the source
-  // article's own URL in the worst case (extraction found no external
-  // link anywhere), which is hidden rather than shown as misleading.
   const hasRealOfficialLink = !isSourceSiteUrl(result.officialLink);
 
   const additionalSections = result.additionalSections ?? [];
@@ -115,15 +93,8 @@ export default async function ResultDetailPage({
       </Card>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
-        {/* Main content */}
         <div className="order-2 min-w-0 space-y-6 lg:order-1">
           {(() => {
-            // Every "regular" section, keyed by the same raw field name
-            // extraction records in sectionOrder — rendered by walking
-            // orderedSectionKeys (the source's own order, with a fixed
-            // fallback tail) instead of this fixed list's own order.
-            // FAQs/Conclusion are deliberately NOT here — always pinned
-            // to the very end below, regardless of source order.
             const sectionRenderers: Record<string, React.ReactNode> = {
               importantDatesRaw: (
                 <Section title="Important Dates" icon={<Calendar size={16} />} accent="blue">
@@ -147,11 +118,6 @@ export default async function ResultDetailPage({
                   <PipeTableOrText text={result.cutoffText} />
                 </Section>
               ) : null,
-              // Same sections a Job page shows — a source frequently
-              // bundles a full recruitment notification (fee, age limit,
-              // vacancy, selection process, exam pattern, documents) into
-              // what's nominally a "Result" page; these self-hide when
-              // this particular result genuinely has none of it.
               applicationFeeRaw: <ApplicationFeeSection fee={result.applicationFee} feeText={result.applicationFeeText} />,
               ageLimitRaw: (
                 <AgeLimitSection
@@ -181,11 +147,6 @@ export default async function ResultDetailPage({
             return orderedSectionKeys.map((key) => {
               const genericIdx = parseGenericKey(key);
               if (genericIdx !== null) {
-                // Every source section that doesn't map to one of the
-                // specific ones above — rendered generically, titled
-                // with the source's own heading text, interleaved at
-                // exactly the position the source itself used, rather
-                // than always lumped together at one fixed spot.
                 const section = additionalSections[genericIdx];
                 if (!section) return null;
                 return (
@@ -220,7 +181,6 @@ export default async function ResultDetailPage({
           )}
         </div>
 
-        {/* Sidebar */}
         <aside className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-24 lg:h-fit">
           <Card>
             <p className="mb-3 flex items-center gap-2 text-base font-bold text-[var(--color-text-primary)]">

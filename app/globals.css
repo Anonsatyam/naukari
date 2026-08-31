@@ -1,23 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  /* Brand */
   --color-primary: #3c44c2;
   --color-primary-hover: #2f37a3;
   --color-primary-tint: #eeeffb;
   --color-primary-tint-2: #dcdef7;
 
-  /* Text */
   --color-text-primary: #181b25;
   --color-text-secondary: #5e6475;
   --color-text-muted: #9298a8;
 
-  /* Surfaces */
   --color-background: #f7f8fa;
   --color-surface: #ffffff;
   --color-border: #e6e8ee;
 
-  /* Semantic */
   --color-success: #157a45;
   --color-success-tint: #e6f4ec;
   --color-warning: #b25e09;
@@ -25,11 +21,6 @@
   --color-danger: #c22b3c;
   --color-danger-tint: #fbe9eb;
 
-  /* Section accents — used to give distinct info-dense pages (like the
-     job details page) a scannable, color-coded structure without
-     introducing a whole second brand palette. Each pairs with a
-     matching -tint for icon/badge backgrounds, same convention as the
-     semantic colors above. */
   --color-accent-purple: #7c3aed;
   --color-accent-purple-tint: #f3ecfd;
   --color-accent-orange: #c2540e;

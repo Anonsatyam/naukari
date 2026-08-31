@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, XCircle, Info, ShieldQuestion } from "lucide-react";
 import { qualifications, qualificationRank, classifyQualification } from "@/lib/taxonomy";
 import { Job } from "@/lib/types";
@@ -21,16 +21,6 @@ function evaluate(
 ): CheckResult[] {
   const results: CheckResult[] = [];
 
-  // Education — job.qualification is a taxonomy label the vast
-  // majority of the time (extraction now classifies it from the
-  // notification's own Eligibility text), but a bot draft can still
-  // land on something else (an admin-edited free-text value, or the
-  // "As per notification" fallback when nothing recognizable was
-  // found anywhere). classifyQualification catches the free-text case;
-  // when even that comes back empty, the requirement is genuinely
-  // unknown — reported as "info" rather than silently auto-passing
-  // every candidate against a requirement the checker never actually
-  // identified.
   const requiredLabel = qualificationRank[job.qualification] ? job.qualification : classifyQualification(job.qualification);
   const requiredRank = requiredLabel ? qualificationRank[requiredLabel] : undefined;
   const userRank = qualificationRank[input.qualification] ?? 1;
@@ -51,7 +41,6 @@ function evaluate(
     });
   }
 
-  // Age
   const ageOk = input.age >= job.minAge && input.age <= job.maxAge;
   results.push({
     label: "Age",
@@ -63,7 +52,6 @@ function evaluate(
       : `Minimum age is ${job.minAge}.`,
   });
 
-  // Rule-specific checks
   job.eligibilityRules.forEach((rule) => {
     if (rule.label === "B.Ed Requirement") {
       results.push({
@@ -102,18 +90,18 @@ export default function EligibilityChecker({ initialJobId }: { initialJobId?: st
   const [hasBEd, setHasBEd] = useState(false);
   const [isDomicile, setIsDomicile] = useState(true);
   const [submitted, setSubmitted] = useState(false);
+  const initialJobIdRef = useRef(initialJobId);
 
   useEffect(() => {
     fetch("/api/jobs")
       .then((res) => res.json())
       .then((data: { jobs: Job[] }) => {
         setJobs(data.jobs);
-        if (!initialJobId && data.jobs.length > 0) {
+        if (!initialJobIdRef.current && data.jobs.length > 0) {
           setJobId(data.jobs[0].id);
         }
       })
       .finally(() => setLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const job = jobs.find((j) => j.id === jobId) ?? jobs[0];
@@ -145,7 +133,6 @@ export default function EligibilityChecker({ initialJobId }: { initialJobId?: st
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[380px_1fr]">
-      {/* Form */}
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -224,7 +211,6 @@ export default function EligibilityChecker({ initialJobId }: { initialJobId?: st
         </Card>
       </form>
 
-      {/* Result */}
       <div>
         {!submitted ? (
           <Card

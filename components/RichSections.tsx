@@ -4,18 +4,6 @@ import { KeyValueRow } from "@/components/KeyValueRow";
 import { formatCurrency } from "@/lib/utils";
 import type { VacancyBreakdown, AgeLimitRow, AgeRelaxationRow } from "@/lib/types";
 
-// The Application Fee / Age Limit / Vacancy Details / Selection Process /
-// Exam Pattern / Documents Required sections, factored out of the Job
-// detail page so Result and Admit Card pages render the exact same
-// fields the exact same way instead of each re-implementing (and
-// silently drifting out of parity with) their own version. A source
-// routinely bundles a full recruitment notification's worth of these
-// into what's nominally a "Result" or "Admit Card" page — see
-// lib/types.ts's ResultItem/AdmitCardItem comments for why those two
-// carry the same fields Job does. Unlike the Job page (which always
-// shows these six sections with a placeholder), every section here is
-// self-hiding (returns null) when the entity genuinely has none of
-// that data, since a plain result/admit-card announcement often won't.
 
 export function ApplicationFeeSection({
   fee,

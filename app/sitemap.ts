@@ -17,9 +17,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: new Date(),
   }));
 
-  // If the database is briefly unreachable while the sitemap is being
-  // generated, fall back to just the static routes rather than failing
-  // the whole request.
   let jobs: Awaited<ReturnType<typeof getPublishedJobs>> = [];
   let results: Awaited<ReturnType<typeof getResults>> = [];
   let admitCards: Awaited<ReturnType<typeof getAdmitCards>> = [];

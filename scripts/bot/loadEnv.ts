@@ -1,14 +1,6 @@
 import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
 
-/**
- * Loads .env.local into process.env, if the file exists.
- *
- * Next.js auto-loads .env.local for `next dev`/`next start`, but this
- * bot script runs standalone via `tsx`, which doesn't do that on its
- * own. In CI (GitHub Actions), env vars are already set via repo
- * secrets, so there's no .env.local file and this is a harmless no-op.
- */
 export function loadEnvLocal() {
   const envPath = resolve(process.cwd(), ".env.local");
   if (!existsSync(envPath)) return;

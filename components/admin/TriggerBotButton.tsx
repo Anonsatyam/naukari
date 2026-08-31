@@ -29,12 +29,6 @@ export default function TriggerBotButton() {
 
   return (
     <div>
-      {/* A plain <button>, not the shared Button component — its
-          variant classes (bg/border/text) would sit alongside these
-          same-property overrides in one class list, and which one
-          actually wins a same-property Tailwind conflict isn't
-          guaranteed by source order. Only declaring bg/text once each
-          here avoids that entirely. */}
       <button
         type="button"
         onClick={trigger}

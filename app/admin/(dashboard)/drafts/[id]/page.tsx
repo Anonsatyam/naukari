@@ -39,32 +39,13 @@ interface SectionDraft {
   content: string;
 }
 
-// parseFaqLines now lives in lib/pipeTables.ts, shared with
-// approveDraft's own default (see lib/server/data.ts) — same parse
-// either way, so a bulk-approved draft's FAQs look the same as one an
-// admin reviewed by hand instead of one big unsplit paragraph.
 
-// Splits a bot-extracted "cell | cell || row || row" pipe table (see
-// tableToPairs() in extractHtmlNotificationFields.ts) into one readable
-// line per row — used to seed the Eligibility Details textarea with a
-// starting draft from whatever the eligibility table/list actually
-// contained, same idea as parseSelectionSteps() in lib/server/data.ts.
-// Splits on TABLE_SEP first so a section spanning more than one source
-// table (or table + trailing bullet list) still yields one line per
-// row/bullet across all of them, in order.
 function pipeRowsToLines(text: string): string[] {
   return text.split(TABLE_SEP).flatMap((chunk) => {
     const rows = chunk.split(" || ").map((row) => row.trim()).filter(Boolean);
     if (!chunk.includes(" | ")) {
-      // Not a table — likely already plain sentences/bullets (e.g. a
-      // <ul> eligibility list); each row IS the line, verbatim.
       return rows;
     }
-    // A real table's first row is its column header (labels, not a
-    // criterion of its own) — skipping it here avoids seeding the
-    // textarea with a bogus "Parameter: Details"-style bullet made out
-    // of the header cells themselves, keeping only the actual data
-    // rows as one "label: value" line each.
     return rows
       .slice(1)
       .map((row) =>
@@ -78,17 +59,6 @@ function pipeRowsToLines(text: string): string[] {
   });
 }
 
-// The bot's guessed apply/notification/website links (guessLink() in
-// extractHtmlNotificationFields.ts) plus a second, independent keyword
-// pass over importantLinks — same two-keyword-list approach
-// approveDraft's own findLinkByKeywords uses server-side (duplicated
-// here rather than imported, since that lives in a server-only module
-// this "use client" page can't import). Used only to PRE-FILL the
-// Official Apply/Notification/Link fields below with the best guess
-// available, so an admin sees exactly what would otherwise be silently
-// chosen and can correct it before publishing — a wrong-URL bug from
-// this exact gap (a guess made only at publish time, never shown or
-// editable beforehand) has bitten this site before.
 const APPLY_LINK_KEYWORDS = ["apply", "online", "registration", "आवेदन", "रजिस्ट्रेशन"];
 const NOTIFICATION_LINK_KEYWORDS = ["notification", "notice", "advertisement", "pdf", "नोटिफिकेशन", "अधिसूचना"];
 
@@ -117,8 +87,6 @@ const TYPE_LABELS: Record<BotDraft["draftType"], string> = {
   admit_card: "Admit Card",
 };
 
-// Matches exactly what the bot's PDF extraction targets — see
-// scripts/bot/extractStructuredFields.ts
 const JOB_DATE_FIELDS: { key: string; label: string }[] = [
   { key: "dateApplicationStart", label: "Application Start" },
   { key: "dateApplicationEnd", label: "Application End" },
@@ -169,11 +137,6 @@ function PipeTable({ text }: { text?: string }) {
   );
 }
 
-// A raw pipe-encoded table/list, editable as plain text, with a live
-// rendered preview underneath so the admin can see exactly what will
-// appear on the public page before publishing — rather than the old
-// read-only "Additional Notification Details" panel, which showed the
-// same content but gave no way to fix a bad row or a mis-split cell.
 function RawTableField({
   label,
   value,
@@ -200,11 +163,6 @@ function RawTableField({
   );
 }
 
-// One generic add/remove list editor for every "N-field object" list on
-// this page — FAQs, grade-wise age limits, age relaxation, important
-// links, and additional/generic sections all fit this same shape
-// (2-3 plain-text fields per row), so this one component replaces what
-// used to be several near-identical bespoke blocks.
 function RowsEditor<T extends Record<string, string>>({
   rows,
   setRows,
@@ -274,11 +232,6 @@ export default function DraftReviewPage({
   const [loading, setLoading] = useState(true);
   const [notFoundState, setNotFoundState] = useState(false);
 
-  // One generic field bag for every plain scalar input — text, number,
-  // date, and the raw pipe-encoded table/list fields (which are still
-  // just strings) all live here; only the fields that need their own
-  // add/remove row UI or a newline-per-item textarea get dedicated
-  // state below.
   const [fields, setFields] = useState<Record<string, string>>({});
   const setField = (key: string) => (value: string) => setFields((prev) => ({ ...prev, [key]: value }));
 
@@ -304,12 +257,6 @@ export default function DraftReviewPage({
         return res.json();
       })
       .then((data: { draft: BotDraft }) => {
-        // Decode once, here, before the draft ever touches component
-        // state — drafts extracted before the bot's entity-decoding fix
-        // shipped still have raw codes (&#8220; etc) baked into their
-        // stored extractedFields. Cleaning at this single entry point
-        // means every field below (and the payload sent on approve) is
-        // clean without needing to remember to decode at each read site.
         const cleanedDraft: BotDraft = {
           ...data.draft,
           extractedFields: deepDecodeEntities(data.draft.extractedFields) as BotDraft["extractedFields"],
@@ -321,11 +268,6 @@ export default function DraftReviewPage({
 
         const fee = (ex.applicationFee ?? {}) as { general?: number; reserved?: number; note?: string };
 
-        // Fields shared by all three draft types — the same raw
-        // pipe-table buckets the extractor produces regardless of
-        // draft type (see extractHtmlNotificationFields.ts's
-        // HEADING_FIELD_MAP), so every one of these is pre-filled and
-        // editable for Job, Result, and Admit Card alike.
         const common: Record<string, string> = {
           title: String(ex.title ?? data.draft.jobTitle),
           organization: String(ex.organization ?? data.draft.organization),
@@ -366,13 +308,6 @@ export default function DraftReviewPage({
             if (found) dateFields[key] = found.date;
           }
 
-          // Neither of these has its own extracted field or form — the
-          // bot never derives one number from a whole Age Limit table
-          // or a Pay Scale sentence on its own — so pre-fill from the
-          // same best-effort derivation the approve step falls back to
-          // server-side (deriveAgeRange/deriveSalaryRange), letting the
-          // admin see and correct the guess before publishing rather
-          // than only after.
           const derivedAge = deriveAgeRange(ex.ageLimit);
           const derivedSalary = deriveSalaryRange(ex.postDetails);
 
@@ -401,12 +336,6 @@ export default function DraftReviewPage({
             ...dateFields,
           };
 
-          // Seed a starting draft from whatever the source page's own
-          // Eligibility section contained — the admin edits/corrects
-          // from here rather than typing every bullet from scratch.
-          // Job-only: this curated-bullets tier exists alongside the
-          // shared raw "eligibility" textarea because Job also has its
-          // own eligibility-checker feature that reads from it.
           if (typeof ex.eligibility === "string" && ex.eligibility) {
             setEligibilityDetails(pipeRowsToLines(ex.eligibility).join("\n"));
           }
@@ -414,9 +343,6 @@ export default function DraftReviewPage({
 
         setFields({ ...common, ...typeSpecific });
 
-        // The rest are shared across all three draft types too — the
-        // bot extracts them the same way regardless of what kind of
-        // posting the source page turns out to be.
         if (typeof ex.conclusionText === "string" && ex.conclusionText) {
           setConclusion(ex.conclusionText);
         }
@@ -447,8 +373,6 @@ export default function DraftReviewPage({
         category: fields.category,
       };
 
-      // ---- Raw pipe-table / free-text sections — same keys
-      // approveDraft already reads for every draft type. ----
       const rawTextFields: Record<string, string | undefined> = {
         importantDatesText: fields.importantDatesText,
         applicationFeeText: fields.applicationFeeText,
@@ -492,7 +416,6 @@ export default function DraftReviewPage({
       const sectionRows = additionalSections.filter((s) => s.heading || s.content);
       if (sectionRows.length > 0) body.genericSections = sectionRows;
 
-      // ---- Fields specific to one draft type ----
       if (draft?.draftType === "job") {
         body.totalVacancies = Number(fields.totalVacancies) || 0;
         body.qualification = fields.qualification;
@@ -536,10 +459,6 @@ export default function DraftReviewPage({
       if (!res.ok) throw new Error(data.error || "Approve failed");
       setDecision("approved");
     } catch (err) {
-      // Show the server's own reason when it has one (e.g. "already
-      // published, marked rejected instead") rather than this generic
-      // fallback, which used to be the ONLY thing shown regardless of
-      // why the approve actually failed.
       setError(err instanceof Error ? err.message : "Could not approve this draft. Please try again.");
     } finally {
       setSubmitting(false);
@@ -605,10 +524,6 @@ export default function DraftReviewPage({
     draft.draftType === "result" ? "How to Check Result" : draft.draftType === "admit_card" ? "How to Download Admit Card" : "How to Apply";
   const documentsLabel = draft.draftType === "admit_card" ? "Exam Day Instructions / Documents to Carry" : "Documents Required";
 
-  // Tier 2 discrepancy signal (see extractHtmlNotificationFields.ts's
-  // headingStats) — a warning shown here even though the admin IS on
-  // the review page, since it's just as easy to skim past a page full
-  // of pre-filled fields as it is to skip the page entirely.
   const verification = (draft.extractedFields as { verification?: { sourceHeadingCount?: number; capturedHeadingCount?: number; possibleGap?: boolean } })?.verification;
 
   return (
@@ -648,9 +563,6 @@ export default function DraftReviewPage({
       )}
 
       <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px]">
-        {/* Editable fields — every field the published record can hold,
-            pre-populated from whatever the bot extracted, grouped to
-            match the sections the public page itself renders. */}
         <Card className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <TextField label="Title" value={fields.title ?? ""} onChange={(e) => setField("title")(e.target.value)} />
@@ -807,11 +719,6 @@ export default function DraftReviewPage({
             </div>
           )}
 
-          {/* Everything below is shared by all three draft types — the
-              extractor produces these the same way regardless of what
-              kind of posting the source page turns out to be, and the
-              published record has the same field for each of them on
-              Job, Result, and Admit Card alike. */}
 
           <div className="border-t border-[var(--color-border)] pt-4">
             <SectionDivider label="Important Dates (full table)" />
@@ -1079,7 +986,6 @@ export default function DraftReviewPage({
           </div>
         </Card>
 
-        {/* Source */}
         <Card className="h-fit space-y-4 lg:sticky lg:top-24">
           <p className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
             <FileText size={15} /> Source Notification

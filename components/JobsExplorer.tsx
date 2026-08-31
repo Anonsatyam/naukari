@@ -26,7 +26,6 @@ export default function JobsExplorer() {
   const [filtered, setFiltered] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Debounced fetch from the real API whenever search/filters change
   useEffect(() => {
     const handle = setTimeout(() => {
       const params = new URLSearchParams();
@@ -100,7 +99,6 @@ export default function JobsExplorer() {
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-[240px_1fr]">
-        {/* Filters sidebar */}
         <aside
           className={cn(
             "lg:block",
@@ -174,7 +172,6 @@ export default function JobsExplorer() {
           </Card>
         </aside>
 
-        {/* Results */}
         <div>
           {loading ? (
             <Card padding="p-10" className="text-center">

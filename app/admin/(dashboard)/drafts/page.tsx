@@ -28,24 +28,12 @@ const CONFIDENCE_TONES: Record<BotDraft["confidence"], "success" | "warning" | "
   low: "danger",
 };
 
-// Distinct colors per status so "pending" (still needs a decision) and
-// "approved" (already live) don't read as the same neutral gray —
-// they mean very different things on a review queue.
 const STATUS_TONES: Record<BotDraft["status"], "warning" | "success" | "danger"> = {
   pending: "warning",
   approved: "success",
   rejected: "danger",
 };
 
-// Tier 2 discrepancy signal (see extractHtmlNotificationFields.ts's
-// headingStats) — computed once at scrape time and carried in
-// extractedFields so it's visible here regardless of whether a draft
-// goes through single-draft review or gets bulk-approved (bulk-approve
-// never visits the review page at all, which is exactly why the FAQ/
-// Conclusion auto-fill fix earlier had to live in approveDraft itself
-// rather than only on that page — same reasoning applies here: a
-// warning that only showed up on a page bulk-approve skips would never
-// be seen for a bulk-approved draft).
 function possibleGap(draft: BotDraft): boolean {
   const v = (draft.extractedFields as { verification?: { possibleGap?: boolean } } | undefined)?.verification;
   return v?.possibleGap === true;
@@ -134,8 +122,6 @@ export default function AdminDraftsPage() {
     });
   }, [drafts, sortColumn, sortDirection, sortRank]);
 
-  // Only a pending draft can meaningfully be approved/rejected — an
-  // already-decided one has nothing left for a bulk action to do.
   const selectableIds = useMemo(
     () => sortedDrafts.filter((d) => d.status === "pending").map((d) => d.id),
     [sortedDrafts]

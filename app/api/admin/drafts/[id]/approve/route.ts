@@ -11,7 +11,6 @@ export async function POST(
   try {
     edits = await request.json();
   } catch {
-    // No body provided — approve using the bot's extracted fields as-is.
   }
 
   try {
@@ -19,9 +18,6 @@ export async function POST(
     if (!approved) {
       return NextResponse.json({ error: "Draft not found" }, { status: 404 });
     }
-    // Keep `job` in the response for backward compatibility with any
-    // existing caller that only ever expected job approvals, and add the
-    // generic `approved` shape (which carries the type) for the UI to use.
     return NextResponse.json({
       approved,
       job: approved.type === "job" ? approved.entity : undefined,

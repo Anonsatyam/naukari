@@ -76,7 +76,6 @@ export default function Header() {
             </Link>
           ))}
 
-          {/* Tools dropdown */}
           <div className="relative" ref={toolsRef}>
             <button
               type="button"
@@ -169,7 +168,6 @@ export default function Header() {
             </Link>
           ))}
 
-          {/* Tools expandable section */}
           <button
             type="button"
             onClick={() => setMobileToolsOpen((v) => !v)}

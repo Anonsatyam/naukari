@@ -1,7 +1,3 @@
--- Run this in the Supabase SQL Editor after 001_initial_schema.sql.
--- Adds classification so the bot can create Result and Admit Card
--- drafts, not just Job drafts — existing rows default to 'job' so
--- nothing already in the table is affected.
 
 alter table bot_drafts
   add column if not exists draft_type text not null default 'job'

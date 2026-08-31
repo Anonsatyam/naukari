@@ -41,7 +41,7 @@ const HANDLE_SIZE = 16;
 
 export default function PhotoResizerTool() {
   const [loaded, setLoaded] = useState<LoadedImage | null>(null);
-  const [presetIndex, setPresetIndex] = useState(0); // -1 = custom
+  const [presetIndex, setPresetIndex] = useState(0);
   const [customWidth, setCustomWidth] = useState(200);
   const [customHeight, setCustomHeight] = useState(230);
   const [customMinKB, setCustomMinKB] = useState(20);
@@ -83,7 +83,6 @@ export default function PhotoResizerTool() {
     setResult(null);
   };
 
-  // Re-fit the crop box (same center) whenever the target dimensions change
   const refitForRatio = (ratio: number) => {
     setPreviewSize((size) => {
       if (!size.width) return size;
@@ -131,7 +130,6 @@ export default function PhotoResizerTool() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(loaded.image, 0, 0, previewSize.width, previewSize.height);
 
-    // Dim everything, then re-reveal the crop region
     ctx.fillStyle = "rgba(24, 27, 37, 0.55)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.save();
@@ -141,12 +139,10 @@ export default function PhotoResizerTool() {
     ctx.drawImage(loaded.image, 0, 0, previewSize.width, previewSize.height);
     ctx.restore();
 
-    // Crop box border
     ctx.strokeStyle = "#3C44C2";
     ctx.lineWidth = 2;
     ctx.strokeRect(cropBox.x, cropBox.y, cropBox.width, cropBox.height);
 
-    // Resize handle (bottom-right)
     ctx.fillStyle = "#3C44C2";
     ctx.fillRect(
       cropBox.x + cropBox.width - HANDLE_SIZE / 2,

@@ -7,9 +7,7 @@ export default function WhatsAppShareButton({
   text,
   className,
 }: {
-  /** Relative path to the item's dedicated page, e.g. `/jobs/some-slug` */
   path: string;
-  /** Short text shown alongside the link in the WhatsApp message */
   text: string;
   className?: string;
 }) {

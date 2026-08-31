@@ -1,8 +1,6 @@
 import { Job, ResultItem, AdmitCardItem, BotDraft, BotLogEntry } from "@/lib/types";
 
-// ---- jobs ----
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function rowToJob(row: any): Job {
   return {
     id: row.id,
@@ -56,7 +54,6 @@ export function rowToJob(row: any): Job {
   };
 }
 
-/** Partial job -> DB row (snake_case), for inserts/updates. Omits `id`. */
 export function jobToRow(job: Partial<Job>): Record<string, unknown> {
   const row: Record<string, unknown> = {};
   if (job.slug !== undefined) row.slug = job.slug;
@@ -109,9 +106,7 @@ export function jobToRow(job: Partial<Job>): Record<string, unknown> {
   return row;
 }
 
-// ---- results ----
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function rowToResult(row: any): ResultItem {
   return {
     id: row.id,
@@ -185,9 +180,7 @@ export function resultToRow(result: Partial<ResultItem>): Record<string, unknown
   return row;
 }
 
-// ---- admit cards ----
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function rowToAdmitCard(row: any): AdmitCardItem {
   return {
     id: row.id,
@@ -259,9 +252,7 @@ export function admitCardToRow(card: Partial<AdmitCardItem>): Record<string, unk
   return row;
 }
 
-// ---- bot drafts ----
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function rowToDraft(row: any): BotDraft {
   return {
     id: row.id,
@@ -291,9 +282,7 @@ export function draftToRow(draft: Partial<BotDraft>): Record<string, unknown> {
   return row;
 }
 
-// ---- bot log ----
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function rowToLogEntry(row: any): BotLogEntry {
   return {
     id: row.id,

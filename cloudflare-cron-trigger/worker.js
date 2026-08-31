@@ -1,17 +1,3 @@
-// Cloudflare Worker: fires the bot's GitHub Actions workflow on a
-// reliable, self-controlled cron — see cloudflare-cron-trigger/README.md
-// for why this exists and how to deploy it.
-//
-// This worker does exactly one thing on its schedule: call GitHub's API
-// to trigger a workflow_dispatch run of bot.yml. It does NOT run the bot
-// itself (that still happens on GitHub Actions, which already has
-// Playwright installed and a generous execution time limit) — it only
-// solves "make sure the trigger actually fires reliably every 4 hours",
-// which GitHub's own `schedule` event doesn't guarantee.
-//
-// Required secret (set via the Cloudflare dashboard, NOT in this file):
-//   GITHUB_TOKEN — a GitHub Personal Access Token with the "workflow"
-//   scope, scoped to this repo. See the README for how to create one.
 
 const OWNER = "Anonsatyam";
 const REPO = "naukari";
@@ -23,16 +9,6 @@ const cronTriggerWorker = {
     ctx.waitUntil(triggerBotWorkflow(env));
   },
 
-  // Lets you hit this worker's own URL directly in a browser to fire
-  // one test run on demand, without waiting for the next scheduled
-  // tick — useful for confirming the token/config actually works.
-  //
-  // A browser opening that URL also auto-requests /favicon.ico, which
-  // — since every request path used to hit this same handler — fired
-  // a second real trigger a couple seconds after the first (confirmed:
-  // two workflow runs landed from one page visit). Only the root path
-  // actually triggers; anything else (favicon, devtools probing, etc.)
-  // gets a cheap 204 with no GitHub call at all.
   async fetch(request, env) {
     const { pathname } = new URL(request.url);
     if (pathname !== "/") {
@@ -61,15 +37,12 @@ async function triggerBotWorkflow(env) {
         Authorization: `Bearer ${env.GITHUB_TOKEN}`,
         Accept: "application/vnd.github+json",
         "Content-Type": "application/json",
-        // GitHub requires a User-Agent on API requests.
         "User-Agent": "bihar-jobs-cron-trigger-worker",
       },
       body: JSON.stringify({ ref: BRANCH }),
     }
   );
 
-  // A successful dispatch call returns 204 No Content — there's no
-  // body to read, just the status.
   if (res.status === 204) {
     return { ok: true, status: res.status, triggeredAt: new Date().toISOString() };
   }

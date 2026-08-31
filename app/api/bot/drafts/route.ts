@@ -54,8 +54,7 @@ export async function POST(request: NextRequest) {
     confidence: confidence ?? "medium",
     draftType: draftType ?? "job",
     sourceOrderKey,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    extractedFields: (extractedFields ?? {}) as any,
+    extractedFields: extractedFields ?? {},
   });
 
   await addBotLogEntry(

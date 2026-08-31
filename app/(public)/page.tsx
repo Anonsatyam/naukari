@@ -9,10 +9,6 @@ import { getPublishedJobs, getResults, getAdmitCards, getHotUpdates } from "@/li
 import { isClosingSoon, isRecent } from "@/lib/dateHelpers";
 import { formatDate } from "@/lib/utils";
 
-// The home page shows "latest"/"hot" content computed live from the
-// database — never statically cache it, or visitors would see a
-// snapshot frozen from whenever the site was last built/deployed
-// instead of what's actually true right now.
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
@@ -36,7 +32,6 @@ export default async function Home() {
 
   return (
     <div>
-      {/* Hero */}
       <section className="border-b border-[var(--color-border)] bg-white">
         <div className="container-page py-14 md:py-20">
           <div className="mx-auto max-w-2xl text-center">
@@ -76,10 +71,8 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Hot Right Now — mixed feed of latest jobs, results, admit cards */}
       <HotUpdates items={hotUpdates} />
 
-      {/* Closing soon */}
       {closingSoonJobs.length > 0 && (
         <section className="container-page py-10">
           <div className="flex items-center justify-between">
@@ -101,7 +94,6 @@ export default async function Home() {
         </section>
       )}
 
-      {/* Latest jobs */}
       {latestJobs.length > 0 && (
         <section className="container-page py-10">
           <div className="flex items-center justify-between">
@@ -123,7 +115,6 @@ export default async function Home() {
         </section>
       )}
 
-      {/* Latest results */}
       {latestResults.length > 0 && (
         <section className="container-page py-10">
           <div className="flex items-center justify-between">
@@ -153,7 +144,6 @@ export default async function Home() {
         </section>
       )}
 
-      {/* Latest admit cards */}
       {latestAdmitCards.length > 0 && (
         <section className="container-page py-10">
           <div className="flex items-center justify-between">
@@ -183,7 +173,6 @@ export default async function Home() {
         </section>
       )}
 
-      {/* Eligibility CTA */}
       <section className="container-page pt-10 pb-10">
         <div className="flex flex-col items-start justify-between gap-6 rounded-2xl bg-[var(--color-primary)] p-8 text-white md:flex-row md:items-center md:p-10">
           <div>

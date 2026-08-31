@@ -6,19 +6,7 @@ export type DraftType = "job" | "result" | "admit_card";
 const ADMIT_CARD_KEYWORDS = ["admit card", "e-admit", "call letter", "hall ticket", "download admit"];
 const RESULT_KEYWORDS = ["result", "cut off", "cutoff", "merit list", "shortlist"];
 
-/**
- * Rule-based classification of what kind of notification this is —
- * a genuinely new job posting, a declared result, or a released admit
- * card. This matters because each becomes a different kind of draft
- * with a different approval flow and lands in a different public
- * section of the site.
- */
 export function classifyDraftType(title: string, sectionHint?: DraftType): DraftType {
-  // The section a posting was actually found on (see Candidate.sectionHint
-  // in extract.ts) is a stronger signal than a title-keyword guess —
-  // trust it outright when available, rather than second-guessing a
-  // source's own categorization with a heuristic that can only ever
-  // recognize wording someone thought to list in advance.
   if (sectionHint) return sectionHint;
   const lower = title.toLowerCase();
   if (ADMIT_CARD_KEYWORDS.some((kw) => lower.includes(kw))) return "admit_card";
@@ -58,9 +46,6 @@ export interface ExtractedDraft {
   sourceUrl: string;
   confidence: "high" | "medium" | "low";
   draftType: DraftType;
-  // Set by run.ts after this is returned — see its own comment for why
-  // (it needs the candidate's position within this run's full listing,
-  // which extractFields itself has no knowledge of).
   sourceOrderKey?: number;
   extractedFields: {
     category?: string;
@@ -74,10 +59,6 @@ export function extractFields(candidate: Candidate, orgHint: string): ExtractedD
   const qualification = guessFromKeywords(candidate.title, QUALIFICATION_KEYWORDS);
   const fieldsFound = [category, qualification].filter(Boolean).length;
 
-  // Never claim "high" confidence from link-text scanning alone — that's
-  // reserved for extraction that reads structured fields (dates,
-  // vacancies, fees) out of the actual notification document, which this
-  // pass deliberately doesn't attempt.
   const confidence: ExtractedDraft["confidence"] = fieldsFound >= 2 ? "medium" : "low";
 
   return {

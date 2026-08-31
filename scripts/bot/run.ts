@@ -13,62 +13,26 @@ loadEnvLocal();
 
 const SITE_URL = process.env.BOT_SITE_URL || "http://localhost:3000";
 const BOT_API_SECRET = process.env.BOT_API_SECRET;
-// Raised from 15 now that the bot actually crawls into a source's full
-// "View More" listing page (see extract.ts's VIEW_MORE_PATTERN) rather
-// than only ever seeing the homepage widget's ~10 most-recent links —
-// biharjob.co.in's combined Jobs/Results/Admit Card listings measured
-// at 77 unique candidates in one live check, so this needs real
-// headroom above that to avoid silently truncating, not just enough
-// to cover today's count exactly.
 const MAX_CANDIDATES_PER_SOURCE = 120;
 const MAX_SECTIONS_PER_SOURCE = 5;
-// Playwright page loads take several seconds each, versus milliseconds
-// for the normal fetch — a lower section limit keeps the added cost of
-// testing this hypothesis bounded rather than multiplying it by 5.
 const MAX_SECTIONS_PER_SOURCE_PLAYWRIGHT = 2;
 
-// A single isolated request to a candidate's detail page reliably
-// returns the full page; a burst of many fired back-to-back within
-// under a minute reliably came back with nothing extractable, with no
-// HTTP error at all — the signature of a rate-limiter/WAF issuing a
-// soft-blocked (still HTTP 200) response to a burst rather than an
-// outright block. Spacing requests out is the direct fix for that, not
-// a network/extraction bug — and matters even more now that a single
-// source can have dozens of candidates instead of a handful.
 const DETAIL_FETCH_DELAY_MS = 1200;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Skips drafting a posting whose application deadline has *definitely*
-// already passed — nobody can still apply to it. Deliberately only
-// acts when a clean "Application End" date was actually extracted and
-// parses; a posting with a messy/relative/missing date is kept rather
-// than guessed at, since wrongly dropping a still-open posting is
-// worse than occasionally drafting one that turns out to be expired
-// (a human reviews every draft before it goes live anyway).
 function isDefinitelyExpired(extractedFields: { importantDates?: { label: string; date: string }[] }): boolean {
   const endDate = extractedFields.importantDates?.find((d) => d.label === "Application End")?.date;
   if (!endDate) return false;
   const end = new Date(endDate).getTime();
   if (Number.isNaN(end)) return false;
-  // Compared against the start of today, not the current instant, so a
-  // deadline of "today" is never treated as already expired.
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
   return end < startOfToday.getTime();
 }
 
-/**
- * These sources all share one government CMS platform
- * (state.bihar.gov.in) and have shown a mix of redirect loops and
- * timeouts against a plain HTTP fetch. The hypothesis: a real browser's
- * cookie/session handling resolves what a stateless HTTP client can't.
- * Scoped by hostname rather than a hand-picked list, so it
- * automatically covers this whole platform, including anything added
- * to it later.
- */
 function shouldUsePlaywright(url: string): boolean {
   try {
     return new URL(url).hostname === "state.bihar.gov.in";
@@ -77,23 +41,12 @@ function shouldUsePlaywright(url: string): boolean {
   }
 }
 
-/**
- * When a section link's own URL identifies what kind of listing it
- * is (biharjob.co.in's /result/ or /admit-card/ pages), every
- * candidate crawled from it gets tagged with that as a sectionHint —
- * see Candidate.sectionHint in extract.ts for why that beats guessing
- * from the posting's own title. Anything else (the homepage's generic
- * "Latest Jobs" listing, a "View More" link whose target doesn't
- * match either pattern) is left unhinted, falling back to title-
- * keyword classification exactly as before.
- */
 function inferSectionDraftTypeHint(sectionUrl: string): "result" | "admit_card" | undefined {
   try {
     const path = new URL(sectionUrl).pathname.toLowerCase();
     if (path.includes("admit-card") || path.includes("admit_card")) return "admit_card";
     if (path.includes("result")) return "result";
   } catch {
-    // ignore — no hint
   }
   return undefined;
 }
@@ -114,7 +67,6 @@ async function postJson(path: string, body: unknown) {
 async function logActivity(status: "success" | "warning" | "error", message: string) {
   console.log(`[${status}] ${message}`);
   await postJson("/api/bot/log", { status, message }).catch(() => {
-    // Logging is best-effort — don't let a logging failure crash the run.
   });
 }
 
@@ -131,13 +83,6 @@ function extractErrorDetail(err: unknown): string {
   return `${message}${cause}`;
 }
 
-/**
- * If the candidate links directly to a PDF, download it and try to
- * pull structured fields (dates, fees, vacancy count) out of its text.
- * Returns an empty object for non-PDF links, scanned/image PDFs with
- * no extractable text, or anything that fails — this is a best-effort
- * enhancement, not something the rest of the run should depend on.
- */
 async function tryExtractPdfFields(candidate: Candidate): Promise<ExtractedStructuredFields> {
   if (!candidate.url.toLowerCase().endsWith(".pdf")) return {};
 
@@ -155,15 +100,6 @@ async function tryExtractPdfFields(candidate: Candidate): Promise<ExtractedStruc
   }
 }
 
-/**
- * Sibling to tryExtractPdfFields: for sources whose structured fields
- * live directly in the post's own HTML (abc.com -style pages,
- * which never link out to a separate notification PDF — everything is
- * on the page itself) rather than a linked PDF, fetch the candidate's
- * own page and pull fields out of it directly via
- * extractHtmlNotificationFields. Same best-effort contract as the PDF
- * version — any failure just yields {} rather than aborting the run.
- */
 async function tryExtractHtmlFields(
   candidate: Candidate
 ): Promise<{ organization?: string; fields: ExtractedStructuredFields }> {
@@ -182,7 +118,6 @@ async function tryExtractHtmlFields(
   }
 }
 
-/** Fetches a page and extracts candidates from it, or a warning detail on failure. */
 async function fetchAndExtractCandidates(
   url: string
 ): Promise<{ candidates: Candidate[] } | { error: string }> {
@@ -216,14 +151,6 @@ async function fetchAndExtractCandidates(
   return { candidates: mergeCandidateSources(html, url) };
 }
 
-/**
- * Runs both extraction strategies on the same page and merges the
- * results: `extractCandidates` for simple anchor-based listings, and
- * `extractTableCandidates` for pages structured as a table where the
- * real subject text and the PDF link live in separate cells. A page
- * without a matching table structure simply yields nothing extra from
- * the second pass, so this is safe to run on every page unconditionally.
- */
 function mergeCandidateSources(html: string, baseUrl: string): Candidate[] {
   const fromTables = extractTableCandidates(html, baseUrl);
   if (fromTables.length > 0) {
@@ -241,19 +168,6 @@ async function run() {
 
   console.log(`Bihar Sarkari Naukri bot — checking ${SOURCES.length} source(s) against ${SITE_URL}\n`);
 
-  // A stable base for this whole run's sourceOrderKey values (see
-  // Candidate.sectionHint's sibling concept on BotDraft.sourceOrderKey
-  // in lib/types.ts for the full reasoning) — captured once, not per
-  // candidate, so every candidate this run finds shares the same base
-  // and only their position within the source's own listing
-  // (candidateIndex) differentiates them. A LATER run's base is always
-  // larger by hours (the bot runs every 4 hours), which vastly exceeds
-  // any single run's candidate count (capped at MAX_CANDIDATES_PER_SOURCE),
-  // so subtracting the in-run index can never make a later run's
-  // candidates sort below an earlier run's — new postings always
-  // outrank old ones, and within one run, the source's own top-to-
-  // bottom order (candidateIndex 0 = topmost = newest on their site)
-  // is preserved.
   const runOrderBase = Date.now();
 
   let created = 0;
@@ -264,10 +178,6 @@ async function run() {
   try {
     for (const source of SOURCES) {
       try {
-        // Certificate validation is intentionally relaxed here — see
-        // fetchInsecure.ts for the full reasoning. These are read-only
-        // GET requests, and every result is reviewed by a human admin
-        // before anything goes live.
         const homepageResult = await fetchAndExtractCandidates(source.url);
 
         if ("error" in homepageResult) {
@@ -316,26 +226,15 @@ async function run() {
           if (i > 0) await sleep(DETAIL_FETCH_DELAY_MS);
 
           const draftInput = extractFields(candidate, source.orgHint);
-          // i = 0 is the topmost/newest posting on the source's own
-          // listing — giving it the LARGEST key (runOrderBase - 0)
-          // means sorting sourceOrderKey descending puts it first,
-          // matching the source's own order.
           draftInput.sourceOrderKey = runOrderBase - i;
 
           const pdfFields = await tryExtractPdfFields(candidate);
           const fieldsFoundInPdf = Object.keys(pdfFields).length;
           if (fieldsFoundInPdf > 0) {
             draftInput.extractedFields = { ...draftInput.extractedFields, ...pdfFields };
-            // Now genuinely reading structured fields out of the actual
-            // notification document, not just guessing from link text —
-            // this is exactly the case "high" confidence is reserved for.
             draftInput.confidence = fieldsFoundInPdf >= 2 ? "high" : "medium";
           }
 
-          // Sources like abc.com carry their structured fields in
-          // the post's own HTML rather than a linked PDF — only attempt
-          // this when the PDF pass came up empty, so a source that has
-          // both (rare) doesn't do two fetches for nothing.
           if (fieldsFoundInPdf === 0) {
             const { organization, fields: htmlFields } = await tryExtractHtmlFields(candidate);
             const fieldsFoundInHtml = Object.keys(htmlFields).length;
@@ -343,8 +242,6 @@ async function run() {
               draftInput.extractedFields = { ...draftInput.extractedFields, ...htmlFields };
               draftInput.confidence = fieldsFoundInHtml >= 2 ? "high" : "medium";
             }
-            // Prefer the organization actually printed on the post over
-            // the source's generic orgHint fallback.
             if (organization) {
               draftInput.organization = organization;
             }
@@ -385,13 +282,6 @@ async function run() {
     `\nDone. ${created} draft(s) created, ${skipped} skipped (already known), ${expired} skipped (deadline passed), ${errors} error(s).`
   );
 
-  // One persisted summary entry per run, distinct from the per-source/
-  // per-draft lines logged above — those get buried immediately (a
-  // single run can log 100+ of them, one per candidate), leaving no
-  // easy way to see "when did the bot last run, and how did it go" at
-  // a glance. getLastBotRunSummary() in lib/server/data.ts parses this
-  // exact message shape back out for the admin dashboard — keep them
-  // in sync if this format ever changes.
   await logActivity(
     "success",
     `Bot run summary: ${created} new draft(s), ${skipped} duplicate(s) skipped, ${expired} expired skipped, ${errors} error(s)`

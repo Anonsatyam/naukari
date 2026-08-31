@@ -11,19 +11,6 @@ export interface InsecureFetchResult {
   buffer: () => Promise<Buffer>;
 }
 
-/**
- * A minimal HTTPS/HTTP GET that ignores certificate errors, built on
- * Node's own core http/https modules only — deliberately not the
- * standalone `undici` npm package, which crashed with an internal
- * version-mismatch error against Node's bundled webidl internals
- * (TypeError: webidl.util.markAsUncloneable is not a function). Core
- * Node modules have a far more stable API surface across versions, so
- * this is the more robust choice for something that has to keep working
- * unattended on a schedule.
- *
- * Certificate validation is intentionally relaxed here — see the
- * comment on why in run.ts, next to where this is used.
- */
 export function fetchInsecure(
   url: string,
   options: { headers?: Record<string, string>; timeoutMs?: number; maxRedirects?: number } = {}
@@ -54,7 +41,7 @@ export function fetchInsecure(
           const status = res.statusCode ?? 0;
 
           if (status >= 300 && status < 400 && res.headers.location && redirectsLeft > 0) {
-            res.resume(); // discard this response's body, we're following the redirect
+            res.resume();
             let nextUrl: string;
             try {
               nextUrl = new URL(res.headers.location, currentUrl).toString();

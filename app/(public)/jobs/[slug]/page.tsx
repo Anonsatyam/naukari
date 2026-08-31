@@ -39,11 +39,6 @@ import {
   DocumentsRequiredSection,
 } from "@/components/RichSections";
 
-// The page's own fixed order — used verbatim for any record with no
-// sectionOrder at all (published before this feature existed), and as
-// the fallback tail for anything a record's own sectionOrder doesn't
-// mention (an admin-only field with no source heading, like
-// syllabusSummary). See lib/sectionOrder.ts's resolveSectionOrder.
 const JOB_DEFAULT_ORDER = [
   "importantDatesRaw",
   "applicationFeeRaw",
@@ -57,9 +52,6 @@ const JOB_DEFAULT_ORDER = [
   "howToApplyRaw",
 ];
 
-// Statically generated for speed/SEO, but re-checked against the
-// database every 5 minutes in the background so an admin edit or
-// unpublish doesn't stay stale until the next deploy.
 export const revalidate = 300;
 
 export async function generateStaticParams() {
@@ -67,9 +59,6 @@ export async function generateStaticParams() {
     const jobs = await getPublishedJobs();
     return jobs.map((job) => ({ slug: job.slug }));
   } catch (err) {
-    // If Supabase is briefly unreachable at build time, degrade to zero
-    // statically pre-rendered job pages rather than failing the entire
-    // site's deployment — every page still renders correctly on-demand.
     console.warn("generateStaticParams: could not fetch jobs at build time, skipping pre-render.", err);
     return [];
   }
@@ -110,29 +99,9 @@ export default async function JobDetailPage({
   const additionalSections = job.additionalSections ?? [];
   const orderedSectionKeys = resolveSectionOrder(job.sectionOrder, JOB_DEFAULT_ORDER, additionalSections.length);
 
-  // The source's own Important Links table already has its own "Apply
-  // Online"/"Download Notification" (or equivalent) rows — showing
-  // those verbatim AND separately-labeled "Apply Officially"/"Official
-  // Notification" buttons synthesized from officialApplyUrl/
-  // officialNotificationUrl duplicated the same destinations under
-  // different names, neither matching what biharjob.co.in itself
-  // shows. Once the source publishes a real links list, that list IS
-  // the sidebar — same labels, same set, same order — with no
-  // synthesized buttons layered on top of it.
   const sourceLinks = (Array.isArray(job.importantLinks) ? job.importantLinks : []).filter(
     (link) => !isSourceSiteUrl(link.url)
   );
-  // The synthesized Apply Officially / Official Notification buttons
-  // are now only a fallback for the rarer case where extraction found
-  // no Important Links list at all — still needed so a page never has
-  // literally zero way to apply. Extraction can fail to find a genuine
-  // external link, in which case these fall back to the source
-  // article's own URL (see lib/server/data.ts's firstExternalUrl) —
-  // approveDraft avoids that whenever it can, but a record published
-  // before that fix, or one where the source truly had no working link
-  // at all, can still carry it. Rather than show an "Apply Officially"
-  // button that actually lands a visitor back on the aggregator page,
-  // that button is hidden entirely in this last-resort case.
   const hasRealApplyUrl = !isSourceSiteUrl(job.officialApplyUrl);
   const hasRealNotificationUrl = !isSourceSiteUrl(job.officialNotificationUrl);
 
@@ -146,7 +115,6 @@ export default async function JobDetailPage({
         ]}
       />
 
-      {/* Header */}
       <Card padding="p-6">
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone="primary">{job.category}</Badge>
@@ -169,31 +137,12 @@ export default async function JobDetailPage({
       </Card>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
-        {/* Main content */}
-        {/* min-w-0 overrides the grid item's default min-width:auto —
-            without it, a wide table's intrinsic content width (a
-            27-column vacancy table can't shrink below its own content)
-            forces this ENTIRE grid column to grow to fit it, dragging
-            every other section and the sidebar along with it, instead
-            of being contained by the table's own overflow-x-auto
-            wrapper the way it should be. */}
         <div className="order-2 min-w-0 space-y-6 lg:order-1">
           {(() => {
-            // Every "regular" section, keyed by the same raw field name
-            // extraction records in sectionOrder — rendered by walking
-            // orderedSectionKeys (the source's own order, with a fixed
-            // fallback tail) instead of this fixed list's own order.
-            // FAQs/Conclusion are deliberately NOT here — always pinned
-            // to the very end below, regardless of source order.
             const sectionRenderers: Record<string, React.ReactNode> = {
               importantDatesRaw: (
                 <Section title="Important Dates" icon={<Calendar size={16} />} accent="blue">
                   {job.importantDatesText ? (
-                    // The full dates table as the source actually published it —
-                    // includes rows (PET schedule, provisional allotment, a
-                    // month-only value, a relative "2 days after registration
-                    // closes" edit window) that don't fit the canonical
-                    // {label, ISO date} shape below and would otherwise be lost.
                     <PipeTableOrText text={job.importantDatesText} />
                   ) : (
                     <div>
@@ -294,8 +243,6 @@ export default async function JobDetailPage({
                   <KeyValueRow label="Qualification" value={job.qualification || "As per notification"} />
 
                   {Array.isArray(job.eligibilityDetails) && job.eligibilityDetails.length > 0 ? (
-                    // An admin-curated bullet list — shown in preference to the
-                    // raw table below since it represents deliberate cleanup.
                     <ul className="mt-4 space-y-2">
                       {job.eligibilityDetails.map((point, i) => (
                         <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-[var(--color-text-secondary)]">
@@ -336,14 +283,6 @@ export default async function JobDetailPage({
             return orderedSectionKeys.map((key) => {
               const genericIdx = parseGenericKey(key);
               if (genericIdx !== null) {
-                // Every source section that doesn't map to one of the
-                // specific ones above — e.g. a "Physical Eligibility"
-                // table alongside Education Eligibility — rendered
-                // generically, titled with the source's own heading
-                // text, instead of being dropped for not matching a
-                // hardcoded field. Rendered here, interleaved at
-                // exactly the position the source itself used, rather
-                // than always lumped together at one fixed spot.
                 const section = additionalSections[genericIdx];
                 if (!section) return null;
                 return (
@@ -393,7 +332,6 @@ export default async function JobDetailPage({
           )}
         </div>
 
-        {/* Sidebar */}
         <aside className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-24 lg:h-fit">
           <Card>
             <p className="mb-3 flex items-center gap-2 text-base font-bold text-[var(--color-text-primary)]">

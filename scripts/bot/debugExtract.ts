@@ -1,16 +1,3 @@
-/**
- * Standalone debug script — NOT part of the bot's normal run.
- * Fetches one URL and prints exactly what extractHtmlNotificationFields
- * finds, with no database, no dedup, no draft creation involved. Use
- * this to answer one question: is extraction itself broken, or is the
- * bot pipeline just skipping already-known URLs?
- *
- * Usage:
- *   npx tsx scripts/bot/debugExtract.ts https://abc.com/ibps-csa-recruitment-2026/
- *
- * (adjust the path to wherever you placed extractHtmlNotificationFields.ts
- * and fetchInsecure.ts — this assumes the same folder as run.ts)
- */
 import { fetchInsecure } from "./fetchInsecure";
 import { extractHtmlNotificationFields } from "./extractHtmlNotificationFields";
 
@@ -30,10 +17,6 @@ async function main() {
   const html = await res.text();
   console.log(`HTML length: ${html.length} chars`);
 
-  // Quick sanity checks on the raw markup itself, independent of our
-  // extractor's assumptions — tells us immediately if the page has ANY
-  // headings/tables at all, or if what we got back isn't the real page
-  // (e.g. a Cloudflare challenge page, a 404 template, etc.)
   const h2Count = (html.match(/<h2\b/gi) || []).length;
   const h3Count = (html.match(/<h3\b/gi) || []).length;
   const tableCount = (html.match(/<table\b/gi) || []).length;
