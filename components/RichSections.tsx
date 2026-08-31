@@ -12,7 +12,8 @@ export function ApplicationFeeSection({
   fee?: { general: number; reserved: number; note?: string };
   feeText?: string;
 }) {
-  if (!feeText && !fee) return null;
+  const hasFee = !!fee && (fee.general > 0 || fee.reserved > 0 || !!fee.note);
+  if (!feeText && !hasFee) return null;
   return (
     <Section title="Application Fee" icon={<Wallet size={16} />} accent="green">
       {feeText ? (

@@ -363,11 +363,6 @@ export type ApprovedEntity =
   | { type: "result"; entity: ResultItem }
   | { type: "admit_card"; entity: AdmitCardItem };
 
-function ensureStringArray(value: unknown, fallback: string[]): string[] {
-  if (Array.isArray(value) && value.every((v) => typeof v === "string")) return value;
-  return fallback;
-}
-
 function ensureArray<T>(value: unknown, fallback: T[]): T[] {
   return Array.isArray(value) ? (value as T[]) : fallback;
 }
@@ -430,21 +425,6 @@ function applyRawTextDefaults(merged: Record<string, unknown>): void {
   if (!hasConclusion && typeof merged.conclusionText === "string" && merged.conclusionText.trim().length > 0) {
     merged.conclusion = merged.conclusionText;
   }
-}
-
-function ensureApplicationFee(
-  value: unknown,
-  fallback: { general: number; reserved: number; note?: string }
-): { general: number; reserved: number; note?: string } {
-  if (
-    value &&
-    typeof value === "object" &&
-    !Array.isArray(value) &&
-    ("general" in value || "reserved" in value)
-  ) {
-    return value as { general: number; reserved: number; note?: string };
-  }
-  return fallback;
 }
 
 function ensureOptionalApplicationFee(
@@ -630,7 +610,7 @@ export async function approveDraft(
       merged.qualification ??
       classifyQualification(typeof merged.eligibility === "string" ? merged.eligibility : undefined) ??
       classifyQualification(title) ??
-      "As per notification",
+      "",
     minAge: merged.minAge ?? deriveAgeRange(merged.ageLimit).minAge ?? 18,
     maxAge: merged.maxAge ?? deriveAgeRange(merged.ageLimit).maxAge ?? 40,
     ageRelaxation: merged.ageRelaxation,
@@ -641,16 +621,10 @@ export async function approveDraft(
     ageLimitText: typeof merged.ageLimit === "string" ? merged.ageLimit : undefined,
     salaryMin: merged.salaryMin ?? deriveSalaryRange(merged.postDetails).salaryMin ?? 0,
     salaryMax: merged.salaryMax ?? deriveSalaryRange(merged.postDetails).salaryMax ?? 0,
-    applicationFee: ensureApplicationFee(merged.applicationFee, {
-      general: 0,
-      reserved: 0,
-      note: "See official notification",
-    }),
+    applicationFee: ensureOptionalApplicationFee(merged.applicationFee) ?? { general: 0, reserved: 0 },
     applicationFeeText: typeof merged.applicationFeeText === "string" ? merged.applicationFeeText : undefined,
-    selectionProcess: ensureStringArray(
-      merged.selectionProcess,
-      parseSelectionSteps(merged.selectionProcess) ?? ["As per official notification"]
-    ),
+    selectionProcess:
+      ensureOptionalArray<string>(merged.selectionProcess) ?? parseSelectionSteps(merged.selectionProcess) ?? [],
     selectionProcessText: typeof merged.selectionProcess === "string" ? merged.selectionProcess : undefined,
     examPattern: merged.examPattern,
     examPatternNotes: ensureOptionalArray(merged.examPatternNotes),
@@ -658,9 +632,7 @@ export async function approveDraft(
     syllabusSummary: merged.syllabusSummary,
     eligibilityDetails: ensureOptionalArray(merged.eligibilityDetails),
     eligibilityText: typeof merged.eligibility === "string" ? merged.eligibility : undefined,
-    howToApply: ensureStringArray(merged.howToApply, [
-      "See the official notification for the application procedure",
-    ]),
+    howToApply: ensureOptionalArray<string>(merged.howToApply) ?? [],
     officialNotificationUrl:
       firstExternalUrl(
         merged.officialNotificationUrl,

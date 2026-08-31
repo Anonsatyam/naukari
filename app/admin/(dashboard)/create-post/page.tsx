@@ -35,12 +35,9 @@ export default function CreatePostPage() {
   const [qualification, setQualification] = useState("");
   const [minAge, setMinAge] = useState("");
   const [maxAge, setMaxAge] = useState("");
-  const [officialApplyUrl, setOfficialApplyUrl] = useState("");
-  const [officialNotificationUrl, setOfficialNotificationUrl] = useState("");
   const [keyDates, setKeyDates] = useState<DateRowDraft[]>([]);
 
   const [resultDate, setResultDate] = useState("");
-  const [officialLink, setOfficialLink] = useState("");
 
   const [releaseDate, setReleaseDate] = useState("");
   const [examDate, setExamDate] = useState("");
@@ -67,14 +64,9 @@ export default function CreatePostPage() {
       return;
     }
 
-    const primaryLink =
-      draftType === "job" ? officialApplyUrl.trim() || officialNotificationUrl.trim() : officialLink.trim();
+    const primaryLink = importantLinksRows.find((r) => r.url.trim())?.url.trim();
     if (!primaryLink) {
-      setError(
-        draftType === "job"
-          ? "Fill in at least the Official Apply URL or Official Notification URL."
-          : "Fill in the Official Link."
-      );
+      setError("Add at least one Important Link — the first one becomes this post's official reference link.");
       return;
     }
 
@@ -108,8 +100,6 @@ export default function CreatePostPage() {
           totalVacancies: Number(totalVacancies) || 0,
           qualification: qualification.trim(),
         });
-        if (officialApplyUrl.trim()) extractedFields.officialApplyUrl = officialApplyUrl.trim();
-        if (officialNotificationUrl.trim()) extractedFields.officialNotificationUrl = officialNotificationUrl.trim();
         if (minAge) extractedFields.minAge = Number(minAge);
         if (maxAge) extractedFields.maxAge = Number(maxAge);
         const importantDates = keyDates.filter((d) => d.label.trim() && d.date.trim());
@@ -117,11 +107,9 @@ export default function CreatePostPage() {
       } else if (draftType === "result") {
         extractedFields.resultDate = resultDate || new Date().toISOString().slice(0, 10);
         if (subtitle.trim()) extractedFields.summary = subtitle.trim();
-        extractedFields.officialLink = primaryLink;
       } else {
         extractedFields.examDate = examDate || new Date().toISOString().slice(0, 10);
         extractedFields.releaseDate = releaseDate || new Date().toISOString().slice(0, 10);
-        extractedFields.officialLink = primaryLink;
       }
 
       const res = await fetch("/api/admin/drafts/create", {
@@ -226,27 +214,17 @@ export default function CreatePostPage() {
                 placeholder="Used for the Eligibility Checker"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <TextField label="Official Apply URL" value={officialApplyUrl} onChange={(e) => setOfficialApplyUrl(e.target.value)} />
-              <TextField label="Official Notification URL" value={officialNotificationUrl} onChange={(e) => setOfficialNotificationUrl(e.target.value)} />
-            </div>
           </>
         )}
 
         {draftType === "result" && (
-          <div className="grid grid-cols-2 gap-4">
-            <TextField label="Result Date" type="date" value={resultDate} onChange={(e) => setResultDate(e.target.value)} />
-            <TextField label="Official Link" value={officialLink} onChange={(e) => setOfficialLink(e.target.value)} />
-          </div>
+          <TextField label="Result Date" type="date" value={resultDate} onChange={(e) => setResultDate(e.target.value)} />
         )}
 
         {draftType === "admit_card" && (
           <div className="grid grid-cols-2 gap-4">
             <TextField label="Release Date" type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
             <TextField label="Exam Date" type="date" value={examDate} onChange={(e) => setExamDate(e.target.value)} />
-            <div className="col-span-2">
-              <TextField label="Official Link" value={officialLink} onChange={(e) => setOfficialLink(e.target.value)} />
-            </div>
           </div>
         )}
 
@@ -285,6 +263,10 @@ export default function CreatePostPage() {
 
         <div className="border-t border-[var(--color-border)] pt-4">
           <SectionDivider label="Important Links (sidebar buttons)" />
+          <p className="mb-3 text-xs text-[var(--color-text-secondary)]">
+            Add every action link here — Apply Online, Download Notification, Official Website, Check Result,
+            Download Admit Card. The first link doubles as this post&apos;s official reference link.
+          </p>
           <RowsEditor
             rows={importantLinksRows}
             setRows={setImportantLinksRows}

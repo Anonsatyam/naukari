@@ -112,14 +112,12 @@ export default async function ResultDetailPage({
                   )}
                 </Section>
               ),
-              howToApplyRaw: (
-                <Section title="How to Check Result" icon={<ListChecks size={16} />} accent="green">
-                  <StepList
-                    items={result.howToCheck ?? []}
-                    fallback="Visit the official result link below and follow the on-page instructions."
-                  />
-                </Section>
-              ),
+              howToApplyRaw:
+                Array.isArray(result.howToCheck) && result.howToCheck.length > 0 ? (
+                  <Section title="How to Check Result" icon={<ListChecks size={16} />} accent="green">
+                    <StepList items={result.howToCheck} />
+                  </Section>
+                ) : null,
               cutoffText: result.cutoffText ? (
                 <Section title="Cut Off / Merit Details" icon={<FileText size={16} />} accent="purple">
                   <PipeTableOrText text={result.cutoffText} />

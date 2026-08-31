@@ -7,6 +7,7 @@ import { Button } from "@/components/Button";
 import { TextField, TextAreaField } from "@/components/FormField";
 import { fieldInputClass, fieldLabelClass } from "@/lib/ui";
 import { ChipInput } from "@/components/admin/ChipInput";
+import { ListItemsEditor } from "@/components/admin/ListItemsEditor";
 import { RowsEditor, LinkRowDraft } from "@/components/admin/DraftFormShared";
 import {
   TableBuilder,
@@ -31,7 +32,7 @@ export interface DynamicSectionDraft {
   heading: string;
   kind: AdditionalSectionKind;
   table: TableBuilderValue;
-  list: string;
+  list: string[];
   links: LinkRowDraft[];
   dates: DateRowDraft[];
   chips: string[];
@@ -59,7 +60,7 @@ export function newSectionDraft(kind: AdditionalSectionKind = "table"): DynamicS
     heading: "",
     kind,
     table: emptyTableBuilderValue(),
-    list: "",
+    list: [],
     links: [],
     dates: [],
     chips: [],
@@ -80,7 +81,7 @@ export function sectionToDraft(section: AdditionalSection): DynamicSectionDraft 
     heading: section.heading ?? "",
     kind,
     table,
-    list: kind === "list" ? (section.content ?? "").split(" || ").join("\n") : "",
+    list: kind === "list" ? (section.content ?? "").split(" || ").map((s) => s.trim()).filter(Boolean) : [],
     links: kind === "links" ? section.links ?? [] : [],
     dates: kind === "dates" ? section.dates ?? [] : [],
     chips: kind === "chips" ? section.chips ?? [] : [],
@@ -99,7 +100,7 @@ export function draftToSection(draft: DynamicSectionDraft): AdditionalSection | 
     return { heading, kind: "table", tableHeader: columns, tableRows: draft.table.rows, content };
   }
   if (draft.kind === "list") {
-    const items = draft.list.split("\n").map((s) => s.trim()).filter(Boolean);
+    const items = draft.list.map((s) => s.trim()).filter(Boolean);
     return items.length > 0 ? { heading, kind: "list", content: items.join(" || ") } : null;
   }
   if (draft.kind === "links") {
@@ -207,12 +208,7 @@ export function DynamicSectionsEditor({
               <TableBuilder value={section.table} onChange={(table) => update(section.id, { table })} />
             )}
             {section.kind === "list" && (
-              <TextAreaField
-                label="Items"
-                value={section.list}
-                onChange={(e) => update(section.id, { list: e.target.value })}
-                hint="One item per line — shown as a bulleted list."
-              />
+              <ListItemsEditor items={section.list} onChange={(list) => update(section.id, { list })} />
             )}
             {section.kind === "links" && (
               <RowsEditor

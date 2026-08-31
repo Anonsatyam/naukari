@@ -111,14 +111,12 @@ export default async function AdmitCardDetailPage({
                   )}
                 </Section>
               ),
-              howToApplyRaw: (
-                <Section title="How to Download Admit Card" icon={<ListChecks size={16} />} accent="green">
-                  <StepList
-                    items={card.howToDownload ?? []}
-                    fallback="Visit the download link below and follow the on-page instructions."
-                  />
-                </Section>
-              ),
+              howToApplyRaw:
+                Array.isArray(card.howToDownload) && card.howToDownload.length > 0 ? (
+                  <Section title="How to Download Admit Card" icon={<ListChecks size={16} />} accent="green">
+                    <StepList items={card.howToDownload} />
+                  </Section>
+                ) : null,
               documentsRequiredRaw: card.examDayInstructionsText ? (
                 <Section title="Exam Day Instructions" icon={<FileText size={16} />} accent="orange">
                   <PipeTableOrText text={card.examDayInstructionsText} />

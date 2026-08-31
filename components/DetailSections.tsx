@@ -2,10 +2,34 @@ import { ExternalLink } from "lucide-react";
 import { parsePipeBlocks, TOTAL_ROW_LABEL } from "@/lib/pipeTables";
 import { AdditionalSection, TableCellValue } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
+import { parseInlineLinks } from "@/lib/richText";
 import Card from "@/components/Card";
 import { ButtonLink } from "@/components/Button";
 import Badge from "@/components/Badge";
 import { KeyValueRow } from "@/components/KeyValueRow";
+
+export function InlineRichText({ text }: { text: string }) {
+  const segments = parseInlineLinks(text);
+  return (
+    <>
+      {segments.map((seg, i) =>
+        seg.url ? (
+          <a
+            key={i}
+            href={seg.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-[var(--color-primary)] underline underline-offset-2"
+          >
+            {seg.text}
+          </a>
+        ) : (
+          <span key={i}>{seg.text}</span>
+        )
+      )}
+    </>
+  );
+}
 
 
 export type Accent = "blue" | "green" | "purple" | "orange" | "teal" | "amber" | "pink" | "neutral";
@@ -98,7 +122,11 @@ export function StepList({ items, fallback }: { items: string[]; fallback?: stri
 export function PipeTableOrText({ text }: { text: string }) {
   const blocks = parsePipeBlocks(text);
   if (blocks.length === 0) {
-    return <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{text}</p>;
+    return (
+      <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">
+        <InlineRichText text={text} />
+      </p>
+    );
   }
   return (
     <div className="space-y-4">
@@ -109,7 +137,9 @@ export function PipeTableOrText({ text }: { text: string }) {
               {block.items.map((item, j) => (
                 <li key={j} className="flex gap-2.5 text-sm leading-relaxed text-[var(--color-text-secondary)]">
                   <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-primary)]" />
-                  <span>{item}</span>
+                  <span>
+                    <InlineRichText text={item} />
+                  </span>
                 </li>
               ))}
             </ul>
@@ -188,13 +218,15 @@ export function CellContent({ cell }: { cell: TableCellValue }) {
         {items.map((item, i) => (
           <li key={i} className="flex gap-1.5">
             <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-[var(--color-text-secondary)]" />
-            <span>{item}</span>
+            <span>
+              <InlineRichText text={item} />
+            </span>
           </li>
         ))}
       </ul>
     );
   }
-  return <>{cell.value}</>;
+  return <InlineRichText text={cell.value} />;
 }
 
 export function RichTable({ header, rows }: { header: string[]; rows: TableCellValue[][] }) {

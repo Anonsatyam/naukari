@@ -4,6 +4,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { TableCellValue } from "@/lib/types";
 import { Button } from "@/components/Button";
 import { RichTable } from "@/components/DetailSections";
+import { ListItemsEditor } from "@/components/admin/ListItemsEditor";
 import { parsePipeTables } from "@/lib/pipeTables";
 
 export interface TableBuilderValue {
@@ -88,13 +89,9 @@ function TableCellEditor({ cell, onChange }: { cell: TableCellValue; onChange: (
       )}
 
       {cell.type === "list" && (
-        <textarea
-          value={cell.items.join("\n")}
-          onChange={(e) => onChange({ type: "list", items: e.target.value.split("\n") })}
-          placeholder="One item per line"
-          rows={3}
-          className={`${inputClass} resize-y`}
-        />
+        <div className="mt-1 min-w-[220px]">
+          <ListItemsEditor items={cell.items} onChange={(items) => onChange({ type: "list", items })} />
+        </div>
       )}
     </div>
   );
