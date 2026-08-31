@@ -8,6 +8,11 @@ export interface PipeTable {
   body: string[][];
 }
 
+export function buildPipeTable(header: string[], rows: string[][]): string {
+  const allRows = [header, ...rows].filter((row) => row.some((cell) => cell.trim()));
+  return allRows.map((row) => row.map((c) => c.trim()).join(CELL_SEP)).join(ROW_SEP);
+}
+
 function parseRows(tableText: string): string[][] {
   return tableText
     .split(ROW_SEP)

@@ -2,61 +2,32 @@
 
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ExternalLink, CheckCircle2, XCircle, FileText, Plus, Trash2, TriangleAlert } from "lucide-react";
+import { ExternalLink, CheckCircle2, XCircle, FileText, TriangleAlert } from "lucide-react";
 import { BotDraft } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { deepDecodeEntities } from "@/lib/entities";
-import { parsePipeTables, TABLE_SEP, deriveAgeRange, deriveSalaryRange, parseFaqLines } from "@/lib/pipeTables";
+import { TABLE_SEP, deriveAgeRange, deriveSalaryRange, parseFaqLines } from "@/lib/pipeTables";
 import { Button } from "@/components/Button";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
 import { TextField, TextAreaField } from "@/components/FormField";
-
-interface AgeLimitRowDraft {
-  grade: string;
-  minAge: string;
-  maxAge: string;
-}
-
-interface AgeRelaxationRowDraft {
-  category: string;
-  relaxation: string;
-}
-
-interface LinkRowDraft {
-  label: string;
-  url: string;
-}
-
-interface FaqDraft {
-  question: string;
-  answer: string;
-}
-
-interface SectionDraft {
-  heading: string;
-  content: string;
-}
-
+import {
+  AgeLimitRowDraft,
+  AgeRelaxationRowDraft,
+  LinkRowDraft,
+  FaqDraft,
+  SectionDraft,
+  TYPE_LABELS,
+  JOB_DATE_FIELDS,
+  RawTableField,
+  RowsEditor,
+  SectionDivider,
+  pipeRowsToLines as pipeRowsToLinesShared,
+} from "@/components/admin/DraftFormShared";
 
 function pipeRowsToLines(text: string): string[] {
-  return text.split(TABLE_SEP).flatMap((chunk) => {
-    const rows = chunk.split(" || ").map((row) => row.trim()).filter(Boolean);
-    if (!chunk.includes(" | ")) {
-      return rows;
-    }
-    return rows
-      .slice(1)
-      .map((row) =>
-        row
-          .split(" | ")
-          .map((c) => c.trim())
-          .filter(Boolean)
-          .join(": ")
-      )
-      .filter(Boolean);
-  });
+  return pipeRowsToLinesShared(text, TABLE_SEP);
 }
 
 const APPLY_LINK_KEYWORDS = ["apply", "online", "registration", "आवेदन", "रजिस्ट्रेशन"];
@@ -79,145 +50,6 @@ function firstNonEmptyString(...values: unknown[]): string {
     if (typeof v === "string" && v.trim()) return v;
   }
   return "";
-}
-
-const TYPE_LABELS: Record<BotDraft["draftType"], string> = {
-  job: "Job",
-  result: "Result",
-  admit_card: "Admit Card",
-};
-
-const JOB_DATE_FIELDS: { key: string; label: string }[] = [
-  { key: "dateApplicationStart", label: "Application Start" },
-  { key: "dateApplicationEnd", label: "Application End" },
-  { key: "dateCorrectionDate", label: "Correction Date" },
-  { key: "dateExamDate", label: "Exam Date" },
-  { key: "dateAdmitCardRelease", label: "Admit Card Release" },
-  { key: "dateResultDate", label: "Result Date" },
-];
-
-function PipeTable({ text }: { text?: string }) {
-  if (!text) return null;
-  const tables = parsePipeTables(text);
-  if (tables.length === 0) return null;
-  return (
-    <div className="space-y-3">
-      {tables.map((t, i) => (
-        <div key={i} className="space-y-1.5">
-          {t.caption && <p className="text-xs leading-relaxed text-[var(--color-text-secondary)]">{t.caption}</p>}
-          <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-[var(--color-primary)] text-left text-white">
-                    {t.header.map((cell, j) => (
-                      <th key={j} className="px-3 py-2 align-top font-semibold">
-                        {cell}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--color-border)]">
-                  {t.body.map((row, r) => (
-                    <tr key={r}>
-                      {row.map((cell, c) => (
-                        <td key={c} className="whitespace-normal break-words px-3 py-2 align-top text-[var(--color-text-secondary)]">
-                          {cell}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function RawTableField({
-  label,
-  value,
-  onChange,
-  hint,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  hint?: string;
-}) {
-  return (
-    <div className="space-y-2">
-      <TextAreaField label={label} value={value} onChange={(e) => onChange(e.target.value)} hint={hint} rows={4} />
-      {value.trim() && (
-        <div>
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-            Preview
-          </p>
-          <PipeTable text={value} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function RowsEditor<T extends Record<string, string>>({
-  rows,
-  setRows,
-  fields,
-  addLabel,
-  newRow,
-}: {
-  rows: T[];
-  setRows: (updater: (prev: T[]) => T[]) => void;
-  fields: { key: keyof T & string; label: string; multiline?: boolean }[];
-  addLabel: string;
-  newRow: T;
-}) {
-  return (
-    <div className="space-y-3">
-      {rows.map((row, i) => (
-        <div key={i} className="rounded-lg border border-[var(--color-border)] p-3">
-          <div className="flex items-start gap-2">
-            <div className="flex-1 space-y-2">
-              {fields.map((f) => {
-                const Field = f.multiline ? TextAreaField : TextField;
-                return (
-                  <Field
-                    key={f.key}
-                    label={f.label}
-                    value={row[f.key] ?? ""}
-                    onChange={(e) =>
-                      setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, [f.key]: e.target.value } : r)))
-                    }
-                  />
-                );
-              })}
-            </div>
-            <button
-              type="button"
-              onClick={() => setRows((prev) => prev.filter((_, idx) => idx !== i))}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[var(--color-danger)] hover:bg-[var(--color-danger-tint)]"
-              aria-label="Remove row"
-            >
-              <Trash2 size={15} />
-            </button>
-          </div>
-        </div>
-      ))}
-      <Button type="button" variant="secondary" size="sm" onClick={() => setRows((prev) => [...prev, newRow])}>
-        <Plus size={14} /> {addLabel}
-      </Button>
-    </div>
-  );
-}
-
-function SectionDivider({ label }: { label: string }) {
-  return (
-    <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">{label}</p>
-  );
 }
 
 export default function DraftReviewPage({
@@ -317,10 +149,30 @@ export default function DraftReviewPage({
             shortInfo: typeof ex.shortInfo === "string" ? ex.shortInfo : "",
             totalVacancies: String(ex.totalVacancies ?? 0),
             qualification: String(ex.qualification ?? ""),
-            minAge: derivedAge.minAge !== undefined ? String(derivedAge.minAge) : "",
-            maxAge: derivedAge.maxAge !== undefined ? String(derivedAge.maxAge) : "",
-            salaryMin: derivedSalary.salaryMin !== undefined ? String(derivedSalary.salaryMin) : "",
-            salaryMax: derivedSalary.salaryMax !== undefined ? String(derivedSalary.salaryMax) : "",
+            minAge:
+              typeof ex.minAge === "number"
+                ? String(ex.minAge)
+                : derivedAge.minAge !== undefined
+                ? String(derivedAge.minAge)
+                : "",
+            maxAge:
+              typeof ex.maxAge === "number"
+                ? String(ex.maxAge)
+                : derivedAge.maxAge !== undefined
+                ? String(derivedAge.maxAge)
+                : "",
+            salaryMin:
+              typeof ex.salaryMin === "number"
+                ? String(ex.salaryMin)
+                : derivedSalary.salaryMin !== undefined
+                ? String(derivedSalary.salaryMin)
+                : "",
+            salaryMax:
+              typeof ex.salaryMax === "number"
+                ? String(ex.salaryMax)
+                : derivedSalary.salaryMax !== undefined
+                ? String(derivedSalary.salaryMax)
+                : "",
             ageRelaxation: typeof ex.ageRelaxation === "string" ? ex.ageRelaxation : "",
             syllabusSummary: typeof ex.syllabusSummary === "string" ? ex.syllabusSummary : "",
             officialApplyUrl: firstNonEmptyString(

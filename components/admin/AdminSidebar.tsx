@@ -8,11 +8,13 @@ import {
   Briefcase,
   LogOut,
   Landmark,
+  PenSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/create-post", label: "Create Post", icon: PenSquare },
   { href: "/admin/drafts", label: "Bot Drafts", icon: FileStack },
   { href: "/admin/jobs", label: "Manage Jobs", icon: Briefcase },
 ];
