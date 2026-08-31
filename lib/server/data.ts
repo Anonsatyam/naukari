@@ -168,6 +168,18 @@ export function parseVacancyBreakdown(postDetails: unknown): { category: string;
 }
 
 function ageLimitTableToGradeRows(table: PipeTable): { grade: string; minAge: string; maxAge: string }[] {
+  // A genuine grade-wise table needs at least 3 columns (grade/cadre,
+  // min age, max age) — a 2-column "Criteria | Age Limit" table (e.g.
+  // "Minimum Age | 20 Years" / "Maximum Age | 28 Years" / "Born
+  // Between | 02.04.1998 To 01.04.2006", as an SBI-style page
+  // publishes) looks superficially similar — label + one value per row
+  // — but isn't a grade breakdown at all. Forcing it through this
+  // shape fabricated a "Max. Age" column with nothing in it, on every
+  // row, that the source never published: exactly the kind of made-up
+  // structure the site exists to avoid. Bailing out to [] here lets
+  // the caller fall back to the raw table text instead, which renders
+  // the source's actual 2-column shape verbatim.
+  if (table.header.length < 3) return [];
   return table.body
     .map((row) => ({ grade: row[0], minAge: row[1] ?? "", maxAge: row[2] ?? "" }))
     .filter((r) => r.grade);
@@ -535,6 +547,17 @@ function findLinkByKeywords(links: unknown, keywords: string[]): string | undefi
 
 const APPLY_LINK_KEYWORDS = ["apply", "online", "registration", "आवेदन", "रजिस्ट्रेशन"];
 const NOTIFICATION_LINK_KEYWORDS = ["notification", "notice", "advertisement", "pdf", "नोटिफिकेशन", "अधिसूचना"];
+// A Result's own "View Official Result" button and an Admit Card's own
+// "Download Admit Card" button need to link to that specific document
+// — not whatever generic "notification" PDF happens to be listed
+// first. Checked BEFORE the generic notification/apply keywords below
+// (see the two officialLink resolutions), since without this a Result
+// page's primary button silently linked to the recruitment
+// notification instead of the actual result (both are commonly listed
+// side by side under one "Important Links" table, and "notification"
+// matched first purely by array order).
+const RESULT_LINK_KEYWORDS = ["result", "स्कोर", "scorecard", "मेरिट", "merit", "परिणाम"];
+const ADMIT_CARD_LINK_KEYWORDS = ["admit card", "hall ticket", "प्रवेश पत्र", "एडमिट कार्ड", "call letter"];
 
 // Drops any link that points back at the source site itself (see
 // isSourceSiteUrl's own comment) — applied once, here, to the raw
@@ -734,6 +757,7 @@ export async function approveDraft(
       officialLink:
         firstExternalUrl(
           merged.officialLink,
+          findLinkByKeywords(sanitizedLinks, RESULT_LINK_KEYWORDS),
           findLinkByKeywords(sanitizedLinks, NOTIFICATION_LINK_KEYWORDS),
           findLinkByKeywords(sanitizedLinks, APPLY_LINK_KEYWORDS),
           typeof merged.notificationPdfLink === "string" ? merged.notificationPdfLink : undefined,
@@ -781,6 +805,7 @@ export async function approveDraft(
       officialLink:
         firstExternalUrl(
           merged.officialLink,
+          findLinkByKeywords(sanitizedLinks, ADMIT_CARD_LINK_KEYWORDS),
           findLinkByKeywords(sanitizedLinks, NOTIFICATION_LINK_KEYWORDS),
           findLinkByKeywords(sanitizedLinks, APPLY_LINK_KEYWORDS),
           typeof merged.notificationPdfLink === "string" ? merged.notificationPdfLink : undefined,
