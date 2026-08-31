@@ -4,7 +4,6 @@ import JobCard from "@/components/JobCard";
 import ListItemCard from "@/components/ListItemCard";
 import HotUpdates from "@/components/HotUpdates";
 import RotatingHeroWord from "@/components/RotatingHeroWord";
-import RotatingStateName from "@/components/RotatingStateName";
 import { ButtonLink } from "@/components/Button";
 import { getPublishedJobs, getResults, getAdmitCards, getHotUpdates } from "@/lib/server/data";
 import { isClosingSoon, isRecent } from "@/lib/dateHelpers";
@@ -42,7 +41,7 @@ export default async function Home() {
             <h1 className="font-display mt-5 text-3xl font-extrabold leading-tight text-[var(--color-text-primary)] md:text-5xl">
               Sarkari <RotatingHeroWord />
               <br />
-              in <RotatingStateName className="text-[var(--color-primary)]" />
+              in <span className="tricolor-text">India</span>
             </h1>
             <p className="mt-4 text-base leading-relaxed text-[var(--color-text-secondary)] md:text-lg">
               Find the right job faster with verified details, smart filters, <br />and a clear eligibility check — no login required.
