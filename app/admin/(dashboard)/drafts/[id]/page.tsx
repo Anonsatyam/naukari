@@ -12,6 +12,7 @@ import Badge from "@/components/Badge";
 import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
 import { TextField, TextAreaField } from "@/components/FormField";
+import { ChipInput } from "@/components/admin/ChipInput";
 import {
   AgeLimitRowDraft,
   AgeRelaxationRowDraft,
@@ -77,6 +78,7 @@ export default function DraftReviewPage({
   const [faqs, setFaqs] = useState<FaqDraft[]>([]);
   const [additionalSections, setAdditionalSections] = useState<SectionDraft[]>([]);
   const [conclusion, setConclusion] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
 
   const [decision, setDecision] = useState<"approved" | "rejected" | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -198,6 +200,9 @@ export default function DraftReviewPage({
         if (typeof ex.conclusionText === "string" && ex.conclusionText) {
           setConclusion(ex.conclusionText);
         }
+        if (Array.isArray(ex.tags) && ex.tags.length > 0) {
+          setTags(ex.tags as string[]);
+        }
         if (Array.isArray(ex.faqText) && ex.faqText.length > 0) {
           setFaqs(parseFaqLines(ex.faqText as string[]));
         }
@@ -224,6 +229,7 @@ export default function DraftReviewPage({
         organization: fields.organization,
         category: fields.category,
       };
+      if (tags.length > 0) body.tags = tags;
 
       const rawTextFields: Record<string, string | undefined> = {
         importantDatesText: fields.importantDatesText,
@@ -429,6 +435,7 @@ export default function DraftReviewPage({
             value={fields.category ?? ""}
             onChange={(e) => setField("category")(e.target.value)}
           />
+          <ChipInput label="Tags" value={tags} onChange={setTags} hint="Shown as extra chips alongside Category on the card and detail page." />
 
           {draft.draftType === "job" && (
             <>

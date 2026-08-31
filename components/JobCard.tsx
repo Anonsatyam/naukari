@@ -53,6 +53,11 @@ export default function JobCard({ job }: { job: Job }) {
         <div className="flex flex-wrap items-center gap-2">
           {isNew && <Badge tone="success">New</Badge>}
           <Badge tone="primary">{job.category}</Badge>
+          {job.tags?.map((tag) => (
+            <Badge key={tag} tone="neutral">
+              {tag}
+            </Badge>
+          ))}
           {closingSoon && remaining !== null && (
             <Badge tone="danger">
               {remaining === 0 ? "Closes today" : `Closing in ${remaining}d`}

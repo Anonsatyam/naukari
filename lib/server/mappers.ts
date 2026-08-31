@@ -11,6 +11,7 @@ export function rowToJob(row: any): Job {
     organization: row.organization,
     department: row.department,
     category: row.category,
+    tags: row.tags ?? undefined,
     totalVacancies: row.total_vacancies,
     vacancyBreakdown: row.vacancy_breakdown ?? undefined,
     postDetailsText: row.post_details_text ?? undefined,
@@ -63,6 +64,7 @@ export function jobToRow(job: Partial<Job>): Record<string, unknown> {
   if (job.organization !== undefined) row.organization = job.organization;
   if (job.department !== undefined) row.department = job.department;
   if (job.category !== undefined) row.category = job.category;
+  if (job.tags !== undefined) row.tags = job.tags;
   if (job.totalVacancies !== undefined) row.total_vacancies = job.totalVacancies;
   if (job.vacancyBreakdown !== undefined) row.vacancy_breakdown = job.vacancyBreakdown;
   if (job.postDetailsText !== undefined) row.post_details_text = job.postDetailsText;
@@ -114,6 +116,7 @@ export function rowToResult(row: any): ResultItem {
     title: row.title,
     organization: row.organization,
     category: row.category,
+    tags: row.tags ?? undefined,
     resultDate: row.result_date,
     officialLink: row.official_link,
     sourceUrl: row.source_url,
@@ -150,6 +153,7 @@ export function resultToRow(result: Partial<ResultItem>): Record<string, unknown
   if (result.title !== undefined) row.title = result.title;
   if (result.organization !== undefined) row.organization = result.organization;
   if (result.category !== undefined) row.category = result.category;
+  if (result.tags !== undefined) row.tags = result.tags;
   if (result.resultDate !== undefined) row.result_date = result.resultDate;
   if (result.officialLink !== undefined) row.official_link = result.officialLink;
   if (result.sourceUrl !== undefined) row.source_url = result.sourceUrl;
@@ -188,6 +192,7 @@ export function rowToAdmitCard(row: any): AdmitCardItem {
     title: row.title,
     organization: row.organization,
     category: row.category,
+    tags: row.tags ?? undefined,
     examDate: row.exam_date,
     releaseDate: row.release_date,
     officialLink: row.official_link,
@@ -223,6 +228,7 @@ export function admitCardToRow(card: Partial<AdmitCardItem>): Record<string, unk
   if (card.title !== undefined) row.title = card.title;
   if (card.organization !== undefined) row.organization = card.organization;
   if (card.category !== undefined) row.category = card.category;
+  if (card.tags !== undefined) row.tags = card.tags;
   if (card.examDate !== undefined) row.exam_date = card.examDate;
   if (card.releaseDate !== undefined) row.release_date = card.releaseDate;
   if (card.officialLink !== undefined) row.official_link = card.officialLink;

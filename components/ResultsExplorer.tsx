@@ -73,6 +73,7 @@ export default function ResultsExplorer() {
               title={r.title}
               description={r.summary}
               category={r.category}
+              tags={r.tags}
               meta={`Declared ${formatDate(r.resultDate)}`}
               isNew={isRecent(r.resultDate)}
             />

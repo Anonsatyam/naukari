@@ -84,7 +84,14 @@ export default async function ResultDetailPage({
       />
 
       <Card padding="p-6">
-        <Badge tone="primary">{result.category}</Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone="primary">{result.category}</Badge>
+          {result.tags?.map((tag) => (
+            <Badge key={tag} tone="neutral">
+              {tag}
+            </Badge>
+          ))}
+        </div>
         <h1 className="font-display mt-3 text-2xl font-bold leading-tight text-[var(--color-text-primary)] md:text-3xl">
           {result.title}
         </h1>

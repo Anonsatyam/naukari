@@ -34,6 +34,17 @@ export { deriveAgeRange, deriveSalaryRange };
 export { isRecent, isClosingSoon, getApplicationEndDate };
 
 const UNDEFINED_COLUMN_PATTERN = /column\s+"?([a-zA-Z0-9_.]+)"?\s+(?:of relation "?[a-zA-Z0-9_]+"?\s+)?does not exist/i;
+const SCHEMA_CACHE_COLUMN_PATTERN = /Could not find the '([a-zA-Z0-9_]+)' column/i;
+
+function isMissingColumnError(error: { code?: string } | null | undefined): boolean {
+  return error?.code === "42703" || error?.code === "PGRST204";
+}
+
+function extractMissingColumnName(message: string | undefined): string | undefined {
+  if (!message) return undefined;
+  const match = message.match(UNDEFINED_COLUMN_PATTERN) ?? message.match(SCHEMA_CACHE_COLUMN_PATTERN);
+  return match?.[1]?.split(".").pop();
+}
 
 async function insertWithMissingColumnRetry<T>(
   insert: (
@@ -44,9 +55,8 @@ async function insertWithMissingColumnRetry<T>(
   const attemptRow = { ...row };
   for (let attempt = 0; attempt < 10; attempt++) {
     const result = await insert(attemptRow);
-    if (result.error?.code !== "42703") return result;
-    const match = result.error.message?.match(UNDEFINED_COLUMN_PATTERN);
-    const column = match?.[1]?.split(".").pop();
+    if (!isMissingColumnError(result.error)) return result;
+    const column = extractMissingColumnName(result.error?.message);
     if (!column || !(column in attemptRow)) return result;
     delete attemptRow[column];
   }
@@ -174,7 +184,7 @@ export async function getPublishedJobs(filters: JobFilters = {}): Promise<Job[]>
   let { data, error } = await buildQuery()
     .order("source_order_key", { ascending: false, nullsFirst: false })
     .order("published_at", { ascending: false });
-  if (error?.code === "42703") {
+  if (isMissingColumnError(error)) {
     ({ data, error } = await buildQuery().order("published_at", { ascending: false }));
   }
   if (error) throw error;
@@ -243,7 +253,7 @@ export async function getResults(q?: string): Promise<ResultItem[]> {
   let { data, error } = await buildQuery()
     .order("source_order_key", { ascending: false, nullsFirst: false })
     .order("result_date", { ascending: false });
-  if (error?.code === "42703") {
+  if (isMissingColumnError(error)) {
     ({ data, error } = await buildQuery().order("result_date", { ascending: false }));
   }
   if (error) throw error;
@@ -267,7 +277,7 @@ export async function getAdmitCards(q?: string): Promise<AdmitCardItem[]> {
   let { data, error } = await buildQuery()
     .order("source_order_key", { ascending: false, nullsFirst: false })
     .order("release_date", { ascending: false });
-  if (error?.code === "42703") {
+  if (isMissingColumnError(error)) {
     ({ data, error } = await buildQuery().order("release_date", { ascending: false }));
   }
   if (error) throw error;
@@ -513,6 +523,7 @@ export async function approveDraft(
       title,
       organization: merged.organization ?? draft.organization,
       category: merged.category ?? "Administrative",
+      tags: ensureOptionalArray<string>(merged.tags),
       resultDate: merged.resultDate ?? new Date().toISOString().slice(0, 10),
       officialLink:
         firstExternalUrl(
@@ -561,6 +572,7 @@ export async function approveDraft(
       title,
       organization: merged.organization ?? draft.organization,
       category: merged.category ?? "Administrative",
+      tags: ensureOptionalArray<string>(merged.tags),
       examDate: merged.examDate ?? defaultExamDate,
       releaseDate: merged.releaseDate ?? now.toISOString().slice(0, 10),
       officialLink:
@@ -610,6 +622,7 @@ export async function approveDraft(
     organization: merged.organization ?? draft.organization,
     department: merged.department ?? draft.organization,
     category: merged.category ?? "Administrative",
+    tags: ensureOptionalArray<string>(merged.tags),
     totalVacancies: merged.totalVacancies ?? 0,
     vacancyBreakdown: ensureOptionalArray(merged.vacancyBreakdown) ?? parseVacancyBreakdown(merged.postDetails),
     postDetailsText: typeof merged.postDetails === "string" ? merged.postDetails : undefined,
@@ -739,7 +752,7 @@ export async function createDraft(input: {
     extractedFields: input.extractedFields,
   });
   let { data, error } = await supabase.from("bot_drafts").insert(row).select().single();
-  if (error?.code === "42703") {
+  if (isMissingColumnError(error)) {
     delete row.source_order_key;
     ({ data, error } = await supabase.from("bot_drafts").insert(row).select().single());
   }

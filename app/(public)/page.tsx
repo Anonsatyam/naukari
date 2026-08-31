@@ -136,6 +136,7 @@ export default async function Home() {
                 eyebrow={r.organization}
                 title={r.title}
                 category={r.category}
+                tags={r.tags}
                 meta={`Declared ${formatDate(r.resultDate)}`}
                 isNew={isRecent(r.resultDate)}
               />
@@ -165,6 +166,7 @@ export default async function Home() {
                 eyebrow={a.organization}
                 title={a.title}
                 category={a.category}
+                tags={a.tags}
                 meta={`Exam on ${formatDate(a.examDate)}`}
                 isNew={isRecent(a.releaseDate)}
               />

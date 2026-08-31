@@ -53,6 +53,7 @@ export interface Job {
   organization: string;
   department: string;
   category: string;
+  tags?: string[];
   totalVacancies: number;
   vacancyBreakdown?: VacancyBreakdown[];
   postDetailsText?: string;
@@ -105,6 +106,7 @@ export interface ResultItem {
   title: string;
   organization: string;
   category: string;
+  tags?: string[];
   resultDate: string;
   officialLink: string;
   sourceUrl: string;
@@ -140,6 +142,7 @@ export interface AdmitCardItem {
   title: string;
   organization: string;
   category: string;
+  tags?: string[];
   examDate: string;
   releaseDate: string;
   officialLink: string;

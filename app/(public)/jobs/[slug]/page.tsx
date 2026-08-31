@@ -119,6 +119,11 @@ export default async function JobDetailPage({
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone="primary">{job.category}</Badge>
           <Badge tone="success">{job.state}</Badge>
+          {job.tags?.map((tag) => (
+            <Badge key={tag} tone="neutral">
+              {tag}
+            </Badge>
+          ))}
           {closingSoon && remaining !== null && (
             <Badge tone="danger">
               {remaining === 0 ? "Closes today" : `Closing in ${remaining}d`}

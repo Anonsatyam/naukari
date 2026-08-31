@@ -9,6 +9,7 @@ export default function ListItemCard({
   title,
   description,
   category,
+  tags,
   meta,
   isNew = false,
 }: {
@@ -17,6 +18,7 @@ export default function ListItemCard({
   title: string;
   description?: string;
   category: string;
+  tags?: string[];
   meta: string;
   isNew?: boolean;
 }) {
@@ -51,6 +53,11 @@ export default function ListItemCard({
         <div className="flex flex-wrap items-center gap-2">
           {isNew && <Badge tone="success">New</Badge>}
           <Badge tone="primary">{category}</Badge>
+          {tags?.map((tag) => (
+            <Badge key={tag} tone="neutral">
+              {tag}
+            </Badge>
+          ))}
         </div>
         <WhatsAppShareButton path={href} text={title} />
       </div>

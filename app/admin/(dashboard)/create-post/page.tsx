@@ -20,6 +20,7 @@ import {
   SectionDivider,
 } from "@/components/admin/DraftFormShared";
 import { TableBuilder, TableBuilderValue, emptyTableBuilderValue, tableBuilderToPipeText } from "@/components/admin/TableBuilder";
+import { ChipInput } from "@/components/admin/ChipInput";
 
 interface CustomSectionDraft {
   heading: string;
@@ -34,6 +35,7 @@ export default function CreatePostPage() {
   const [title, setTitle] = useState("");
   const [organization, setOrganization] = useState("");
   const [category, setCategory] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
 
   const [state, setState] = useState("Bihar");
   const [department, setDepartment] = useState("");
@@ -119,6 +121,7 @@ export default function CreatePostPage() {
         organization: organization.trim(),
         category: category.trim(),
       };
+      if (tags.length > 0) extractedFields.tags = tags;
 
       const rawTables: [string, TableBuilderValue][] = [
         ["importantDatesText", importantDatesTable],
@@ -258,10 +261,8 @@ export default function CreatePostPage() {
           <TextField label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
           <TextField label="Organization" value={organization} onChange={(e) => setOrganization(e.target.value)} />
         </div>
-        <div>
-          <TextField label="Category" value={category} onChange={(e) => setCategory(e.target.value)} />
-          <p className="mt-1 text-xs text-[var(--color-text-muted)]">Shown as a chip/badge on the card and detail page.</p>
-        </div>
+        <TextField label="Category" value={category} onChange={(e) => setCategory(e.target.value)} />
+        <ChipInput label="Tags" value={tags} onChange={setTags} hint="Shown as extra chips alongside Category on the card and detail page." />
 
         {draftType === "job" && (
           <>

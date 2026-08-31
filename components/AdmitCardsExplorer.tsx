@@ -72,6 +72,7 @@ export default function AdmitCardsExplorer() {
               eyebrow={a.organization}
               title={a.title}
               category={a.category}
+              tags={a.tags}
               meta={`Exam on ${formatDate(a.examDate)}`}
               isNew={isRecent(a.releaseDate)}
             />
