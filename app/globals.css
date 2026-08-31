@@ -130,6 +130,25 @@ button:not(:disabled) {
   animation: breathe 1.8s ease-out infinite;
 }
 
+.india-sash-clip {
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    transparent 32%,
+    #ff9933 38%,
+    #ff9933 44%,
+    #ffffff 46%,
+    #ffffff 52%,
+    #138808 54%,
+    #138808 60%,
+    transparent 66%,
+    transparent 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;
