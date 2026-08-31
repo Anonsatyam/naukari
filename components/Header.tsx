@@ -1,37 +1,41 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
-import { Menu, X, Landmark, Wrench, ChevronDown } from "lucide-react";
+import { useTranslations, useLocale } from "next-intl";
+import { Link, usePathname } from "@/i18n/navigation";
+import { Menu, X, Landmark, Wrench, ChevronDown, Languages } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/jobs", label: "Jobs" },
-  { href: "/closing-soon", label: "Closing Soon" },
-  { href: "/results", label: "Results" },
-  { href: "/admit-cards", label: "Admit Cards" },
-  { href: "/eligibility-checker", label: "Eligibility Checker" },
-];
-
-const toolLinks = [
-  { href: "/tools/photo-resizer", label: "Photo & Signature Resizer" },
-  { href: "/tools/name-date-photo", label: "Name & Date on Photo" },
-  { href: "/tools/signature-merge", label: "Merge Signature on Photo" },
-];
-
-const aboutLink = { href: "/about", label: "About" };
-
 export default function Header() {
+  const t = useTranslations();
+  const locale = useLocale();
+  const pathname = usePathname();
+
+  const navLinks = [
+    { href: "/", label: t("nav.home") },
+    { href: "/jobs", label: t("nav.jobs") },
+    { href: "/closing-soon", label: t("nav.closingSoon") },
+    { href: "/results", label: t("nav.results") },
+    { href: "/admit-cards", label: t("nav.admitCards") },
+    { href: "/eligibility-checker", label: t("nav.eligibilityChecker") },
+  ];
+
+  const toolLinks = [
+    { href: "/tools/photo-resizer", label: "Photo & Signature Resizer" },
+    { href: "/tools/name-date-photo", label: "Name & Date on Photo" },
+    { href: "/tools/signature-merge", label: "Merge Signature on Photo" },
+  ];
+
+  const aboutLink = { href: "/about", label: t("nav.about") };
+
   const [open, setOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
   const toolsRef = useRef<HTMLDivElement>(null);
-  const pathname = usePathname();
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
   const toolsActive = pathname.startsWith("/tools");
+  const otherLocale = locale === "en" ? "hi" : "en";
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -52,10 +56,10 @@ export default function Header() {
           </span>
           <span className="flex flex-col leading-tight">
             <span className="text-[15px] font-bold text-[var(--color-text-primary)]">
-              Sarkari Naukri
+              {t("brand.name")}
             </span>
             <span className="text-[11px] text-[var(--color-text-secondary)]">
-              Verified government job updates
+              {t("brand.tagline")}
             </span>
           </span>
         </Link>
@@ -88,7 +92,7 @@ export default function Header() {
               )}
             >
               <Wrench size={14} />
-              Tools
+              {t("nav.tools")}
               <ChevronDown size={14} className={cn("transition-transform", toolsOpen && "rotate-180")} />
             </button>
 
@@ -99,7 +103,7 @@ export default function Header() {
                   onClick={() => setToolsOpen(false)}
                   className="block rounded-md px-3 py-2 text-sm font-semibold text-[var(--color-primary)] hover:bg-[var(--color-primary-tint)]"
                 >
-                  All Tools
+                  {t("nav.allTools")}
                 </Link>
                 <div className="my-1 border-t border-[var(--color-border)]" />
                 {toolLinks.map((tool) => (
@@ -122,7 +126,7 @@ export default function Header() {
           </div>
         </nav>
 
-        <div className="hidden lg:block">
+        <div className="hidden items-center gap-2 lg:flex">
           <Link
             href={aboutLink.href}
             className={cn(
@@ -134,15 +138,37 @@ export default function Header() {
           >
             {aboutLink.label}
           </Link>
+          <Link
+            href={pathname}
+            locale={otherLocale}
+            aria-label={t("nav.language")}
+            title={t("nav.language")}
+            className="flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+          >
+            <Languages size={14} />
+            {otherLocale === "hi" ? "हिं" : "EN"}
+          </Link>
         </div>
 
-        <button
-          aria-label={open ? "Close menu" : "Open menu"}
-          className="lg:hidden flex h-9 w-9 items-center justify-center rounded-md border border-[var(--color-border)] text-[var(--color-text-primary)]"
-          onClick={() => setOpen((v) => !v)}
-        >
-          {open ? <X size={18} /> : <Menu size={18} />}
-        </button>
+        <div className="flex items-center gap-2 lg:hidden">
+          <Link
+            href={pathname}
+            locale={otherLocale}
+            aria-label={t("nav.language")}
+            title={t("nav.language")}
+            className="flex h-9 items-center gap-1 rounded-md border border-[var(--color-border)] px-2.5 text-xs font-semibold text-[var(--color-text-primary)]"
+          >
+            <Languages size={14} />
+            {otherLocale === "hi" ? "हिं" : "EN"}
+          </Link>
+          <button
+            aria-label={open ? t("nav.closeMenu") : t("nav.openMenu")}
+            className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--color-border)] text-[var(--color-text-primary)]"
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? <X size={18} /> : <Menu size={18} />}
+          </button>
+        </div>
       </div>
 
       <div
@@ -177,7 +203,7 @@ export default function Header() {
             )}
           >
             <span className="flex items-center gap-1.5">
-              <Wrench size={14} /> Tools
+              <Wrench size={14} /> {t("nav.tools")}
             </span>
             <ChevronDown size={14} className={cn("transition-transform", mobileToolsOpen && "rotate-180")} />
           </button>
@@ -188,7 +214,7 @@ export default function Header() {
                 onClick={() => setOpen(false)}
                 className="rounded-md px-2 py-2.5 text-sm font-semibold text-[var(--color-primary)]"
               >
-                All Tools
+                {t("nav.allTools")}
               </Link>
               {toolLinks.map((tool) => (
                 <Link

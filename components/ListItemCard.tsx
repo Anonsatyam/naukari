@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { ArrowUpRight, Calendar } from "lucide-react";
 import Badge from "./Badge";
 import WhatsAppShareButton from "./WhatsAppShareButton";

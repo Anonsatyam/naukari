@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
-const WORDS: { text: string; colorVar: string }[] = [
-  { text: "Jobs", colorVar: "--color-primary" },
-  { text: "Results", colorVar: "--color-success" },
-  { text: "Admit Cards", colorVar: "--color-accent-orange" },
+const WORD_KEYS: { key: "jobs" | "results" | "admitCards"; colorVar: string }[] = [
+  { key: "jobs", colorVar: "--color-primary" },
+  { key: "results", colorVar: "--color-success" },
+  { key: "admitCards", colorVar: "--color-accent-orange" },
 ];
 
 export default function RotatingHeroWord({ className }: { className?: string }) {
+  const t = useTranslations("heroWords");
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
@@ -20,13 +22,13 @@ export default function RotatingHeroWord({ className }: { className?: string }) 
     if (prefersReducedMotion) return;
 
     const id = setInterval(() => {
-      setIndex((prev) => (prev + 1) % WORDS.length);
+      setIndex((prev) => (prev + 1) % WORD_KEYS.length);
     }, 2000);
 
     return () => clearInterval(id);
   }, []);
 
-  const word = WORDS[index];
+  const word = WORD_KEYS[index];
 
   return (
     <span
@@ -34,7 +36,7 @@ export default function RotatingHeroWord({ className }: { className?: string }) 
       className={cn("inline-block animate-state-cycle", className)}
       style={{ color: `var(${word.colorVar})` }}
     >
-      {word.text}
+      {t(word.key)}
     </span>
   );
 }

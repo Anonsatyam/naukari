@@ -1,0 +1,57 @@
+{
+  "nav": {
+    "home": "Home",
+    "jobs": "Jobs",
+    "closingSoon": "Closing Soon",
+    "results": "Results",
+    "admitCards": "Admit Cards",
+    "eligibilityChecker": "Eligibility Checker",
+    "about": "About",
+    "tools": "Tools",
+    "allTools": "All Tools",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "language": "Language"
+  },
+  "brand": {
+    "name": "Sarkari Naukri",
+    "tagline": "Verified government job updates"
+  },
+  "footer": {
+    "description": "Structured, verified government job information — sourced directly from official notifications.",
+    "explore": "Explore",
+    "allJobs": "All Jobs",
+    "results": "Results",
+    "admitCards": "Admit Cards",
+    "eligibilityChecker": "Eligibility Checker",
+    "disclaimerTitle": "Disclaimer",
+    "disclaimerBody": "This is an independent information portal, not an official government website. Always verify details and apply only through the official notification and application links provided on each listing.",
+    "credit": "© 2026 Sarkari Naukri — made by a Bihari.",
+    "about": "About",
+    "disclaimer": "Disclaimer",
+    "contact": "Contact"
+  },
+  "home": {
+    "liveBadge": "Live · Verified from official sources",
+    "heroPrefix": "Sarkari",
+    "heroSuffix": "in",
+    "heroTagline": "Find the right job faster with verified details, smart filters, and a clear eligibility check — no login required.",
+    "searchPlaceholder": "Search Job/Result/Admit card by title, department or organization",
+    "searchButton": "Search Jobs",
+    "closingSoon": "Closing Soon",
+    "latestJobs": "Latest Jobs",
+    "latestResults": "Latest Results",
+    "latestAdmitCards": "Latest Admit Cards",
+    "viewAll": "View all",
+    "ctaTitle": "Not sure if you qualify?",
+    "ctaBody": "Check your eligibility for any listed job in seconds — with a clear reason, not just a yes or no.",
+    "ctaButton": "Check Eligibility",
+    "resultDeclared": "Declared {date}",
+    "examOn": "Exam on {date}"
+  },
+  "heroWords": {
+    "jobs": "Jobs",
+    "results": "Results",
+    "admitCards": "Admit Cards"
+  }
+}

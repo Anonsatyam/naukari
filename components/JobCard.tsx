@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { ArrowUpRight, Briefcase, Clock, Users } from "lucide-react";
 import { Job } from "@/lib/types";
 import { formatDate, daysUntil } from "@/lib/utils";
