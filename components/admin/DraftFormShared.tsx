@@ -132,7 +132,7 @@ export function RowsEditor<T extends Record<string, string>>({
   return (
     <div className="space-y-3">
       {rows.map((row, i) => (
-        <div key={i} className="rounded-lg border border-[var(--color-border)] p-3">
+        <div key={i} className="rounded-lg bg-[var(--color-border)] p-3">
           <div className="flex items-start gap-2">
             <div className="flex-1 space-y-2">
               {fields.map((f) => {

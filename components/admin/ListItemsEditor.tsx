@@ -41,7 +41,7 @@ function ListItemRow({
   };
 
   return (
-    <div className="rounded-lg border border-[var(--color-border)] p-2.5">
+    <div className="rounded-lg border border-[var(--color-border)] bg-white p-2.5">
       <div className="flex items-center gap-1.5">
         <input
           ref={inputRef}

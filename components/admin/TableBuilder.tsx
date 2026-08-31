@@ -48,7 +48,7 @@ function emptyCellOfType(type: TableCellValue["type"]): TableCellValue {
 
 function TableCellEditor({ cell, onChange }: { cell: TableCellValue; onChange: (cell: TableCellValue) => void }) {
   const inputClass =
-    "mt-1 w-full min-w-[100px] rounded-[var(--radius-control)] border border-[var(--color-border)] px-2 py-1.5 text-xs text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]";
+    "mt-1 w-full min-w-[100px] rounded-[var(--radius-control)] border border-[var(--color-border)] bg-white px-2 py-1.5 text-xs text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]";
 
   return (
     <div className="min-w-[130px]">

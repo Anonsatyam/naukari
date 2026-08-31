@@ -249,7 +249,7 @@ export default function CreatePostPage() {
             </p>
             <div className="space-y-3">
               {keyDates.map((row, i) => (
-                <div key={i} className="flex items-end gap-2 rounded-lg border border-[var(--color-border)] p-3">
+                <div key={i} className="flex items-end gap-2 rounded-lg bg-[var(--color-border)] p-3">
                   <div className="flex-1">
                     <TextField label="Label" value={row.label} onChange={(e) => updateKeyDate(i, { label: e.target.value })} />
                   </div>

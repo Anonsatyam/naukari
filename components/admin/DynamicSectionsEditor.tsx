@@ -149,7 +149,7 @@ export function DynamicSectionsEditor({
   return (
     <div className="space-y-4">
       {sections.map((section, i) => (
-        <div key={section.id} className="rounded-lg border border-[var(--color-border)] p-3">
+        <div key={section.id} className="rounded-lg bg-[var(--color-border)] p-3">
           <div className="flex flex-wrap items-start gap-2">
             <div className="min-w-0 flex-1">
               <TextField
@@ -204,7 +204,7 @@ export function DynamicSectionsEditor({
             {section.kind === "dates" && (
               <div className="space-y-3">
                 {section.dates.map((row, r) => (
-                  <div key={r} className="flex items-end gap-2 rounded-lg border border-[var(--color-border)] p-3">
+                  <div key={r} className="flex items-end gap-2 rounded-lg border border-[var(--color-border)] bg-white p-3">
                     <div className="flex-1">
                       <TextField
                         label="Label"
