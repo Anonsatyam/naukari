@@ -195,6 +195,7 @@ export function CellContent({ cell }: { cell: TableCellValue }) {
     return cell.value ? <span>{formatDate(cell.value)}</span> : null;
   }
   if (cell.type === "link") {
+    if (!cell.label.trim() && !cell.url.trim()) return null;
     return (
       <a
         href={cell.url}
@@ -207,6 +208,7 @@ export function CellContent({ cell }: { cell: TableCellValue }) {
     );
   }
   if (cell.type === "button") {
+    if (!cell.label.trim() && !cell.url.trim()) return null;
     return (
       <ButtonLink href={cell.url} target="_blank" variant="secondary" size="sm">
         {cell.label || "Open"} <ExternalLink size={12} />
