@@ -34,13 +34,14 @@ export function pipeTextToTableBuilderValue(text: string): TableBuilderValue {
 
 const CELL_TYPE_LABELS: Record<TableCellValue["type"], string> = {
   text: "Text",
+  date: "Date",
   link: "Link",
   button: "Button",
   list: "List",
 };
 
 function emptyCellOfType(type: TableCellValue["type"]): TableCellValue {
-  if (type === "text") return { type: "text", value: "" };
+  if (type === "text" || type === "date") return { type, value: "" };
   if (type === "list") return { type: "list", items: [] };
   return { type, label: "", url: "" };
 }
@@ -70,6 +71,15 @@ function TableCellEditor({ cell, onChange }: { cell: TableCellValue; onChange: (
         <input
           value={cell.value}
           onChange={(e) => onChange({ type: "text", value: e.target.value })}
+          className={inputClass}
+        />
+      )}
+
+      {cell.type === "date" && (
+        <input
+          type="date"
+          value={cell.value}
+          onChange={(e) => onChange({ type: "date", value: e.target.value })}
           className={inputClass}
         />
       )}

@@ -191,6 +191,9 @@ export function PipeTableOrText({ text }: { text: string }) {
 }
 
 export function CellContent({ cell }: { cell: TableCellValue }) {
+  if (cell.type === "date") {
+    return cell.value ? <span>{formatDate(cell.value)}</span> : null;
+  }
   if (cell.type === "link") {
     return (
       <a

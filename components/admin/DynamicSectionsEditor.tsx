@@ -17,7 +17,7 @@ import {
 } from "@/components/admin/TableBuilder";
 
 function cellToPlainText(cell: TableCellValue): string {
-  if (cell.type === "text") return cell.value;
+  if (cell.type === "text" || cell.type === "date") return cell.value;
   if (cell.type === "list") return cell.items.filter(Boolean).join("; ");
   return cell.label || cell.url;
 }

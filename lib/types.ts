@@ -43,6 +43,7 @@ export type AdditionalSectionKind = "table" | "list" | "links" | "dates" | "chip
 
 export type TableCellValue =
   | { type: "text"; value: string }
+  | { type: "date"; value: string }
   | { type: "link"; label: string; url: string }
   | { type: "button"; label: string; url: string }
   | { type: "list"; items: string[] };
