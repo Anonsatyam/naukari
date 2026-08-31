@@ -212,7 +212,7 @@ export function TableBuilder({
         </table>
       </div>
 
-      <Button type="button" variant="secondary" size="sm" onClick={addRow}>
+      <Button type="button" size="sm" onClick={addRow}>
         <Plus size={14} /> Add Row
       </Button>
 

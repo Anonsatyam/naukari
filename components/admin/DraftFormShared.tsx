@@ -173,7 +173,7 @@ export function RowsEditor<T extends Record<string, string>>({
           </div>
         </div>
       ))}
-      <Button type="button" variant="secondary" size="sm" onClick={() => setRows((prev) => [...prev, newRow])}>
+      <Button type="button" size="sm" onClick={() => setRows((prev) => [...prev, newRow])}>
         <Plus size={14} /> {addLabel}
       </Button>
     </div>

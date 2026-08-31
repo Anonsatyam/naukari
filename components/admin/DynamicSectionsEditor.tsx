@@ -236,7 +236,6 @@ export function DynamicSectionsEditor({
                 ))}
                 <Button
                   type="button"
-                  variant="secondary"
                   size="sm"
                   onClick={() => update(section.id, { dates: [...section.dates, { label: "", date: "" }] })}
                 >
@@ -258,7 +257,7 @@ export function DynamicSectionsEditor({
         </div>
       ))}
 
-      <Button type="button" variant="secondary" size="sm" onClick={add}>
+      <Button type="button" size="sm" onClick={add}>
         <Plus size={14} /> Add Section
       </Button>
     </div>

@@ -231,20 +231,18 @@ export function DraftsListView({
             <Button
               type="button"
               size="sm"
-              variant="secondary"
               disabled={bulkPending}
               onClick={() => runBulkAction("approve")}
-              className="border-[var(--color-success)] text-[var(--color-success)]"
+              className="bg-[var(--color-success)] text-white hover:opacity-90"
             >
               <CheckCircle2 size={14} /> Approve
             </Button>
             <Button
               type="button"
               size="sm"
-              variant="secondary"
               disabled={bulkPending}
               onClick={() => runBulkAction("reject")}
-              className="border-[var(--color-danger)] text-[var(--color-danger)]"
+              className="bg-[var(--color-danger)] text-white hover:opacity-90"
             >
               <XCircle size={14} /> Reject
             </Button>

@@ -1,13 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { cloneElement, isValidElement, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
 const TONE_CLASSES = {
-  default: "text-[var(--color-text-secondary)] hover:bg-[var(--color-background)]",
-  danger: "text-[var(--color-danger)] hover:bg-[var(--color-danger-tint)]",
-  primary: "text-[var(--color-primary)] hover:bg-[var(--color-primary-tint)]",
+  default: "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]",
+  danger: "bg-[var(--color-danger)] text-white hover:opacity-90",
+  primary: "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]",
 } as const;
 
 const SIZE_CLASSES = {
@@ -44,6 +44,8 @@ export function IconButton({
   };
   const hideTooltip = () => setTooltipPos(null);
 
+  const filledIcon = isValidElement<{ fill?: string }>(icon) ? cloneElement(icon, { fill: "currentColor" }) : icon;
+
   return (
     <>
       <button
@@ -56,7 +58,6 @@ export function IconButton({
         onBlur={hideTooltip}
         disabled={disabled}
         aria-label={label}
-        title={label}
         className={cn(
           "flex shrink-0 items-center justify-center rounded-[var(--radius-control)] transition-colors disabled:cursor-not-allowed disabled:opacity-30",
           SIZE_CLASSES[size],
@@ -64,7 +65,7 @@ export function IconButton({
           className
         )}
       >
-        {icon}
+        {filledIcon}
       </button>
       {tooltipPos &&
         createPortal(

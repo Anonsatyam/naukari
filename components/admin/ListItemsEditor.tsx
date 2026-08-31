@@ -95,7 +95,7 @@ export function ListItemsEditor({ items, onChange }: { items: string[]; onChange
           canMoveDown={i < items.length - 1}
         />
       ))}
-      <Button type="button" variant="secondary" size="sm" onClick={addItem}>
+      <Button type="button" size="sm" onClick={addItem}>
         <Plus size={14} /> Add List Item
       </Button>
     </div>
