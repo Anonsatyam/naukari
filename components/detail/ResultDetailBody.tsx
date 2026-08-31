@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Calendar, ExternalLink, FileText, HelpCircle, Link2, ListChecks, CheckCircle2 } from "lucide-react";
 import { ResultItem } from "@/lib/types";
 import { formatDate, isSourceSiteUrl, documentViewerHref } from "@/lib/utils";
@@ -12,6 +13,7 @@ import {
   SelectionProcessSection,
   ExamPatternSection,
   DocumentsRequiredSection,
+  SectionTranslator,
 } from "@/components/RichSections";
 import { ButtonLink } from "@/components/Button";
 import Badge from "@/components/Badge";
@@ -33,7 +35,12 @@ const RESULT_DEFAULT_ORDER = [
   "eligibilityRaw",
 ];
 
-export function ResultDetailBody({ result }: { result: ResultItem }) {
+export async function ResultDetailBody({ result }: { result: ResultItem }) {
+  const t = (await getTranslations("detail")) as SectionTranslator;
+  const tResults = await getTranslations("resultsPage");
+  const tCommon = await getTranslations("common");
+  const locale = await getLocale();
+  const localePath = (path: string) => (locale === "en" ? path : `/${locale}${path}`);
   const sourceLinks = (result.importantLinks ?? []).filter((link) => !isSourceSiteUrl(link.url));
   const hasRealOfficialLink = !isSourceSiteUrl(result.officialLink);
 
@@ -44,8 +51,8 @@ export function ResultDetailBody({ result }: { result: ResultItem }) {
     <div className="container-page py-8">
       <Breadcrumb
         items={[
-          { label: "Home", href: "/" },
-          { label: "Results", href: "/results" },
+          { label: tCommon("home"), href: localePath("/") },
+          { label: tResults("breadcrumb"), href: localePath("/results") },
           { label: result.title },
         ]}
       />
@@ -71,31 +78,32 @@ export function ResultDetailBody({ result }: { result: ResultItem }) {
           {(() => {
             const sectionRenderers: Record<string, React.ReactNode> = {
               importantDatesRaw: (
-                <Section title="Important Dates" icon={<Calendar size={16} />} accent="blue">
+                <Section title={t("importantDates")} icon={<Calendar size={16} />} accent="blue">
                   {result.importantDatesText ? (
                     <PipeTableOrText text={result.importantDatesText} />
                   ) : (
-                    <KeyValueRow label="Result Declared" value={formatDate(result.resultDate)} />
+                    <KeyValueRow label={t("resultDeclared")} value={formatDate(result.resultDate)} />
                   )}
                 </Section>
               ),
               howToApplyRaw:
                 Array.isArray(result.howToCheck) && result.howToCheck.length > 0 ? (
-                  <Section title="How to Check Result" icon={<ListChecks size={16} />} accent="green">
+                  <Section title={t("howToCheckResult")} icon={<ListChecks size={16} />} accent="green">
                     <StepList items={result.howToCheck} />
                   </Section>
                 ) : null,
               cutoffText: result.cutoffText ? (
-                <Section title="Cut Off / Merit Details" icon={<FileText size={16} />} accent="purple">
+                <Section title={t("cutoffDetails")} icon={<FileText size={16} />} accent="purple">
                   <PipeTableOrText text={result.cutoffText} />
                 </Section>
               ) : null,
-              applicationFeeRaw: <ApplicationFeeSection fee={result.applicationFee} feeText={result.applicationFeeText} />,
+              applicationFeeRaw: <ApplicationFeeSection fee={result.applicationFee} feeText={result.applicationFeeText} t={t} />,
               ageLimitRaw: (
                 <AgeLimitSection
                   ageLimitByGrade={result.ageLimitByGrade}
                   ageRelaxationBreakdown={result.ageRelaxationBreakdown}
                   ageLimitText={result.ageLimitText}
+                  t={t}
                 />
               ),
               postDetailsRaw: (
@@ -103,17 +111,21 @@ export function ResultDetailBody({ result }: { result: ResultItem }) {
                   vacancyBreakdown={result.vacancyBreakdown}
                   postDetailsText={result.postDetailsText}
                   totalVacancies={result.totalVacancies}
+                  t={t}
                 />
               ),
               selectionProcessRaw: (
                 <SelectionProcessSection
                   selectionProcess={result.selectionProcess}
                   selectionProcessText={result.selectionProcessText}
+                  t={t}
                 />
               ),
-              examPatternRaw: <ExamPatternSection examPattern={result.examPattern} examPatternNotes={result.examPatternNotes} />,
-              documentsRequiredRaw: <DocumentsRequiredSection documentsRequired={result.documentsRequired} />,
-              eligibilityRaw: <EligibilitySection eligibilityText={result.eligibilityText} />,
+              examPatternRaw: (
+                <ExamPatternSection examPattern={result.examPattern} examPatternNotes={result.examPatternNotes} t={t} />
+              ),
+              documentsRequiredRaw: <DocumentsRequiredSection documentsRequired={result.documentsRequired} t={t} />,
+              eligibilityRaw: <EligibilitySection eligibilityText={result.eligibilityText} t={t} />,
             };
 
             return orderedSectionKeys.map((key) => {
@@ -128,7 +140,7 @@ export function ResultDetailBody({ result }: { result: ResultItem }) {
           })()}
 
           {Array.isArray(result.faqs) && result.faqs.length > 0 && (
-            <Section title="FAQs" icon={<HelpCircle size={16} />} accent="pink">
+            <Section title={t("faqs")} icon={<HelpCircle size={16} />} accent="pink">
               <div className="divide-y divide-[var(--color-border)]">
                 {result.faqs.map((faq, i) => (
                   <div key={i} className={i === 0 ? "pb-4" : "py-4"}>
@@ -143,7 +155,7 @@ export function ResultDetailBody({ result }: { result: ResultItem }) {
           )}
 
           {result.conclusion && (
-            <Section title="Conclusion" icon={<CheckCircle2 size={16} />} accent="green">
+            <Section title={t("conclusion")} icon={<CheckCircle2 size={16} />} accent="green">
               <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{result.conclusion}</p>
             </Section>
           )}
@@ -152,7 +164,7 @@ export function ResultDetailBody({ result }: { result: ResultItem }) {
         <aside className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-24 lg:h-fit">
           <Card>
             <p className="mb-3 flex items-center gap-2 text-base font-bold text-[var(--color-text-primary)]">
-              <Link2 size={17} /> Important Links
+              <Link2 size={17} /> {t("importantLinks")}
             </p>
             {sourceLinks.length > 0 ? (
               sourceLinks.map((link, i) => (
@@ -167,12 +179,12 @@ export function ResultDetailBody({ result }: { result: ResultItem }) {
                 </ButtonLink>
               ))
             ) : hasRealOfficialLink ? (
-              <ButtonLink href={documentViewerHref(result.officialLink, "View Official Result")} target="_blank" className="w-full">
-                View Official Result <ExternalLink size={14} />
+              <ButtonLink href={documentViewerHref(result.officialLink, t("viewOfficialResult"))} target="_blank" className="w-full">
+                {t("viewOfficialResult")} <ExternalLink size={14} />
               </ButtonLink>
             ) : (
               <p className="text-sm text-[var(--color-text-secondary)]">
-                No official link could be found for this result yet — check the source notification for details.
+                {t("noOfficialLinkResult")}
               </p>
             )}
             <div className="mt-3">
@@ -182,12 +194,12 @@ export function ResultDetailBody({ result }: { result: ResultItem }) {
 
           <Card>
             <p className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
-              At a glance
+              {t("atAGlance")}
             </p>
             <div className="mt-3 space-y-2.5">
-              <KeyValueRow label="Organization" value={result.organization} />
-              <KeyValueRow label="Category" value={result.category} />
-              <KeyValueRow label="Result Declared" value={formatDate(result.resultDate)} />
+              <KeyValueRow label={t("organization")} value={result.organization} />
+              <KeyValueRow label={t("category")} value={result.category} />
+              <KeyValueRow label={t("resultDeclared")} value={formatDate(result.resultDate)} />
             </div>
           </Card>
         </aside>

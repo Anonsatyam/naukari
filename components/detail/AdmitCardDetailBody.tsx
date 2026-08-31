@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Calendar, ExternalLink, ClipboardList, FileText, HelpCircle, Link2, ListChecks, CheckCircle2 } from "lucide-react";
 import { AdmitCardItem } from "@/lib/types";
 import { formatDate, isSourceSiteUrl, documentViewerHref } from "@/lib/utils";
@@ -10,6 +11,7 @@ import {
   VacancyDetailsSection,
   EligibilitySection,
   SelectionProcessSection,
+  SectionTranslator,
 } from "@/components/RichSections";
 import { ButtonLink } from "@/components/Button";
 import Badge from "@/components/Badge";
@@ -30,7 +32,12 @@ const ADMIT_CARD_DEFAULT_ORDER = [
   "eligibilityRaw",
 ];
 
-export function AdmitCardDetailBody({ card }: { card: AdmitCardItem }) {
+export async function AdmitCardDetailBody({ card }: { card: AdmitCardItem }) {
+  const t = (await getTranslations("detail")) as SectionTranslator;
+  const tAdmitCards = await getTranslations("admitCardsPage");
+  const tCommon = await getTranslations("common");
+  const locale = await getLocale();
+  const localePath = (path: string) => (locale === "en" ? path : `/${locale}${path}`);
   const sourceLinks = (card.importantLinks ?? []).filter((link) => !isSourceSiteUrl(link.url));
   const hasRealOfficialLink = !isSourceSiteUrl(card.officialLink);
 
@@ -41,8 +48,8 @@ export function AdmitCardDetailBody({ card }: { card: AdmitCardItem }) {
     <div className="container-page py-8">
       <Breadcrumb
         items={[
-          { label: "Home", href: "/" },
-          { label: "Admit Cards", href: "/admit-cards" },
+          { label: tCommon("home"), href: localePath("/") },
+          { label: tAdmitCards("breadcrumb"), href: localePath("/admit-cards") },
           { label: card.title },
         ]}
       />
@@ -67,30 +74,30 @@ export function AdmitCardDetailBody({ card }: { card: AdmitCardItem }) {
           {(() => {
             const sectionRenderers: Record<string, React.ReactNode> = {
               importantDatesRaw: (
-                <Section title="Important Dates" icon={<Calendar size={16} />} accent="blue">
+                <Section title={t("importantDates")} icon={<Calendar size={16} />} accent="blue">
                   {card.importantDatesText ? (
                     <PipeTableOrText text={card.importantDatesText} />
                   ) : (
                     <div className="space-y-2.5">
-                      <KeyValueRow label="Admit Card Released" value={formatDate(card.releaseDate)} />
-                      <KeyValueRow label="Exam Date" value={formatDate(card.examDate)} />
+                      <KeyValueRow label={t("admitCardReleased")} value={formatDate(card.releaseDate)} />
+                      <KeyValueRow label={t("examDate")} value={formatDate(card.examDate)} />
                     </div>
                   )}
                 </Section>
               ),
               howToApplyRaw:
                 Array.isArray(card.howToDownload) && card.howToDownload.length > 0 ? (
-                  <Section title="How to Download Admit Card" icon={<ListChecks size={16} />} accent="green">
+                  <Section title={t("howToDownloadAdmitCard")} icon={<ListChecks size={16} />} accent="green">
                     <StepList items={card.howToDownload} />
                   </Section>
                 ) : null,
               documentsRequiredRaw: card.examDayInstructionsText ? (
-                <Section title="Exam Day Instructions" icon={<FileText size={16} />} accent="orange">
+                <Section title={t("examDayInstructions")} icon={<FileText size={16} />} accent="orange">
                   <PipeTableOrText text={card.examDayInstructionsText} />
                 </Section>
               ) : null,
               examPatternRaw: card.examPattern ? (
-                <Section title="Exam Pattern" icon={<ClipboardList size={16} />} accent="amber">
+                <Section title={t("examPattern")} icon={<ClipboardList size={16} />} accent="amber">
                   <PipeTableOrText text={card.examPattern} />
                   {Array.isArray(card.examPatternNotes) && card.examPatternNotes.length > 0 && (
                     <ul className="mt-4 space-y-1.5 border-t border-[var(--color-border)] pt-4">
@@ -103,12 +110,13 @@ export function AdmitCardDetailBody({ card }: { card: AdmitCardItem }) {
                   )}
                 </Section>
               ) : null,
-              applicationFeeRaw: <ApplicationFeeSection fee={card.applicationFee} feeText={card.applicationFeeText} />,
+              applicationFeeRaw: <ApplicationFeeSection fee={card.applicationFee} feeText={card.applicationFeeText} t={t} />,
               ageLimitRaw: (
                 <AgeLimitSection
                   ageLimitByGrade={card.ageLimitByGrade}
                   ageRelaxationBreakdown={card.ageRelaxationBreakdown}
                   ageLimitText={card.ageLimitText}
+                  t={t}
                 />
               ),
               postDetailsRaw: (
@@ -116,15 +124,17 @@ export function AdmitCardDetailBody({ card }: { card: AdmitCardItem }) {
                   vacancyBreakdown={card.vacancyBreakdown}
                   postDetailsText={card.postDetailsText}
                   totalVacancies={card.totalVacancies}
+                  t={t}
                 />
               ),
               selectionProcessRaw: (
                 <SelectionProcessSection
                   selectionProcess={card.selectionProcess}
                   selectionProcessText={card.selectionProcessText}
+                  t={t}
                 />
               ),
-              eligibilityRaw: <EligibilitySection eligibilityText={card.eligibilityText} />,
+              eligibilityRaw: <EligibilitySection eligibilityText={card.eligibilityText} t={t} />,
             };
 
             return orderedSectionKeys.map((key) => {
@@ -139,7 +149,7 @@ export function AdmitCardDetailBody({ card }: { card: AdmitCardItem }) {
           })()}
 
           {Array.isArray(card.faqs) && card.faqs.length > 0 && (
-            <Section title="FAQs" icon={<HelpCircle size={16} />} accent="pink">
+            <Section title={t("faqs")} icon={<HelpCircle size={16} />} accent="pink">
               <div className="divide-y divide-[var(--color-border)]">
                 {card.faqs.map((faq, i) => (
                   <div key={i} className={i === 0 ? "pb-4" : "py-4"}>
@@ -154,7 +164,7 @@ export function AdmitCardDetailBody({ card }: { card: AdmitCardItem }) {
           )}
 
           {card.conclusion && (
-            <Section title="Conclusion" icon={<CheckCircle2 size={16} />} accent="green">
+            <Section title={t("conclusion")} icon={<CheckCircle2 size={16} />} accent="green">
               <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{card.conclusion}</p>
             </Section>
           )}
@@ -163,7 +173,7 @@ export function AdmitCardDetailBody({ card }: { card: AdmitCardItem }) {
         <aside className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-24 lg:h-fit">
           <Card>
             <p className="mb-3 flex items-center gap-2 text-base font-bold text-[var(--color-text-primary)]">
-              <Link2 size={17} /> Important Links
+              <Link2 size={17} /> {t("importantLinks")}
             </p>
             {sourceLinks.length > 0 ? (
               sourceLinks.map((link, i) => (
@@ -178,12 +188,12 @@ export function AdmitCardDetailBody({ card }: { card: AdmitCardItem }) {
                 </ButtonLink>
               ))
             ) : hasRealOfficialLink ? (
-              <ButtonLink href={documentViewerHref(card.officialLink, "Download Admit Card")} target="_blank" className="w-full">
-                Download Admit Card <ExternalLink size={14} />
+              <ButtonLink href={documentViewerHref(card.officialLink, t("downloadAdmitCard"))} target="_blank" className="w-full">
+                {t("downloadAdmitCard")} <ExternalLink size={14} />
               </ButtonLink>
             ) : (
               <p className="text-sm text-[var(--color-text-secondary)]">
-                No official link could be found for this admit card yet — check the source notification for details.
+                {t("noOfficialLinkAdmitCard")}
               </p>
             )}
             <div className="mt-3">
@@ -193,13 +203,13 @@ export function AdmitCardDetailBody({ card }: { card: AdmitCardItem }) {
 
           <Card>
             <p className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
-              At a glance
+              {t("atAGlance")}
             </p>
             <div className="mt-3 space-y-2.5">
-              <KeyValueRow label="Organization" value={card.organization} />
-              <KeyValueRow label="Category" value={card.category} />
-              <KeyValueRow label="Exam Date" value={formatDate(card.examDate)} />
-              <KeyValueRow label="Released" value={formatDate(card.releaseDate)} />
+              <KeyValueRow label={t("organization")} value={card.organization} />
+              <KeyValueRow label={t("category")} value={card.category} />
+              <KeyValueRow label={t("examDate")} value={formatDate(card.examDate)} />
+              <KeyValueRow label={t("released")} value={formatDate(card.releaseDate)} />
             </div>
           </Card>
         </aside>

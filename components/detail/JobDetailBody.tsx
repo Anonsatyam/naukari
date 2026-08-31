@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import Link from "next/link";
+import { getLocale, getTranslations } from "next-intl/server";
 import {
   Calendar,
   CheckCircle2,
@@ -30,6 +31,7 @@ import {
   SelectionProcessSection,
   ExamPatternSection,
   DocumentsRequiredSection,
+  SectionTranslator,
 } from "@/components/RichSections";
 
 const JOB_DEFAULT_ORDER = [
@@ -45,7 +47,12 @@ const JOB_DEFAULT_ORDER = [
   "howToApplyRaw",
 ];
 
-export function JobDetailBody({ job, relatedJobs = [] }: { job: Job; relatedJobs?: Job[] }) {
+export async function JobDetailBody({ job, relatedJobs = [] }: { job: Job; relatedJobs?: Job[] }) {
+  const t = (await getTranslations("detail")) as SectionTranslator;
+  const tJobs = await getTranslations("jobsPage");
+  const tCommon = await getTranslations("common");
+  const locale = await getLocale();
+  const localePath = (path: string) => (locale === "en" ? path : `/${locale}${path}`);
   const endDate = getApplicationEndDate(job);
   const closingSoon = isClosingSoon(job);
   const remaining = endDate ? daysUntil(endDate) : null;
@@ -63,8 +70,8 @@ export function JobDetailBody({ job, relatedJobs = [] }: { job: Job; relatedJobs
     <div className="container-page py-8">
       <Breadcrumb
         items={[
-          { label: "Home", href: "/" },
-          { label: "Jobs", href: "/jobs" },
+          { label: tCommon("home"), href: localePath("/") },
+          { label: tJobs("breadcrumb"), href: localePath("/jobs") },
           { label: job.title },
         ]}
       />
@@ -80,7 +87,7 @@ export function JobDetailBody({ job, relatedJobs = [] }: { job: Job; relatedJobs
           ))}
           {closingSoon && remaining !== null && (
             <Badge tone="danger">
-              {remaining === 0 ? "Closes today" : `Closing in ${remaining}d`}
+              {remaining === 0 ? t("closesToday") : t("closingInDays", { days: remaining })}
             </Badge>
           )}
         </div>
@@ -100,7 +107,7 @@ export function JobDetailBody({ job, relatedJobs = [] }: { job: Job; relatedJobs
           {(() => {
             const sectionRenderers: Record<string, React.ReactNode> = {
               importantDatesRaw: (
-                <Section title="Important Dates" icon={<Calendar size={16} />} accent="blue">
+                <Section title={t("importantDates")} icon={<Calendar size={16} />} accent="blue">
                   {job.importantDatesText ? (
                     <PipeTableOrText text={job.importantDatesText} />
                   ) : (
@@ -115,16 +122,17 @@ export function JobDetailBody({ job, relatedJobs = [] }: { job: Job; relatedJobs
                   )}
                 </Section>
               ),
-              applicationFeeRaw: <ApplicationFeeSection fee={job.applicationFee} feeText={job.applicationFeeText} />,
+              applicationFeeRaw: <ApplicationFeeSection fee={job.applicationFee} feeText={job.applicationFeeText} t={t} />,
               ageLimitRaw: (
                 <AgeLimitSection
                   ageLimitByGrade={job.ageLimitByGrade}
                   ageRelaxationBreakdown={job.ageRelaxationBreakdown}
                   ageLimitText={job.ageLimitText}
+                  t={t}
                 >
                   {job.ageAsOnDate && (
                     <p className="mt-3 text-xs text-[var(--color-text-secondary)]">
-                      Age reckoned as on {formatDate(job.ageAsOnDate)}
+                      {t("ageAsOn", { date: formatDate(job.ageAsOnDate) })}
                     </p>
                   )}
                 </AgeLimitSection>
@@ -134,12 +142,13 @@ export function JobDetailBody({ job, relatedJobs = [] }: { job: Job; relatedJobs
                   vacancyBreakdown={job.vacancyBreakdown}
                   postDetailsText={job.postDetailsText}
                   totalVacancies={job.totalVacancies}
+                  t={t}
                 />
               ),
               eligibilityRaw:
                 job.qualification || (Array.isArray(job.eligibilityDetails) && job.eligibilityDetails.length > 0) || job.eligibilityText ? (
-                  <Section title="Education Eligibility" icon={<GraduationCap size={16} />} accent="teal">
-                    {job.qualification && <KeyValueRow label="Qualification" value={job.qualification} />}
+                  <Section title={t("educationEligibility")} icon={<GraduationCap size={16} />} accent="teal">
+                    {job.qualification && <KeyValueRow label={t("qualification")} value={job.qualification} />}
 
                     {Array.isArray(job.eligibilityDetails) && job.eligibilityDetails.length > 0 ? (
                       <ul className="mt-4 space-y-2">
@@ -163,18 +172,21 @@ export function JobDetailBody({ job, relatedJobs = [] }: { job: Job; relatedJobs
                 <SelectionProcessSection
                   selectionProcess={job.selectionProcess}
                   selectionProcessText={job.selectionProcessText}
+                  t={t}
                 />
               ),
-              examPatternRaw: <ExamPatternSection examPattern={job.examPattern} examPatternNotes={job.examPatternNotes} />,
-              documentsRequiredRaw: <DocumentsRequiredSection documentsRequired={job.documentsRequired} />,
+              examPatternRaw: (
+                <ExamPatternSection examPattern={job.examPattern} examPatternNotes={job.examPatternNotes} t={t} />
+              ),
+              documentsRequiredRaw: <DocumentsRequiredSection documentsRequired={job.documentsRequired} t={t} />,
               syllabusSummary: job.syllabusSummary ? (
-                <Section title="Syllabus" accent="neutral">
+                <Section title={t("syllabus")} accent="neutral">
                   <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{job.syllabusSummary}</p>
                 </Section>
               ) : null,
               howToApplyRaw:
                 Array.isArray(job.howToApply) && job.howToApply.length > 0 ? (
-                  <Section title="How to Apply" icon={<ListChecks size={16} />} accent="green">
+                  <Section title={t("howToApply")} icon={<ListChecks size={16} />} accent="green">
                     <StepList items={job.howToApply} />
                   </Section>
                 ) : null,
@@ -192,7 +204,7 @@ export function JobDetailBody({ job, relatedJobs = [] }: { job: Job; relatedJobs
           })()}
 
           {Array.isArray(job.faqs) && job.faqs.length > 0 && (
-            <Section title="FAQs" icon={<HelpCircle size={16} />} accent="pink">
+            <Section title={t("faqs")} icon={<HelpCircle size={16} />} accent="pink">
               <div className="divide-y divide-[var(--color-border)]">
                 {job.faqs.map((faq, i) => (
                   <div key={i} className={i === 0 ? "pb-4" : "py-4"}>
@@ -209,7 +221,7 @@ export function JobDetailBody({ job, relatedJobs = [] }: { job: Job; relatedJobs
           )}
 
           {job.conclusion && (
-            <Section title="Conclusion" icon={<CheckCircle2 size={16} />} accent="green">
+            <Section title={t("conclusion")} icon={<CheckCircle2 size={16} />} accent="green">
               <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{job.conclusion}</p>
             </Section>
           )}
@@ -217,7 +229,7 @@ export function JobDetailBody({ job, relatedJobs = [] }: { job: Job; relatedJobs
           {relatedJobs.length > 0 && (
             <div>
               <h2 className="font-display text-lg font-bold text-[var(--color-text-primary)]">
-                Related Jobs
+                {t("relatedJobs")}
               </h2>
               <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {relatedJobs.map((rj) => (
@@ -231,7 +243,7 @@ export function JobDetailBody({ job, relatedJobs = [] }: { job: Job; relatedJobs
         <aside className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-24 lg:h-fit">
           <Card>
             <p className="mb-3 flex items-center gap-2 text-base font-bold text-[var(--color-text-primary)]">
-              <Link2 size={17} /> Important Links
+              <Link2 size={17} /> {t("importantLinks")}
             </p>
             {sourceLinks.length > 0 ? (
               sourceLinks.map((link, i) => (
@@ -248,24 +260,24 @@ export function JobDetailBody({ job, relatedJobs = [] }: { job: Job; relatedJobs
             ) : hasRealApplyUrl || hasRealNotificationUrl ? (
               <>
                 {hasRealApplyUrl && (
-                  <ButtonLink href={documentViewerHref(job.officialApplyUrl, "Apply Officially")} target="_blank" className="w-full">
-                    Apply Officially <ExternalLink size={14} />
+                  <ButtonLink href={documentViewerHref(job.officialApplyUrl, t("applyOfficially"))} target="_blank" className="w-full">
+                    {t("applyOfficially")} <ExternalLink size={14} />
                   </ButtonLink>
                 )}
                 {hasRealNotificationUrl && (
                   <ButtonLink
-                    href={documentViewerHref(job.officialNotificationUrl, "Official Notification")}
+                    href={documentViewerHref(job.officialNotificationUrl, t("officialNotification"))}
                     target="_blank"
                     variant="secondary"
                     className={hasRealApplyUrl ? "mt-2 w-full" : "w-full"}
                   >
-                    <FileText size={14} /> Official Notification
+                    <FileText size={14} /> {t("officialNotification")}
                   </ButtonLink>
                 )}
               </>
             ) : (
               <p className="text-sm text-[var(--color-text-secondary)]">
-                No official link could be found for this posting yet — check the source notification for details.
+                {t("noOfficialLinkJob")}
               </p>
             )}
             <div className="mt-3">
@@ -275,19 +287,19 @@ export function JobDetailBody({ job, relatedJobs = [] }: { job: Job; relatedJobs
 
           <Card>
             <p className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
-              <Users size={15} /> At a glance
+              <Users size={15} /> {t("atAGlance")}
             </p>
             <div className="mt-3 space-y-2.5">
-              <KeyValueRow label="Organization" value={job.organization} />
-              <KeyValueRow label="Department" value={job.department} />
-              <KeyValueRow label="Category" value={job.category} />
-              <KeyValueRow label="Last Updated" value={formatDate(job.updatedAt)} />
+              <KeyValueRow label={t("organization")} value={job.organization} />
+              <KeyValueRow label={t("department")} value={job.department} />
+              <KeyValueRow label={t("category")} value={job.category} />
+              <KeyValueRow label={t("lastUpdated")} value={formatDate(job.updatedAt)} />
             </div>
             <Link
-              href={`/eligibility-checker?job=${job.id}`}
+              href={localePath(`/eligibility-checker?job=${job.id}`)}
               className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--color-primary)]"
             >
-              Check your eligibility for this job →
+              {t("checkEligibility")}
             </Link>
           </Card>
         </aside>

@@ -4,24 +4,27 @@ import { KeyValueRow } from "@/components/KeyValueRow";
 import { formatCurrency } from "@/lib/utils";
 import type { VacancyBreakdown, AgeLimitRow, AgeRelaxationRow } from "@/lib/types";
 
+export type SectionTranslator = (key: string, values?: Record<string, string | number>) => string;
 
 export function ApplicationFeeSection({
   fee,
   feeText,
+  t,
 }: {
   fee?: { general: number; reserved: number; note?: string };
   feeText?: string;
+  t: SectionTranslator;
 }) {
   const hasFee = !!fee && (fee.general > 0 || fee.reserved > 0 || !!fee.note);
   if (!feeText && !hasFee) return null;
   return (
-    <Section title="Application Fee" icon={<Wallet size={16} />} accent="green">
+    <Section title={t("applicationFee")} icon={<Wallet size={16} />} accent="green">
       {feeText ? (
         <PipeTableOrText text={feeText} />
       ) : (
         <div className="space-y-3">
-          <KeyValueRow label="General / OBC" value={formatCurrency(fee!.general)} />
-          <KeyValueRow label="SC / ST / Reserved" value={formatCurrency(fee!.reserved)} />
+          <KeyValueRow label={t("generalObc")} value={formatCurrency(fee!.general)} />
+          <KeyValueRow label={t("scStReserved")} value={formatCurrency(fee!.reserved)} />
           {fee!.note && <p className="text-xs text-[var(--color-text-secondary)]">{fee!.note}</p>}
         </div>
       )}
@@ -33,11 +36,13 @@ export function AgeLimitSection({
   ageLimitByGrade,
   ageRelaxationBreakdown,
   ageLimitText,
+  t,
   children,
 }: {
   ageLimitByGrade?: AgeLimitRow[];
   ageRelaxationBreakdown?: AgeRelaxationRow[];
   ageLimitText?: string;
+  t: SectionTranslator;
   children?: React.ReactNode;
 }) {
   const hasGradeTable = Array.isArray(ageLimitByGrade) && ageLimitByGrade.length > 0;
@@ -45,17 +50,17 @@ export function AgeLimitSection({
   if (!hasGradeTable && !hasRelaxationTable && !ageLimitText) return null;
 
   return (
-    <Section title="Age Limit Details" icon={<Hourglass size={16} />} accent="purple">
+    <Section title={t("ageLimitDetails")} icon={<Hourglass size={16} />} accent="purple">
       {hasGradeTable && (
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-            Grade-wise Age Limit
+            {t("gradeWiseAgeLimit")}
           </p>
           <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
             <div className="grid grid-cols-3 gap-3 bg-[var(--color-primary)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white">
-              <span>Grade / Cadre</span>
-              <span>Min. Age</span>
-              <span>Max. Age</span>
+              <span>{t("gradeCadre")}</span>
+              <span>{t("minAge")}</span>
+              <span>{t("maxAge")}</span>
             </div>
             <div>
               {ageLimitByGrade!.map((row, i) => (
@@ -73,12 +78,12 @@ export function AgeLimitSection({
       {hasRelaxationTable && (
         <div className={hasGradeTable ? "mt-4" : ""}>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-            Age Relaxation
+            {t("ageRelaxation")}
           </p>
           <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
             <div className="grid grid-cols-2 bg-[var(--color-primary)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white">
-              <span>Category</span>
-              <span className="text-right">Relaxation</span>
+              <span>{t("category")}</span>
+              <span className="text-right">{t("relaxation")}</span>
             </div>
             <div>
               {ageRelaxationBreakdown!.map((row) => (
@@ -103,10 +108,12 @@ export function VacancyDetailsSection({
   vacancyBreakdown,
   postDetailsText,
   totalVacancies,
+  t,
 }: {
   vacancyBreakdown?: VacancyBreakdown[];
   postDetailsText?: string;
   totalVacancies?: number;
+  t: SectionTranslator;
 }) {
   const hasTable = Array.isArray(vacancyBreakdown) && vacancyBreakdown.length > 0;
   const hasFallback = !hasTable && !!postDetailsText;
@@ -116,13 +123,13 @@ export function VacancyDetailsSection({
   const cols = hasGrade ? "grid-cols-[1fr_auto_auto]" : "grid-cols-2";
 
   return (
-    <Section title="Post / Vacancy Details" icon={<Users size={16} />} accent="orange">
+    <Section title={t("postVacancyDetails")} icon={<Users size={16} />} accent="orange">
       {hasTable ? (
         <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
           <div className={`grid ${cols} gap-3 bg-[var(--color-primary)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white`}>
-            <span>Post / Category</span>
-            {hasGrade && <span>Grade</span>}
-            <span className="text-right">Posts</span>
+            <span>{t("postCategory")}</span>
+            {hasGrade && <span>{t("grade")}</span>}
+            <span className="text-right">{t("posts")}</span>
           </div>
           <div>
             {vacancyBreakdown!.map((row) => (
@@ -135,10 +142,10 @@ export function VacancyDetailsSection({
               </div>
             ))}
             <div className={`grid ${cols} gap-3 bg-[var(--color-background)] px-4 py-2.5 text-sm font-semibold`}>
-              <span className="text-[var(--color-text-primary)]">Total</span>
+              <span className="text-[var(--color-text-primary)]">{t("total")}</span>
               {hasGrade && <span />}
               <span className="text-right text-[var(--color-text-primary)]">
-                {totalVacancies ? totalVacancies.toLocaleString("en-IN") : "As notified"}
+                {totalVacancies ? totalVacancies.toLocaleString("en-IN") : t("asNotified")}
               </span>
             </div>
           </div>
@@ -153,14 +160,16 @@ export function VacancyDetailsSection({
 export function SelectionProcessSection({
   selectionProcess,
   selectionProcessText,
+  t,
 }: {
   selectionProcess?: string[];
   selectionProcessText?: string;
+  t: SectionTranslator;
 }) {
   const hasSteps = Array.isArray(selectionProcess) && selectionProcess.length > 0;
   if (!hasSteps && !selectionProcessText) return null;
   return (
-    <Section title="Selection Process" icon={<ListChecks size={16} />} accent="blue">
+    <Section title={t("selectionProcess")} icon={<ListChecks size={16} />} accent="blue">
       {selectionProcessText ? <PipeTableOrText text={selectionProcessText} /> : <StepList items={selectionProcess!} />}
     </Section>
   );
@@ -169,13 +178,15 @@ export function SelectionProcessSection({
 export function ExamPatternSection({
   examPattern,
   examPatternNotes,
+  t,
 }: {
   examPattern?: string;
   examPatternNotes?: string[];
+  t: SectionTranslator;
 }) {
   if (!examPattern) return null;
   return (
-    <Section title="Exam Pattern" icon={<ClipboardList size={16} />} accent="amber">
+    <Section title={t("examPattern")} icon={<ClipboardList size={16} />} accent="amber">
       <PipeTableOrText text={examPattern} />
       {Array.isArray(examPatternNotes) && examPatternNotes.length > 0 && (
         <ul className="mt-4 space-y-1.5 border-t border-[var(--color-border)] pt-4">
@@ -190,19 +201,19 @@ export function ExamPatternSection({
   );
 }
 
-export function EligibilitySection({ eligibilityText }: { eligibilityText?: string }) {
+export function EligibilitySection({ eligibilityText, t }: { eligibilityText?: string; t: SectionTranslator }) {
   if (!eligibilityText) return null;
   return (
-    <Section title="Eligibility" icon={<GraduationCap size={16} />} accent="teal">
+    <Section title={t("eligibility")} icon={<GraduationCap size={16} />} accent="teal">
       <PipeTableOrText text={eligibilityText} />
     </Section>
   );
 }
 
-export function DocumentsRequiredSection({ documentsRequired }: { documentsRequired?: string }) {
+export function DocumentsRequiredSection({ documentsRequired, t }: { documentsRequired?: string; t: SectionTranslator }) {
   if (!documentsRequired) return null;
   return (
-    <Section title="Documents Required" icon={<FileText size={16} />} accent="neutral">
+    <Section title={t("documentsRequired")} icon={<FileText size={16} />} accent="neutral">
       <PipeTableOrText text={documentsRequired} />
     </Section>
   );
