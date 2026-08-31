@@ -39,7 +39,7 @@ export default async function Home() {
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-success-tint)] px-3 py-1 text-xs font-semibold text-[var(--color-success)] animate-breathe">
               Live · Verified from official sources
             </span>
-            <h1 className="font-display mt-5 text-3xl font-extrabold leading-tight text-[var(--color-text-primary)] md:text-5xl">
+            <h1 className="font-display mt-5 text-4xl font-extrabold leading-tight text-[var(--color-text-primary)] md:text-6xl">
               Sarkari <RotatingHeroWord />
               <br />
               in <IndiaHeading />
