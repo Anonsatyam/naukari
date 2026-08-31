@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Fragment } from "react";
 import { notFound } from "next/navigation";
-import { Calendar, ExternalLink, ClipboardList, FileText, HelpCircle, ListChecks, CheckCircle2 } from "lucide-react";
+import { Calendar, ExternalLink, ClipboardList, FileText, HelpCircle, Link2, ListChecks, CheckCircle2 } from "lucide-react";
 import { getAdmitCards, getAdmitCardBySlug } from "@/lib/server/data";
 import { formatDate, isSourceSiteUrl } from "@/lib/utils";
 import { resolveSectionOrder, parseGenericKey } from "@/lib/sectionOrder";
@@ -234,7 +234,9 @@ export default async function AdmitCardDetailPage({
         {/* Sidebar */}
         <aside className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-24 lg:h-fit">
           <Card>
-            <p className="mb-3 text-sm font-semibold text-[var(--color-text-primary)]">Important Links</p>
+            <p className="mb-3 flex items-center gap-2 text-base font-bold text-[var(--color-text-primary)]">
+              <Link2 size={17} /> Important Links
+            </p>
             {sourceLinks.length > 0 ? (
               sourceLinks.map((link, i) => (
                 <ButtonLink

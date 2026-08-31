@@ -10,6 +10,7 @@ import {
   GraduationCap,
   HelpCircle,
   Hourglass,
+  Link2,
   ListChecks,
   Users,
 } from "lucide-react";
@@ -395,7 +396,9 @@ export default async function JobDetailPage({
         {/* Sidebar */}
         <aside className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-24 lg:h-fit">
           <Card>
-            <p className="mb-3 text-sm font-semibold text-[var(--color-text-primary)]">Important Links</p>
+            <p className="mb-3 flex items-center gap-2 text-base font-bold text-[var(--color-text-primary)]">
+              <Link2 size={17} /> Important Links
+            </p>
             {sourceLinks.length > 0 ? (
               sourceLinks.map((link, i) => (
                 <ButtonLink
