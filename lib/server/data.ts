@@ -324,8 +324,20 @@ export async function getPendingDrafts(): Promise<BotDraft[]> {
     .from("bot_drafts")
     .select("*")
     .eq("status", "pending")
+    .eq("origin", "bot")
     .order("detected_at", { ascending: false });
-  if (error) throw error;
+  if (error) {
+    if (isMissingColumnError(error)) {
+      const fallback = await supabase
+        .from("bot_drafts")
+        .select("*")
+        .eq("status", "pending")
+        .order("detected_at", { ascending: false });
+      if (fallback.error) throw fallback.error;
+      return (fallback.data ?? []).map(rowToDraft).filter((d) => d.origin === "bot");
+    }
+    throw error;
+  }
   return (data ?? []).map(rowToDraft);
 }
 

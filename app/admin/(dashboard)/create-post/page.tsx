@@ -178,7 +178,7 @@ export default function CreatePostPage() {
           It&apos;s saved under Drafts — review everything one more time, then Approve &amp; Publish or Reject.
         </p>
         <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
-          <Button onClick={() => router.push(`/admin/drafts/${created.id}`)}>Go to Review</Button>
+          <Button onClick={() => router.push(`/admin/my-drafts/${created.id}`)}>Go to Review</Button>
           <Button variant="secondary" onClick={() => router.push("/admin/my-drafts")}>
             Back to Drafts
           </Button>

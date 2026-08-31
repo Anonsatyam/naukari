@@ -317,7 +317,10 @@ export function DraftsListView({
                   aria-label={`Select ${draft.jobTitle}`}
                   className="h-4 w-4 cursor-pointer accent-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-40"
                 />
-                <Link href={`/admin/drafts/${draft.id}`} className="min-w-0 hover:opacity-80">
+                <Link
+                  href={origin === "manual" ? `/admin/my-drafts/${draft.id}` : `/admin/drafts/${draft.id}`}
+                  className="min-w-0 hover:opacity-80"
+                >
                   <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--color-text-primary)]">
                     {draft.jobTitle}
                     {possibleGap(draft) && (
