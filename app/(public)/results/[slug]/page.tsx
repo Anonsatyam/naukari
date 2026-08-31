@@ -74,16 +74,22 @@ export default async function ResultDetailPage({
   const result = await getResultBySlug(slug);
   if (!result) notFound();
 
-  // Same dedup reasoning as the job page's sidebar: don't show an
-  // importantLinks entry that's just the same URL as the primary
-  // "View Official Result" button again as a second button.
-  const otherImportantLinks = (result.importantLinks ?? []).filter(
-    (link) => link.url !== result.officialLink && !isSourceSiteUrl(link.url)
-  );
-  // See the job page's identical comment — extraction can fail to find
-  // a genuine external link, in which case this falls back to the
-  // source article's own URL; hidden rather than shown as a misleading
-  // "View Official Result" button in that last-resort case.
+  // The source's own Important Links table already has its own
+  // "Download Result" (or equivalent) row — showing that verbatim
+  // AND a separately-labeled "View Official Result" button synthesized
+  // from officialLink duplicated the same destination under two
+  // different names, neither of which matched what biharjob.co.in
+  // itself shows. Once the source publishes a real links list, that
+  // list IS the sidebar — same labels, same set, same order — with no
+  // synthesized button layered on top of it.
+  const sourceLinks = (result.importantLinks ?? []).filter((link) => !isSourceSiteUrl(link.url));
+  // The synthesized "View Official Result" button is now only a
+  // fallback for the rarer case where extraction found no Important
+  // Links list at all — still needed so a page never has literally
+  // zero way to reach the result. See the job page's identical
+  // comment on why officialLink itself can still be the source
+  // article's own URL in the worst case (extraction found no external
+  // link anywhere), which is hidden rather than shown as misleading.
   const hasRealOfficialLink = !isSourceSiteUrl(result.officialLink);
 
   const additionalSections = result.additionalSections ?? [];
@@ -217,23 +223,23 @@ export default async function ResultDetailPage({
         {/* Sidebar */}
         <aside className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-24 lg:h-fit">
           <Card>
-            {hasRealOfficialLink && (
+            {sourceLinks.length > 0 ? (
+              sourceLinks.map((link, i) => (
+                <ButtonLink
+                  key={`${link.label}-${i}`}
+                  href={link.url}
+                  target="_blank"
+                  variant="secondary"
+                  className={i === 0 ? "w-full" : "mt-2 w-full"}
+                >
+                  {link.label} <ExternalLink size={14} />
+                </ButtonLink>
+              ))
+            ) : hasRealOfficialLink ? (
               <ButtonLink href={result.officialLink} target="_blank" className="w-full">
                 View Official Result <ExternalLink size={14} />
               </ButtonLink>
-            )}
-            {otherImportantLinks.map((link, i) => (
-              <ButtonLink
-                key={link.label}
-                href={link.url}
-                target="_blank"
-                variant="secondary"
-                className={i === 0 && !hasRealOfficialLink ? "w-full" : "mt-2 w-full"}
-              >
-                {link.label} <ExternalLink size={14} />
-              </ButtonLink>
-            ))}
-            {!hasRealOfficialLink && otherImportantLinks.length === 0 && (
+            ) : (
               <p className="text-sm text-[var(--color-text-secondary)]">
                 No official link could be found for this result yet — check the source notification for details.
               </p>
