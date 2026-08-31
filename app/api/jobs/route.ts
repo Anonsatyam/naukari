@@ -7,7 +7,8 @@ export async function GET(request: NextRequest) {
   const category = searchParams.getAll("category");
   const department = searchParams.getAll("department");
   const qualification = searchParams.getAll("qualification");
+  const state = searchParams.getAll("state");
 
-  const jobs = await getPublishedJobs({ q, category, department, qualification });
+  const jobs = await getPublishedJobs({ q, category, department, qualification, state });
   return NextResponse.json({ jobs });
 }

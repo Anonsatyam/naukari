@@ -164,6 +164,7 @@ export interface JobFilters {
   category?: string[];
   department?: string[];
   qualification?: string[];
+  state?: string[];
 }
 
 export async function getPublishedJobs(filters: JobFilters = {}): Promise<Job[]> {
@@ -178,6 +179,7 @@ export async function getPublishedJobs(filters: JobFilters = {}): Promise<Job[]>
     if (filters.category?.length) q = q.in("category", filters.category);
     if (filters.department?.length) q = q.in("department", filters.department);
     if (filters.qualification?.length) q = q.in("qualification", filters.qualification);
+    if (filters.state?.length) q = q.in("state", filters.state);
     return q;
   };
 

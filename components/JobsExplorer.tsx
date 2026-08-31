@@ -7,7 +7,7 @@ import JobCard from "./JobCard";
 import Breadcrumb from "./Breadcrumb";
 import SearchInput from "./SearchInput";
 import Card from "./Card";
-import { categories, departments, qualifications } from "@/lib/taxonomy";
+import { categories, departments, qualifications, states } from "@/lib/taxonomy";
 import { Job } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +21,7 @@ export default function JobsExplorer() {
   );
   const [department, setDepartment] = useState<string[]>([]);
   const [qualification, setQualification] = useState<string[]>([]);
+  const [state, setState] = useState<string[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [filtered, setFiltered] = useState<Job[]>([]);
@@ -33,6 +34,7 @@ export default function JobsExplorer() {
       category.forEach((c) => params.append("category", c));
       department.forEach((d) => params.append("department", d));
       qualification.forEach((q) => params.append("qualification", q));
+      state.forEach((s) => params.append("state", s));
 
       setLoading(true);
       fetch(`/api/jobs?${params.toString()}`)
@@ -42,14 +44,15 @@ export default function JobsExplorer() {
     }, 250);
 
     return () => clearTimeout(handle);
-  }, [query, category, department, qualification]);
+  }, [query, category, department, qualification, state]);
 
-  const activeFilterCount = category.length + department.length + qualification.length;
+  const activeFilterCount = category.length + department.length + qualification.length + state.length;
 
   const resetFilters = () => {
     setCategory([]);
     setDepartment([]);
     setQualification([]);
+    setState([]);
   };
 
   const toggle = (
@@ -151,15 +154,12 @@ export default function JobsExplorer() {
               onToggle={(opt) => toggle(setQualification, opt)}
             />
 
-            <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                State
-              </p>
-              <div className="flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-text-secondary)]">
-                Bihar
-                <span className="text-xs text-[var(--color-text-muted)]">More states soon</span>
-              </div>
-            </div>
+            <FilterGroup
+              label="State"
+              options={states}
+              selected={state}
+              onToggle={(opt) => toggle(setState, opt)}
+            />
 
             {filtersOpen && (
               <button
