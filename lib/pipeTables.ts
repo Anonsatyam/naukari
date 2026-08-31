@@ -225,3 +225,93 @@ export function deriveSalaryRange(postDetails: unknown): { salaryMin?: number; s
   }
   return {};
 }
+
+// This source writes FAQs in two different shapes depending on the
+// page's own markup — most commonly one <p> for the question and a
+// SEPARATE following <p> for the answer (captured as two consecutive
+// faqText entries: "प्रश्न 1: ...?" then "उत्तर: ..."), but sometimes
+// as one block combining both ("Q1. <question>? Ans: <answer>.", seen
+// where a source wraps each FAQ in a <div> with a <br/> between them —
+// the bot's leaf-div fallback collapses that br into a plain space).
+// Treating every line as already "combined" (the original assumption
+// here) silently mis-paired the far more common two-line shape: each
+// question line matched too (its own "Ans:"/"उत्तर:" marker just
+// doesn't exist in it, so the regex fails to match at all and it fell
+// back to being its own zero-answer FAQ), and separately each answer
+// line ALSO "matched" as a combined line with an empty question — the
+// उत्तर marker sits at the very start with nothing before it. Real
+// backfill data on already-published pages caught this directly: every
+// SBI/NICL-shaped FAQ list came out as alternating empty-answer and
+// empty-question entries instead of one Q+A pair each.
+//
+// ANSWER_ONLY matches a line that IS the answer, and only the answer —
+// the marker sits right at the start (nothing meaningful precedes it).
+// COMBINED matches a line carrying both a real question AND its answer
+// (requires a non-empty, real question portion before the marker, so
+// it can't accidentally match an answer-only line the way the old
+// single regex did). Both require the marker's own colon/period right
+// after it — "उत्तर" bare (no punctuation immediately following) also
+// turns up as an ordinary WORD inside a question itself ("गलत उत्तरों
+// के लिए" — "for wrong answers", part of a negative-marking question,
+// not the marker), which an unpunctuated match wrongly split mid-
+// question. Every real marker instance seen in practice ("उत्तर:",
+// "Ans:", "प्रश्न 1:") does carry the colon, so requiring it costs
+// nothing on the intended matches while ruling out this collision.
+const ANSWER_ONLY = /^\s*(?:ans(?:wer)?|उत्तर)\s*[:.]\s*(.+)$/i;
+const COMBINED = /^\s*(?:q\.?\s*\d*\s*[.):]?\s*)?(.+?)\s*(?:ans(?:wer)?|उत्तर)\s*[:.]\s*(.+)$/i;
+const QUESTION_PREFIX = /^\s*(?:q\.?\s*\d*\s*[.):]?\s*|प्रश्न\s*\d*\s*[:.]?\s*)/i;
+
+// Shared by the draft review page's own FAQ editor (pre-filling it from
+// the bot's raw faqText) and approveDraft's default (see lib/server/
+// data.ts) — the same parse either way, so an admin-reviewed FAQ list
+// and one that skipped review entirely (e.g. bulk-approve) look the
+// same, not "reviewed" vs "one big unsplit paragraph".
+export function parseFaqLines(lines: string[]): { question: string; answer: string }[] {
+  const result: { question: string; answer: string }[] = [];
+  let pendingQuestion: string | null = null;
+
+  const flushPending = () => {
+    if (pendingQuestion !== null) {
+      result.push({ question: pendingQuestion, answer: "" });
+      pendingQuestion = null;
+    }
+  };
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+
+    const answerOnly = line.match(ANSWER_ONLY);
+    if (answerOnly && pendingQuestion !== null) {
+      result.push({ question: pendingQuestion, answer: answerOnly[1].trim() });
+      pendingQuestion = null;
+      continue;
+    }
+
+    const combined = line.match(COMBINED);
+    if (combined) {
+      flushPending();
+      result.push({ question: combined[1].trim().replace(QUESTION_PREFIX, "").trim(), answer: combined[2].trim() });
+      continue;
+    }
+
+    // Plain question line (no answer marker anywhere in it, or an
+    // answer marker with no question pending to attach it to) — starts
+    // a new pending question; any earlier pending one that never got
+    // its answer is flushed as a zero-answer entry.
+    flushPending();
+    pendingQuestion = line.replace(QUESTION_PREFIX, "").trim();
+  }
+  flushPending();
+
+  // A source's FAQ block routinely ends with one extra promotional
+  // line ("👉 Bihar Job Portal", "...biharjob.co.in पर विजिट करते
+  // रहें।") with no answer marker of its own — captured as a real
+  // faqText entry (it genuinely is part of that section), but it isn't
+  // a question, so it always comes out with no answer (or, for a bare
+  // trailing answer marker with nothing pending, no question). Neither
+  // half is useful to show as an FAQ; dropping only the entries with a
+  // missing half — never ones with both — can't remove a genuinely
+  // answered FAQ.
+  return result.filter((faq) => faq.question && faq.answer);
+}

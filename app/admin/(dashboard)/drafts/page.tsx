@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, ArrowUpDown, ArrowUp, ArrowDown, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowUpRight, ArrowUpDown, ArrowUp, ArrowDown, CheckCircle2, XCircle, TriangleAlert } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { BotDraft } from "@/lib/types";
 import { Button } from "@/components/Button";
@@ -36,6 +36,20 @@ const STATUS_TONES: Record<BotDraft["status"], "warning" | "success" | "danger">
   approved: "success",
   rejected: "danger",
 };
+
+// Tier 2 discrepancy signal (see extractHtmlNotificationFields.ts's
+// headingStats) — computed once at scrape time and carried in
+// extractedFields so it's visible here regardless of whether a draft
+// goes through single-draft review or gets bulk-approved (bulk-approve
+// never visits the review page at all, which is exactly why the FAQ/
+// Conclusion auto-fill fix earlier had to live in approveDraft itself
+// rather than only on that page — same reasoning applies here: a
+// warning that only showed up on a page bulk-approve skips would never
+// be seen for a bulk-approved draft).
+function possibleGap(draft: BotDraft): boolean {
+  const v = (draft.extractedFields as { verification?: { possibleGap?: boolean } } | undefined)?.verification;
+  return v?.possibleGap === true;
+}
 
 const CONFIDENCE_RANK: Record<BotDraft["confidence"], number> = { low: 0, medium: 1, high: 2 };
 const TYPE_RANK: Record<BotDraft["draftType"], number> = { job: 0, result: 1, admit_card: 2 };
@@ -255,9 +269,21 @@ export default function AdminDraftsPage() {
                 <Link href={`/admin/drafts/${draft.id}`} className="min-w-0 hover:opacity-80">
                   <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--color-text-primary)]">
                     {draft.jobTitle}
+                    {possibleGap(draft) && (
+                      <TriangleAlert
+                        size={14}
+                        className="shrink-0 text-[var(--color-warning)]"
+                        aria-label="Extraction might be missing a section — check before approving"
+                      />
+                    )}
                     <ArrowUpRight size={13} className="shrink-0 text-[var(--color-text-muted)]" />
                   </p>
                   <p className="text-xs text-[var(--color-text-secondary)]">{draft.organization}</p>
+                  {possibleGap(draft) && (
+                    <p className="mt-0.5 text-xs font-medium text-[var(--color-warning)]">
+                      ⚠ Might be missing a section — please check
+                    </p>
+                  )}
                 </Link>
                 <span className="col-start-2 md:col-start-auto">
                   <Badge tone={TYPE_TONES[draft.draftType]}>{TYPE_LABELS[draft.draftType]}</Badge>

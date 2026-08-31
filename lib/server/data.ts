@@ -25,7 +25,7 @@ import {
 } from "@/lib/types";
 import { isRecent, isClosingSoon, getApplicationEndDate } from "@/lib/dateHelpers";
 import { deepDecodeEntities, decodeHtmlEntities } from "@/lib/entities";
-import { parsePipeTables, PipeTable, firstNumber, deriveAgeRange, deriveSalaryRange, TOTAL_ROW_LABEL } from "@/lib/pipeTables";
+import { parsePipeTables, PipeTable, firstNumber, deriveAgeRange, deriveSalaryRange, TOTAL_ROW_LABEL, parseFaqLines } from "@/lib/pipeTables";
 import { classifyQualification } from "@/lib/taxonomy";
 import { isSourceSiteUrl } from "@/lib/utils";
 
@@ -566,7 +566,7 @@ const ADMIT_CARD_LINK_KEYWORDS = ["admit card", "hall ticket", "प्रवे�
 // / "View More" nav link the extractor picked up by mistake) can
 // neither show up as its own sidebar button nor get matched as "the"
 // apply/notification link.
-function sanitizeImportantLinks(links: unknown): ImportantLink[] | undefined {
+export function sanitizeImportantLinks(links: unknown): ImportantLink[] | undefined {
   if (!Array.isArray(links)) return undefined;
   const cleaned = links.filter(
     (link): link is ImportantLink =>
@@ -604,6 +604,33 @@ const OWN_SITE_DOMAIN = "naukari-lac.vercel.app";
 function replaceSourceSitePlug(text: string | undefined): string | undefined {
   if (typeof text !== "string") return text;
   return text.replace(SOURCE_SITE_PATTERN, OWN_SITE_DOMAIN);
+}
+
+// The bot's own extraction only ever produces raw faqText/conclusionText
+// (see extractHtmlNotificationFields.ts) — never the structured faqs[]/
+// conclusion the public pages render. Those previously only got filled
+// in when an admin opened the single-draft review page and its
+// pre-filled editor happened to still be populated at Approve time.
+// Bulk-approve (select many drafts → Approve) skips that page entirely
+// and posts no edits at all, so faqs/conclusion came back empty on
+// EVERY bulk-approved draft, regardless of what the source published —
+// confirmed via a live audit against real published pages (12/13
+// missing FAQ, 13/13 missing Conclusion, despite the raw text being
+// extracted successfully in all of them). Deriving the same default an
+// admin would have seen pre-filled — reusing the exact parser the
+// review page's own FAQ editor uses — removes the dependency on a
+// human transcribing it at all; an admin's own edits (already merged
+// into `merged` before this runs) still take priority over this
+// default, they're just no longer the ONLY path to a non-empty result.
+function applyRawTextDefaults(merged: Record<string, unknown>): void {
+  const hasFaqs = Array.isArray(merged.faqs) && merged.faqs.length > 0;
+  if (!hasFaqs && Array.isArray(merged.faqText) && merged.faqText.length > 0) {
+    merged.faqs = parseFaqLines(merged.faqText as string[]);
+  }
+  const hasConclusion = typeof merged.conclusion === "string" && merged.conclusion.trim().length > 0;
+  if (!hasConclusion && typeof merged.conclusionText === "string" && merged.conclusionText.trim().length > 0) {
+    merged.conclusion = merged.conclusionText;
+  }
 }
 
 function ensureApplicationFee(
@@ -746,6 +773,7 @@ export async function approveDraft(
     // `howToCheck`, renamed here to match what this section actually
     // is for a result rather than a job application.
     const merged = { ...cleanedExtractedFields, ...cleanedEdits } as Partial<ResultItem> & Record<string, unknown>;
+    applyRawTextDefaults(merged);
     const title = merged.title ?? cleanJobTitle;
     const sanitizedLinks = sanitizeImportantLinks(merged.importantLinks);
     const newResult: Partial<ResultItem> = {
@@ -791,6 +819,7 @@ export async function approveDraft(
 
   if (draft.draftType === "admit_card") {
     const merged = { ...cleanedExtractedFields, ...cleanedEdits } as Partial<AdmitCardItem> & Record<string, unknown>;
+    applyRawTextDefaults(merged);
     const title = merged.title ?? cleanJobTitle;
     const now = new Date();
     const defaultExamDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -847,6 +876,7 @@ export async function approveDraft(
   // vacancyBreakdown. The intersection lets known Job fields keep their
   // real types while still allowing that one raw read.
   const merged = { ...cleanedExtractedFields, ...cleanedEdits } as Partial<Job> & Record<string, unknown>;
+  applyRawTextDefaults(merged);
   const title = merged.title ?? cleanJobTitle;
   const now = new Date().toISOString();
   const sanitizedLinks = sanitizeImportantLinks(merged.importantLinks);

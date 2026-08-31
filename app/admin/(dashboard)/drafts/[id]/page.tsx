@@ -2,11 +2,11 @@
 
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ExternalLink, CheckCircle2, XCircle, FileText, Plus, Trash2 } from "lucide-react";
+import { ExternalLink, CheckCircle2, XCircle, FileText, Plus, Trash2, TriangleAlert } from "lucide-react";
 import { BotDraft } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { deepDecodeEntities } from "@/lib/entities";
-import { parsePipeTables, TABLE_SEP, deriveAgeRange, deriveSalaryRange } from "@/lib/pipeTables";
+import { parsePipeTables, TABLE_SEP, deriveAgeRange, deriveSalaryRange, parseFaqLines } from "@/lib/pipeTables";
 import { Button } from "@/components/Button";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
@@ -39,21 +39,10 @@ interface SectionDraft {
   content: string;
 }
 
-// Sources on this site write each FAQ as one paragraph combining both
-// question and answer — "Q1. <question>? Ans: <answer>." — rather than
-// alternating separate blocks, so it's captured as one entry per <p> by
-// the bot's plain-block fallback (extractPlainBlocks). That shape is
-// reliably splittable on the "Ans:"/"उत्तर:" marker, unlike a generic
-// FAQ layout where question/answer pairing can't be inferred safely —
-// this is intentionally narrow rather than a general-purpose FAQ parser.
-const FAQ_LINE = /^\s*(?:q\d*[.):]?\s*)?(.*?)\s*(?:ans(?:wer)?|उत्तर)\s*[:.]?\s*(.+)$/i;
-
-function parseFaqLines(lines: string[]): FaqDraft[] {
-  return lines.map((line) => {
-    const match = line.match(FAQ_LINE);
-    return match ? { question: match[1].trim(), answer: match[2].trim() } : { question: line.trim(), answer: "" };
-  });
-}
+// parseFaqLines now lives in lib/pipeTables.ts, shared with
+// approveDraft's own default (see lib/server/data.ts) — same parse
+// either way, so a bulk-approved draft's FAQs look the same as one an
+// admin reviewed by hand instead of one big unsplit paragraph.
 
 // Splits a bot-extracted "cell | cell || row || row" pipe table (see
 // tableToPairs() in extractHtmlNotificationFields.ts) into one readable
@@ -616,6 +605,12 @@ export default function DraftReviewPage({
     draft.draftType === "result" ? "How to Check Result" : draft.draftType === "admit_card" ? "How to Download Admit Card" : "How to Apply";
   const documentsLabel = draft.draftType === "admit_card" ? "Exam Day Instructions / Documents to Carry" : "Documents Required";
 
+  // Tier 2 discrepancy signal (see extractHtmlNotificationFields.ts's
+  // headingStats) — a warning shown here even though the admin IS on
+  // the review page, since it's just as easy to skim past a page full
+  // of pre-filled fields as it is to skip the page entirely.
+  const verification = (draft.extractedFields as { verification?: { sourceHeadingCount?: number; capturedHeadingCount?: number; possibleGap?: boolean } })?.verification;
+
   return (
     <div>
       <Breadcrumb
@@ -640,6 +635,17 @@ export default function DraftReviewPage({
           </p>
         </div>
       </div>
+
+      {verification?.possibleGap && (
+        <div className="mt-4 flex items-start gap-2.5 rounded-[var(--radius-control)] border border-[var(--color-warning)] bg-[var(--color-warning-tint)] px-4 py-3">
+          <TriangleAlert size={18} className="mt-0.5 shrink-0 text-[var(--color-warning)]" />
+          <p className="text-sm text-[var(--color-text-primary)]">
+            <span className="font-semibold">This extraction might be missing a section.</span> The source page had{" "}
+            {verification.sourceHeadingCount} heading(s) worth checking, but only {verification.capturedHeadingCount} ended up with
+            captured content below. This isn&apos;t a diagnosis of what&apos;s missing — open the source link and compare before approving.
+          </p>
+        </div>
+      )}
 
       <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px]">
         {/* Editable fields — every field the published record can hold,

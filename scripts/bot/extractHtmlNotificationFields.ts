@@ -398,6 +398,18 @@ interface ParsedSections {
   // render sections in the source's own order instead of a fixed
   // template — see components using resolveSectionOrder.
   sectionOrder: string[];
+  // A cheap, always-computed signal for whether extraction likely left
+  // something out — NOT a diagnosis of what, just a count: how many
+  // real (non-boilerplate) headings were found on the page vs how many
+  // of them ended up with actual captured content. A heading matching
+  // several times into the same field (e.g. two Exam Pattern phase
+  // headings) counts as two "covered" headings here, not one — this
+  // is a per-HEADING tally, not a per-FIELD one, so that legitimate
+  // multi-heading sections don't look like a gap. See Tier 2 of the
+  // discrepancy-reduction plan: surfaced on the admin drafts list/
+  // review page as a "might be missing something, please check"
+  // warning, not a block on approving.
+  headingStats: { total: number; covered: number };
 }
 
 // genericSections is populated directly (see the `!field` branch
@@ -406,7 +418,7 @@ interface ParsedSections {
 // `sections[field].push(...)` for an actually-matched heading is known
 // to be pushing into one of the `string[][]`/`string[]` fields above,
 // not genericSections' different shape.
-type MatchableSection = Exclude<keyof ParsedSections, "genericSections" | "sectionOrder">;
+type MatchableSection = Exclude<keyof ParsedSections, "genericSections" | "sectionOrder" | "headingStats">;
 
 // "शारीरिक योग्यता" (Physical Eligibility) and "शैक्षणिक योग्यता"
 // (Education Eligibility) both contain "योग्यता" — matched here by the
@@ -429,21 +441,32 @@ function classifyHeading(headingText: string): MatchableSection | null {
   // completely different section's own heading. Seen in practice: a
   // genuine "महत्वपूर्ण लिंक (Important Links For SBI Apprentice
   // Vacancy 2026)" heading was classified as postDetailsRaw purely
-  // because its own branded title happened to contain "Vacancy" (and
-  // postDetailsRaw is declared earlier in HEADING_FIELD_MAP than
-  // importantLinksRaw) — silently merging the real links table into
-  // the Vacancy Details section as inert "Click Here" text instead of
-  // real sidebar buttons. Preferring the LONGEST matching keyword —
-  // the more specific, less coincidental match — resolves this
-  // correctly regardless of which bucket happens to be declared first,
-  // without having to hand-tune keyword lists or their order every
-  // time a new collision like this turns up.
-  let best: { field: MatchableSection; keywordLength: number } | null = null;
+  // because its own branded title happened to contain "Vacancy".
+  //
+  // This site consistently leads each heading with its real topic word
+  // ("FAQ-...", "Important Links...", "Physical Eligibility (...)")
+  // and only tacks the branded post title on afterward/in parens — so
+  // preferring whichever keyword matches EARLIEST in the heading (not
+  // simply the longest one anywhere in it) picks the heading's actual,
+  // intentional topic over an incidental word from its own branding.
+  // Longest length only breaks a tie when two keywords start at the
+  // same position. Two collisions this still can't resolve on
+  // position alone get a narrow exclusion below: a heading already
+  // excluded from eligibilityRaw (see ELIGIBILITY_EXCLUDE) — e.g.
+  // "Physical Eligibility (... Vacancy 2026)" — has no other
+  // candidate keyword at all, so without this, "vacancy" would
+  // "rescue" it into postDetailsRaw instead of correctly falling
+  // through to the generic catch-all it's meant to land in.
+  const eligibilityExcluded = ELIGIBILITY_EXCLUDE.some((kw) => lower.includes(kw));
+  let best: { field: MatchableSection; keywordLength: number; position: number } | null = null;
   for (const { field, keywords } of HEADING_FIELD_MAP) {
-    if (field === "eligibilityRaw" && ELIGIBILITY_EXCLUDE.some((kw) => lower.includes(kw))) continue;
+    if (field === "eligibilityRaw" && eligibilityExcluded) continue;
     for (const kw of keywords) {
-      if (lower.includes(kw.toLowerCase()) && (!best || kw.length > best.keywordLength)) {
-        best = { field, keywordLength: kw.length };
+      if (kw.toLowerCase() === "vacancy" && eligibilityExcluded) continue;
+      const idx = lower.indexOf(kw.toLowerCase());
+      if (idx === -1) continue;
+      if (!best || idx < best.position || (idx === best.position && kw.length > best.keywordLength)) {
+        best = { field, keywordLength: kw.length, position: idx };
       }
     }
   }
@@ -613,6 +636,35 @@ function extractPlainBlocks(segmentHtml: string): string[] {
   return blocks;
 }
 
+// A leaf <div> — one containing no <div> of its own — used only as a
+// last resort when a segment has neither a <table> nor any <p>/<li>/
+// <h3-6> at all. Seen in practice: an FAQ section laid out as one
+// <div style="..."><b>Q1. ...</b><br />Ans: ...</div> per question,
+// with no other tag BLOCK_PATTERN recognizes — content that was
+// otherwise silently discarded even though it's visibly a real,
+// readable section on the page. Requiring "no nested <div>" is what
+// keeps this from also matching a large wrapper <div> (an ad
+// code-block, a whole section's outer container) as if it were one
+// block — the non-greedy match would stop at that wrapper's first
+// inner </div> and never reach its own closing tag, so it simply
+// doesn't match instead of matching the wrong span.
+const LEAF_DIV_PATTERN = /<div\b[^>]*>((?:(?!<div\b)[\s\S])*?)<\/div>/gi;
+
+function stripScriptsAndStyles(html: string): string {
+  return html.replace(/<script\b[\s\S]*?<\/script>/gi, "").replace(/<style\b[\s\S]*?<\/style>/gi, "");
+}
+
+function extractLeafDivBlocks(segmentHtml: string): string[] {
+  const blocks: string[] = [];
+  const pattern = new RegExp(LEAF_DIV_PATTERN.source, "gi");
+  let m: RegExpExecArray | null;
+  while ((m = pattern.exec(segmentHtml)) !== null) {
+    const text = stripTags(stripScriptsAndStyles(m[1]));
+    if (text) blocks.push(text);
+  }
+  return blocks;
+}
+
 function extractLinkPairs(sectionHtml: string): { label: string; url: string }[] {
   // Prefer table-row form (label cell + link cell), same layout the site
   // actually uses for its "Important Links" table; fall back to any raw
@@ -679,6 +731,7 @@ function parseSections(html: string): ParsedSections {
     conclusionRaw: [],
     genericSections: [],
     sectionOrder: [],
+    headingStats: { total: 0, covered: 0 },
   };
   const recordOrder = (key: string) => {
     if (!sections.sectionOrder.includes(key)) sections.sectionOrder.push(key);
@@ -689,6 +742,15 @@ function parseSections(html: string): ParsedSections {
   let headingMatch: RegExpExecArray | null;
   while ((headingMatch = headingPattern.exec(html)) !== null) {
     const text = stripTags(headingMatch[1]);
+    // A blank <h2>/<h3> — no real title text once stripped, seen used
+    // purely as a decorative spacer before a second table under an
+    // already-titled section (e.g. a syllabus breakdown table right
+    // after "Exam Pattern & Syllabus") — isn't a real section boundary.
+    // Skipping it entirely (rather than adding it as a heading with no
+    // field) means its content stays part of whichever real, titled
+    // section precedes it instead of being cut off into its own
+    // generic section titled with an empty string.
+    if (!text) continue;
     headingPositions.push({
       field: classifyHeading(text),
       text,
@@ -738,11 +800,30 @@ function parseSections(html: string): ParsedSections {
     "similar post",
     "about the author",
     "about author",
+    "you may also check",
+    "you might also check",
   ];
   const isBoilerplateHeading = (text: string) => {
     const lower = text.toLowerCase();
     return GENERIC_SECTION_EXCLUDE.some((kw) => lower.includes(kw));
   };
+
+  // A boilerplate heading like "You Might Also Like" is always the
+  // START of a trailing widget, never something real content resumes
+  // after — but only ITS OWN heading text matches a GENERIC_SECTION_
+  // EXCLUDE keyword; the individual post-title headings inside that
+  // widget (a different, unpredictable title every time) don't, and
+  // without this they were being scanned as if they were real content
+  // headings — silently inflating the Tier 2 "possible gap" signal on
+  // every single page (each one has this widget), and structurally
+  // capable of leaking a related post's own excerpt text onto THIS
+  // page as a bogus generic section if that post's card happens to
+  // wrap its excerpt in a <p>/<li> the way real content does. Cutting
+  // the heading list off at the first boilerplate marker — rather than
+  // trying to keyword-match every possible post title that could
+  // follow it — removes both risks in one place.
+  const firstBoilerplateIndex = headingPositions.findIndex((h) => isBoilerplateHeading(h.text));
+  if (firstBoilerplateIndex !== -1) headingPositions.length = firstBoilerplateIndex;
 
   // Shared by both the specific-field path below and the generic
   // catch-all: scans a segment for real <table>s first, falling back
@@ -761,9 +842,35 @@ function parseSections(html: string): ParsedSections {
       const plain = extractPlainBlocks(segment).filter((row) => !WP_POST_META_ROW.test(row));
       if (plain.length > 0) blocks.push(plain);
     }
+    if (blocks.length === 0) {
+      const leafDivs = extractLeafDivBlocks(segment).filter((row) => !WP_POST_META_ROW.test(row));
+      if (leafDivs.length > 0) blocks.push(leafDivs);
+    }
     return blocks;
   };
 
+  // This site's post-title block runs the organization name, an
+  // English branded subtitle, and a Hindi subtitle as separate
+  // headings before the first real section (Important Dates) — always
+  // just restating the title, in whatever tag that particular page
+  // happens to wrap it in (a bare <div>/<span>, occasionally nothing
+  // at all). Confirmed in practice both as truly empty segments AND as
+  // real-length text that isn't wrapped in any tag extractBlocksFromSegment
+  // recognizes as a block — either way, never something a reader would
+  // notice as a "missing section" if it weren't captured. Once the
+  // FIRST real field is reached, every heading after it counts
+  // normally; before that, none of them count toward headingStats
+  // (their content, if any, is still captured as a generic section as
+  // usual — this only affects the Tier 2 signal, not what's shown).
+  let reachedFirstField = false;
+
+  // Set DEBUG_SECTIONS=1 (e.g. `DEBUG_SECTIONS=1 npx tsx scripts/bot/
+  // debugExtract.ts <url>`) to print exactly which heading(s) tripped
+  // headingStats' "no content found" case and why — the same tracing
+  // used to calibrate the Tier 2 threshold against real pages so it
+  // doesn't fire on this site's own decorative title-block headings.
+  // Useful again if a future page shape produces a false positive/
+  // negative and needs the same kind of investigation.
   for (let i = 0; i < headingPositions.length; i++) {
     const { field, end, text: headingText } = headingPositions[i];
 
@@ -777,6 +884,21 @@ function parseSections(html: string): ParsedSections {
         const segmentEnd = i + 1 < headingPositions.length ? headingPositions[i + 1].start : html.length;
         const segment = html.slice(end, segmentEnd);
         const blocks = extractBlocksFromSegment(segment);
+        // A heading whose own segment is (near-)empty once stripped of
+        // tags — not zero blocks despite real content, just genuinely
+        // nothing there — is a decorative stacked title/org-name repeat
+        // (this site's post-title block routinely runs "ORG NAME" /
+        // "English Title" / "Hindi Title" as three separate headings
+        // back to back before the real Important Dates section starts),
+        // not a missed section. Counting it toward headingStats would
+        // flag every single page as a false "possible gap" — confirmed
+        // directly: before this check, every page in a manual spot
+        // check came back flagged, entirely from headings exactly like
+        // this. A heading WITH real stripped text just short of a full
+        // section (rare) is still safely captured normally below; this
+        // only affects whether it counts toward the Tier 2 signal.
+        const hasSubstantialContent = blocks.length > 0 || stripTags(segment).trim().length >= 15;
+        if (hasSubstantialContent && reachedFirstField) sections.headingStats.total++;
 
         // Structural fallback for an "Important Links"-shaped table
         // whose own heading wording isn't one importantLinksRaw's
@@ -794,22 +916,38 @@ function parseSections(html: string): ParsedSections {
         // The `- 1` tolerance allows for exactly one non-link row (the
         // table's own header row, e.g. "विवरण | लिंक", which never has
         // an anchor of its own).
-        const linkPairs = extractLinkPairs(segment);
+        //
+        // Gated on an actual `<table>` being present: extractLinkPairs
+        // falls back to grabbing every inline `<a>` in the segment when
+        // there's no table at all, which misfires on an ordinary intro
+        // paragraph that happens to contain one contextual link (this
+        // site's "Short Info" summary always has exactly one) — with
+        // rowCount 1 for that single paragraph, the `- 1` tolerance let
+        // a single inline link pass as if it were a whole links table,
+        // silently swallowing the paragraph's real content into
+        // importantLinksRaw instead of showing it as its own section.
+        const hasRealTable = /<table\b/i.test(segment);
+        const linkPairs = hasRealTable ? extractLinkPairs(segment) : [];
         const rowCount = blocks.reduce((sum, block) => sum + block.length, 0);
         if (linkPairs.length > 0 && linkPairs.length >= rowCount - 1) {
           sections.importantLinksRaw.push(...linkPairs);
           recordOrder("importantLinksRaw");
+          sections.headingStats.covered++;
           continue;
         }
 
         if (blocks.length > 0) {
           sections.genericSections.push({ heading: headingText, blocks });
           recordOrder(`generic:${sections.genericSections.length - 1}`);
+          sections.headingStats.covered++;
+        } else if (hasSubstantialContent && process.env.DEBUG_SECTIONS) {
+          console.error(`[DEBUG-MISS] generic-no-blocks heading="${headingText}" segLen=${segment.length} text="${stripTags(segment).slice(0, 200)}"`);
         }
       }
       continue;
     }
 
+    reachedFirstField = true;
     const startIdx = i;
     let j = i + 1;
     let absorbed = 0;
@@ -832,23 +970,45 @@ function parseSections(html: string): ParsedSections {
     // have no field of their own, capturing the exact same content a
     // second time under the generic catch-all.
     i = j - 1;
+    // One real heading matched a field — counted as "total" below,
+    // same "is there actually anything here" gate the generic branch
+    // uses. Needed even for a MATCHED heading: this site's own branded
+    // post title routinely contains a field's own keyword by pure
+    // coincidence (seen in practice — a page whose exam is literally
+    // named "...Teachers Eligibility Test..." matches eligibilityRaw's
+    // "eligibility" keyword on its own title heading, which has no
+    // content of its own, it's immediately followed by the next
+    // heading) — without this gate, that inflated the Tier 2 signal
+    // with headings that were never going to have content to miss.
+    // Any absorbed sub-headings are each their own real heading too,
+    // counted individually below alongside their own content.
+    if (stripTags(segment).trim().length >= 15) sections.headingStats.total++;
 
     if (field === "importantLinksRaw") {
-      sections.importantLinksRaw.push(...extractLinkPairs(segment));
+      const linkPairs = extractLinkPairs(segment);
+      sections.importantLinksRaw.push(...linkPairs);
       recordOrder(field);
+      if (linkPairs.length > 0) sections.headingStats.covered++;
+      else if (process.env.DEBUG_SECTIONS) console.error(`[DEBUG-MISS] importantLinksRaw heading="${headingText}" segLen=${segment.length}`);
       continue;
     }
     if (field === "howToApplyRaw") {
       // "How to Apply" is almost always a numbered <ol>, not a table
       const listMatch = segment.match(/<ol\b[^>]*>([\s\S]*?)<\/ol>/i);
-      sections[field].push(...(listMatch ? listToItems(listMatch[1]) : []));
+      const items = listMatch ? listToItems(listMatch[1]) : [];
+      sections[field].push(...items);
       recordOrder(field);
+      if (items.length > 0) sections.headingStats.covered++;
+      else if (process.env.DEBUG_SECTIONS) console.error(`[DEBUG-MISS] howToApplyRaw heading="${headingText}" segLen=${segment.length}`);
       continue;
     }
 
     if (!hadAbsorbedSubheadings) {
-      sections[field].push(...extractBlocksFromSegment(segment));
+      const contentBlocks = extractBlocksFromSegment(segment);
+      sections[field].push(...contentBlocks);
       recordOrder(field);
+      if (contentBlocks.length > 0) sections.headingStats.covered++;
+      else if (process.env.DEBUG_SECTIONS) console.error(`[DEBUG-MISS] ${field} heading="${headingText}" segLen=${segment.length}`);
       continue;
     }
 
@@ -866,14 +1026,24 @@ function parseSections(html: string): ParsedSections {
     // nothing new needed downstream) preserves that same division.
     const preambleEnd = headingPositions[startIdx + 1].start;
     const preamble = html.slice(end, preambleEnd);
-    sections[field].push(...extractBlocksFromSegment(preamble));
+    const preambleBlocks = extractBlocksFromSegment(preamble);
+    sections[field].push(...preambleBlocks);
     recordOrder(field);
+    if (preambleBlocks.length > 0) sections.headingStats.covered++;
+    else if (process.env.DEBUG_SECTIONS) console.error(`[DEBUG-MISS] preamble field=${field} heading="${headingText}" preambleLen=${preamble.length}`);
 
     for (let k = startIdx + 1; k <= j - 1; k++) {
+      // Each absorbed sub-heading (e.g. "1. Phase-I ...") is its own
+      // real heading, same accounting as any other.
+      sections.headingStats.total++;
       const subEnd = k + 1 <= j - 1 ? headingPositions[k + 1].start : segmentEnd;
       const subSegment = html.slice(headingPositions[k].end, subEnd);
       const subBlocks = extractBlocksFromSegment(subSegment);
-      if (subBlocks.length === 0) continue;
+      if (subBlocks.length === 0) {
+        if (process.env.DEBUG_SECTIONS) console.error(`[DEBUG-MISS] subheading="${headingPositions[k].text}" subLen=${subSegment.length}`);
+        continue;
+      }
+      sections.headingStats.covered++;
       subBlocks[0] = [headingPositions[k].text, ...subBlocks[0]];
       sections[field].push(...subBlocks);
     }
@@ -1019,6 +1189,11 @@ export function extractHtmlNotificationFields(html: string): HtmlNotificationExt
       ? { officialWebsiteLink: guessLink(importantLinks, ["official website", "official portal"]) }
       : {}),
     ...(sections.sectionOrder.length ? { sectionOrder: sections.sectionOrder } : {}),
+    verification: {
+      sourceHeadingCount: sections.headingStats.total,
+      capturedHeadingCount: sections.headingStats.covered,
+      possibleGap: sections.headingStats.total - sections.headingStats.covered >= 1,
+    },
   };
 
   return { organization, fields };

@@ -54,6 +54,18 @@ export interface ExtractedStructuredFields {
   // to preserve, since a PDF's own field extraction isn't heading-
   // driven the way this is).
   sectionOrder?: string[];
+
+  // Tier 2 discrepancy safety net: a cheap signal for whether
+  // extraction likely left something out of this draft, computed once
+  // at scrape time (see ParsedSections.headingStats) so it's available
+  // on the drafts list and single-draft review page regardless of
+  // whether the draft goes through single-draft review or bulk-approve
+  // — the FAQ/Conclusion workflow gap fixed earlier this session was
+  // exactly this mistake: a signal that only reached the admin if they
+  // happened to open the one page bulk-approve skips entirely. Only
+  // present for HTML-page extraction (a PDF-sourced draft has no
+  // comparable heading structure to count).
+  verification?: { sourceHeadingCount: number; capturedHeadingCount: number; possibleGap: boolean };
 }
 
 const MONTH_NAMES: Record<string, number> = {
