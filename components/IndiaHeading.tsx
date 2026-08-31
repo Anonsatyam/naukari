@@ -5,7 +5,7 @@ function ChakraDot() {
     <svg
       viewBox="0 0 40 40"
       aria-hidden="true"
-      className="pointer-events-none absolute bottom-full left-1/2 mb-[-0.28em] h-[0.26em] w-[0.26em] -translate-x-1/2"
+      className="pointer-events-none absolute bottom-full left-1/2 mb-[-0.4em] h-[0.26em] w-[0.26em] -translate-x-1/2"
     >
       <circle cx="20" cy="20" r="17" fill="#ffffff" stroke="#000080" strokeWidth="3" />
       {Array.from({ length: 24 }).map((_, i) => (
