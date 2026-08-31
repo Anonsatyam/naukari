@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { CheckCircle2, XCircle, Info, ShieldQuestion } from "lucide-react";
-import { qualifications, qualificationRank, classifyQualification } from "@/lib/taxonomy";
+import { qualifications, qualificationRank, classifyQualification, taxonomyLabel } from "@/lib/taxonomy";
 import { Job } from "@/lib/types";
 import { Button } from "./Button";
 import Card from "./Card";
@@ -17,7 +18,9 @@ type CheckResult = {
 
 function evaluate(
   job: Job,
-  input: { qualification: string; age: number; hasBEd: boolean; isDomicile: boolean }
+  input: { qualification: string; age: number; hasBEd: boolean; isDomicile: boolean },
+  t: ReturnType<typeof useTranslations<"eligibilityChecker">>,
+  locale: string
 ): CheckResult[] {
   const results: CheckResult[] = [];
 
@@ -26,48 +29,45 @@ function evaluate(
   const userRank = qualificationRank[input.qualification] ?? 1;
   if (requiredRank === undefined) {
     results.push({
-      label: "Education",
+      label: t("educationLabel"),
       status: "info",
-      reason: `This job's qualification requirement ("${job.qualification}") couldn't be matched to a specific level — check the official notification directly.`,
+      reason: t("educationUnmatched", { qualification: job.qualification }),
     });
   } else {
+    const requiredDisplay = taxonomyLabel(requiredLabel ?? job.qualification, locale, "qualification");
     results.push({
-      label: "Education",
+      label: t("educationLabel"),
       status: userRank >= requiredRank ? "pass" : "fail",
       reason:
         userRank >= requiredRank
-          ? `Your qualification meets the requirement (${requiredLabel}).`
-          : `This job requires at least ${requiredLabel}.`,
+          ? t("educationPass", { required: requiredDisplay })
+          : t("educationFail", { required: requiredDisplay }),
     });
   }
 
   const ageOk = input.age >= job.minAge && input.age <= job.maxAge;
   results.push({
-    label: "Age",
+    label: t("ageResultLabel"),
     status: ageOk ? "pass" : "fail",
     reason: ageOk
-      ? `Your age (${input.age}) is within the ${job.minAge}–${job.maxAge} year range.`
+      ? t("agePass", { age: input.age, min: job.minAge, max: job.maxAge })
       : input.age > job.maxAge
-      ? `Maximum age is ${job.maxAge}. ${job.ageRelaxation ?? "Check if a relaxation applies to your category."}`
-      : `Minimum age is ${job.minAge}.`,
+      ? t("ageFailMax", { max: job.maxAge, relaxation: job.ageRelaxation ?? t("ageRelaxationDefault") })
+      : t("ageFailMin", { min: job.minAge }),
   });
 
   job.eligibilityRules.forEach((rule) => {
     if (rule.label === "B.Ed Requirement") {
       results.push({
-        label: "B.Ed",
+        label: t("bEdLabel"),
         status: input.hasBEd ? "pass" : "fail",
-        reason: input.hasBEd
-          ? "You meet the B.Ed requirement for this post."
-          : "B.Ed Required — this post's Paper II needs a B.Ed degree.",
+        reason: input.hasBEd ? t("bEdPass") : t("bEdFail"),
       });
     } else if (rule.label === "Domicile") {
       results.push({
-        label: "Domicile",
+        label: t("domicileResultLabel"),
         status: input.isDomicile ? "pass" : "fail",
-        reason: input.isDomicile
-          ? "You meet the Bihar residency requirement."
-          : "This post requires Bihar domicile as per category rules.",
+        reason: input.isDomicile ? t("domicilePass") : t("domicileFail"),
       });
     } else if (rule.type === "other") {
       results.push({
@@ -82,6 +82,8 @@ function evaluate(
 }
 
 export default function EligibilityChecker({ initialJobId }: { initialJobId?: string }) {
+  const t = useTranslations("eligibilityChecker");
+  const locale = useLocale();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [jobId, setJobId] = useState(initialJobId ?? "");
@@ -108,14 +110,14 @@ export default function EligibilityChecker({ initialJobId }: { initialJobId?: st
   const needsBEd = job?.eligibilityRules.some((r) => r.label === "B.Ed Requirement") ?? false;
   const needsDomicile = job?.eligibilityRules.some((r) => r.label === "Domicile") ?? false;
 
-  const results = submitted && job ? evaluate(job, { qualification, age, hasBEd, isDomicile }) : [];
+  const results = submitted && job ? evaluate(job, { qualification, age, hasBEd, isDomicile }, t, locale) : [];
   const blockingResults = results.filter((r) => r.status !== "info");
   const overallEligible = blockingResults.every((r) => r.status === "pass");
 
   if (loading) {
     return (
       <Card padding="p-10" className="text-center">
-        <p className="text-sm text-[var(--color-text-secondary)]">Loading jobs…</p>
+        <p className="text-sm text-[var(--color-text-secondary)]">{t("loading")}</p>
       </Card>
     );
   }
@@ -123,9 +125,9 @@ export default function EligibilityChecker({ initialJobId }: { initialJobId?: st
   if (!job) {
     return (
       <Card padding="p-10" className="text-center">
-        <p className="text-sm font-semibold text-[var(--color-text-primary)]">No jobs available yet</p>
+        <p className="text-sm font-semibold text-[var(--color-text-primary)]">{t("noJobsTitle")}</p>
         <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          Check back once jobs have been published.
+          {t("noJobsBody")}
         </p>
       </Card>
     );
@@ -143,7 +145,7 @@ export default function EligibilityChecker({ initialJobId }: { initialJobId?: st
         <Card className="space-y-5">
           <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-              Job
+              {t("jobLabel")}
             </label>
             <select
               value={jobId}
@@ -162,7 +164,7 @@ export default function EligibilityChecker({ initialJobId }: { initialJobId?: st
           </div>
 
           <SelectField
-            label="Your Highest Qualification"
+            label={t("qualificationLabel")}
             value={qualification}
             onChange={(e) => {
               setQualification(e.target.value);
@@ -172,7 +174,7 @@ export default function EligibilityChecker({ initialJobId }: { initialJobId?: st
           />
 
           <TextField
-            label="Your Age"
+            label={t("ageLabel")}
             type="number"
             min={15}
             max={65}
@@ -185,7 +187,7 @@ export default function EligibilityChecker({ initialJobId }: { initialJobId?: st
 
           {needsBEd && (
             <CheckboxField
-              label="I hold a B.Ed degree"
+              label={t("hasBEdLabel")}
               checked={hasBEd}
               onChange={(e) => {
                 setHasBEd(e.target.checked);
@@ -196,7 +198,7 @@ export default function EligibilityChecker({ initialJobId }: { initialJobId?: st
 
           {needsDomicile && (
             <CheckboxField
-              label="I am a resident (domicile) of Bihar"
+              label={t("domicileLabel")}
               checked={isDomicile}
               onChange={(e) => {
                 setIsDomicile(e.target.checked);
@@ -206,7 +208,7 @@ export default function EligibilityChecker({ initialJobId }: { initialJobId?: st
           )}
 
           <Button type="submit" className="w-full">
-            Check Eligibility
+            {t("checkButton")}
           </Button>
         </Card>
       </form>
@@ -219,11 +221,10 @@ export default function EligibilityChecker({ initialJobId }: { initialJobId?: st
           >
             <ShieldQuestion size={28} className="text-[var(--color-text-muted)]" />
             <p className="mt-3 text-sm font-semibold text-[var(--color-text-primary)]">
-              Fill the form to see your result
+              {t("fillFormTitle")}
             </p>
             <p className="mt-1 max-w-xs text-sm text-[var(--color-text-secondary)]">
-              We&apos;ll check each requirement individually and explain the reason —
-              not just eligible or not.
+              {t("fillFormBody")}
             </p>
           </Card>
         ) : (
@@ -241,10 +242,10 @@ export default function EligibilityChecker({ initialJobId }: { initialJobId?: st
                   overallEligible ? "text-[var(--color-success)]" : "text-[var(--color-danger)]"
                 )}
               >
-                {overallEligible ? "You appear to be eligible" : "You may not be eligible"}
+                {overallEligible ? t("eligibleTitle") : t("notEligibleTitle")}
               </p>
               <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                for {job.title}. Always confirm with the official notification before applying.
+                {t("forJob", { title: job.title })}
               </p>
             </Card>
 

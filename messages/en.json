@@ -112,5 +112,72 @@
     "checkBackHint": "Check back soon, or browse all open jobs.",
     "noSearchMatch": "No closing-soon jobs match your search",
     "tryDifferentSearch": "Try a different search term."
+  },
+  "toolsNav": {
+    "photoResizer": "Photo & Signature Resizer",
+    "nameDatePhoto": "Name & Date on Photo",
+    "signatureMerge": "Merge Signature on Photo"
+  },
+  "toolsPage": {
+    "breadcrumb": "Tools",
+    "heading": "Tools",
+    "subtitle": "Free, works entirely in your browser — nothing is uploaded anywhere",
+    "photoResizerTitle": "Photo & Signature Resizer",
+    "photoResizerDesc": "Crop and resize any photo to an exact pixel size and file size — pick a common preset (passport photo, signature) or set your own.",
+    "nameDatePhotoTitle": "Name & Date on Photo",
+    "nameDatePhotoDesc": "Add your name and today's date onto a photo, positioned exactly where you want it.",
+    "signatureMergeTitle": "Merge Signature on Photo",
+    "signatureMergeDesc": "Overlay your signature onto a photo — with optional white-background removal so it blends in cleanly."
+  },
+  "photoResizerPage": {
+    "breadcrumb": "Photo & Signature Resizer",
+    "heading": "Photo & Signature Resizer",
+    "body": "Upload a photo, choose a preset or set your own size, then drag the box to crop. We'll resize to the exact dimensions and compress to fit the target file size."
+  },
+  "nameDatePhotoPage": {
+    "breadcrumb": "Name & Date on Photo",
+    "heading": "Name & Date on Photo",
+    "body": "Upload a photo, type your name and date, and drag the label to position it. Download the finished photo when you're happy with it."
+  },
+  "signatureMergePage": {
+    "breadcrumb": "Merge Signature on Photo",
+    "heading": "Merge Signature on Photo",
+    "body": "Upload a photo and your signature, then drag and resize the signature onto the photo. Turn on background removal if your signature was scanned on white paper."
+  },
+  "eligibilityCheckerPage": {
+    "breadcrumb": "Eligibility Checker",
+    "heading": "Eligibility Checker",
+    "body": "Select a job and enter your details. We'll show exactly which conditions you meet — and which you don't, with the reason why."
+  },
+  "eligibilityChecker": {
+    "loading": "Loading jobs…",
+    "noJobsTitle": "No jobs available yet",
+    "noJobsBody": "Check back once jobs have been published.",
+    "jobLabel": "Job",
+    "qualificationLabel": "Your Highest Qualification",
+    "ageLabel": "Your Age",
+    "hasBEdLabel": "I hold a B.Ed degree",
+    "domicileLabel": "I am a resident (domicile) of Bihar",
+    "checkButton": "Check Eligibility",
+    "fillFormTitle": "Fill the form to see your result",
+    "fillFormBody": "We'll check each requirement individually and explain the reason — not just eligible or not.",
+    "eligibleTitle": "You appear to be eligible",
+    "notEligibleTitle": "You may not be eligible",
+    "forJob": "for {title}. Always confirm with the official notification before applying.",
+    "educationLabel": "Education",
+    "ageResultLabel": "Age",
+    "bEdLabel": "B.Ed",
+    "domicileResultLabel": "Domicile",
+    "educationUnmatched": "This job's qualification requirement (\"{qualification}\") couldn't be matched to a specific level — check the official notification directly.",
+    "educationPass": "Your qualification meets the requirement ({required}).",
+    "educationFail": "This job requires at least {required}.",
+    "agePass": "Your age ({age}) is within the {min}–{max} year range.",
+    "ageFailMax": "Maximum age is {max}. {relaxation}",
+    "ageFailMin": "Minimum age is {min}.",
+    "ageRelaxationDefault": "Check if a relaxation applies to your category.",
+    "bEdPass": "You meet the B.Ed requirement for this post.",
+    "bEdFail": "B.Ed Required — this post's Paper II needs a B.Ed degree.",
+    "domicilePass": "You meet the Bihar residency requirement.",
+    "domicileFail": "This post requires Bihar domicile as per category rules."
   }
 }

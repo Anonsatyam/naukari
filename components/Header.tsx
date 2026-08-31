@@ -21,9 +21,9 @@ export default function Header() {
   ];
 
   const toolLinks = [
-    { href: "/tools/photo-resizer", label: "Photo & Signature Resizer" },
-    { href: "/tools/name-date-photo", label: "Name & Date on Photo" },
-    { href: "/tools/signature-merge", label: "Merge Signature on Photo" },
+    { href: "/tools/photo-resizer", label: t("toolsNav.photoResizer") },
+    { href: "/tools/name-date-photo", label: t("toolsNav.nameDatePhoto") },
+    { href: "/tools/signature-merge", label: t("toolsNav.signatureMerge") },
   ];
 
   const aboutLink = { href: "/about", label: t("nav.about") };

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Crop, PenTool, Wrench, Type } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import Breadcrumb from "@/components/Breadcrumb";
 import Card from "@/components/Card";
 
@@ -10,42 +11,45 @@ export const metadata: Metadata = {
     "Free tools to prepare your application photo and signature — crop and resize to exact dimensions, add your name and date, or merge your signature onto a photo.",
 };
 
-const tools = [
-  {
-    href: "/tools/photo-resizer",
-    icon: Crop,
-    title: "Photo & Signature Resizer",
-    description:
-      "Crop and resize any photo to an exact pixel size and file size — pick a common preset (passport photo, signature) or set your own.",
-  },
-  {
-    href: "/tools/name-date-photo",
-    icon: Type,
-    title: "Name & Date on Photo",
-    description: "Add your name and today's date onto a photo, positioned exactly where you want it.",
-  },
-  {
-    href: "/tools/signature-merge",
-    icon: PenTool,
-    title: "Merge Signature on Photo",
-    description:
-      "Overlay your signature onto a photo — with optional white-background removal so it blends in cleanly.",
-  },
-];
+export default async function ToolsPage() {
+  const t = await getTranslations("toolsPage");
+  const tCommon = await getTranslations("common");
+  const locale = await getLocale();
+  const localePath = (path: string) => (locale === "en" ? path : `/${locale}${path}`);
 
-export default function ToolsPage() {
+  const tools = [
+    {
+      href: "/tools/photo-resizer",
+      icon: Crop,
+      title: t("photoResizerTitle"),
+      description: t("photoResizerDesc"),
+    },
+    {
+      href: "/tools/name-date-photo",
+      icon: Type,
+      title: t("nameDatePhotoTitle"),
+      description: t("nameDatePhotoDesc"),
+    },
+    {
+      href: "/tools/signature-merge",
+      icon: PenTool,
+      title: t("signatureMergeTitle"),
+      description: t("signatureMergeDesc"),
+    },
+  ];
+
   return (
     <div className="container-page py-8">
-      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Tools" }]} />
+      <Breadcrumb items={[{ label: tCommon("home"), href: localePath("/") }, { label: t("breadcrumb") }]} />
 
       <div className="flex items-center gap-2">
         <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-primary-tint)] text-[var(--color-primary)]">
           <Wrench size={18} />
         </span>
         <div>
-          <h1 className="font-display text-2xl font-bold text-[var(--color-text-primary)]">Tools</h1>
+          <h1 className="font-display text-2xl font-bold text-[var(--color-text-primary)]">{t("heading")}</h1>
           <p className="text-sm text-[var(--color-text-secondary)]">
-            Free, works entirely in your browser — nothing is uploaded anywhere
+            {t("subtitle")}
           </p>
         </div>
       </div>

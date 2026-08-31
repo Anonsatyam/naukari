@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getLocale, getTranslations } from "next-intl/server";
 import EligibilityChecker from "@/components/EligibilityChecker";
 import Breadcrumb from "@/components/Breadcrumb";
 
@@ -13,16 +14,20 @@ export default async function EligibilityCheckerPage({
   searchParams: Promise<{ job?: string }>;
 }) {
   const { job } = await searchParams;
+  const t = await getTranslations("eligibilityCheckerPage");
+  const tCommon = await getTranslations("common");
+  const locale = await getLocale();
+  const localePath = (path: string) => (locale === "en" ? path : `/${locale}${path}`);
+
   return (
     <div className="container-page py-8">
-      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Eligibility Checker" }]} />
+      <Breadcrumb items={[{ label: tCommon("home"), href: localePath("/") }, { label: t("breadcrumb") }]} />
 
       <h1 className="font-display text-2xl font-bold text-[var(--color-text-primary)] md:text-3xl">
-        Eligibility Checker
+        {t("heading")}
       </h1>
       <p className="mt-1 max-w-xl text-sm text-[var(--color-text-secondary)]">
-        Select a job and enter your details. We&apos;ll show exactly which
-        conditions you meet — and which you don&apos;t, with the reason why.
+        {t("body")}
       </p>
 
       <div className="mt-6">
