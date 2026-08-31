@@ -43,6 +43,7 @@ export function ChipInput({
               onClick={() => removeAt(i)}
               className="text-[var(--color-primary)]/70 hover:text-[var(--color-primary)]"
               aria-label={`Remove ${tag}`}
+              title={`Remove ${tag}`}
             >
               <X size={12} />
             </button>

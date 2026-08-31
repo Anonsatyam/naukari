@@ -2,22 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  LayoutDashboard,
-  FileStack,
-  Briefcase,
-  LogOut,
-  Landmark,
-  PenSquare,
-} from "lucide-react";
+import { LogOut, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const links = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/create-post", label: "Create Post", icon: PenSquare },
-  { href: "/admin/drafts", label: "Bot Drafts", icon: FileStack },
-  { href: "/admin/jobs", label: "Manage Jobs", icon: Briefcase },
-];
+import { ADMIN_NAV_LINKS } from "@/lib/adminNav";
 
 export default function AdminSidebar() {
   const pathname = usePathname();
@@ -39,7 +26,7 @@ export default function AdminSidebar() {
       </div>
 
       <nav className="flex-1 space-y-1 p-3">
-        {links.map((link) => {
+        {ADMIN_NAV_LINKS.map((link) => {
           const Icon = link.icon;
           const active = pathname.startsWith(link.href);
           return (

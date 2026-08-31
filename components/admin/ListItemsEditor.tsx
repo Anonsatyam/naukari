@@ -5,6 +5,7 @@ import { ArrowDown, ArrowUp, Link2, Plus, Trash2 } from "lucide-react";
 import { insertInlineLink } from "@/lib/richText";
 import { InlineRichText } from "@/components/DetailSections";
 import { Button } from "@/components/Button";
+import { IconButton } from "@/components/admin/IconButton";
 import { fieldInputClass } from "@/lib/ui";
 
 function ListItemRow({
@@ -49,41 +50,15 @@ function ListItemRow({
           className={`${fieldInputClass} py-2`}
           placeholder="List item text — select a word or phrase, then click the link icon"
         />
-        <button
-          type="button"
+        <IconButton
+          icon={<Link2 size={15} />}
+          label="Select text above, then click to link it"
+          tone="primary"
           onClick={addLink}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[var(--color-primary)] hover:bg-[var(--color-primary-tint)]"
-          aria-label="Add link to selected text"
-          title="Select text above, then click to link it"
-        >
-          <Link2 size={15} />
-        </button>
-        <button
-          type="button"
-          onClick={onMoveUp}
-          disabled={!canMoveUp}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[var(--color-text-secondary)] hover:bg-[var(--color-background)] disabled:cursor-not-allowed disabled:opacity-30"
-          aria-label="Move up"
-        >
-          <ArrowUp size={15} />
-        </button>
-        <button
-          type="button"
-          onClick={onMoveDown}
-          disabled={!canMoveDown}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[var(--color-text-secondary)] hover:bg-[var(--color-background)] disabled:cursor-not-allowed disabled:opacity-30"
-          aria-label="Move down"
-        >
-          <ArrowDown size={15} />
-        </button>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[var(--color-danger)] hover:bg-[var(--color-danger-tint)]"
-          aria-label="Delete item"
-        >
-          <Trash2 size={15} />
-        </button>
+        />
+        <IconButton icon={<ArrowUp size={15} />} label="Move up" onClick={onMoveUp} disabled={!canMoveUp} />
+        <IconButton icon={<ArrowDown size={15} />} label="Move down" onClick={onMoveDown} disabled={!canMoveDown} />
+        <IconButton icon={<Trash2 size={15} />} label="Delete item" tone="danger" onClick={onRemove} />
       </div>
       {value.trim() && (
         <p className="mt-1.5 pl-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">

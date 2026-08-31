@@ -5,6 +5,8 @@ import { TableCellValue } from "@/lib/types";
 import { Button } from "@/components/Button";
 import { RichTable } from "@/components/DetailSections";
 import { ListItemsEditor } from "@/components/admin/ListItemsEditor";
+import { IconButton } from "@/components/admin/IconButton";
+import { selectFieldCompactClass } from "@/lib/ui";
 import { parsePipeTables } from "@/lib/pipeTables";
 
 export interface TableBuilderValue {
@@ -44,24 +46,25 @@ function emptyCellOfType(type: TableCellValue["type"]): TableCellValue {
 }
 
 function TableCellEditor({ cell, onChange }: { cell: TableCellValue; onChange: (cell: TableCellValue) => void }) {
-  const selectClass =
-    "w-full rounded border border-[var(--color-border)] bg-white px-1.5 py-1 text-[10px] font-medium text-[var(--color-text-secondary)] outline-none focus:border-[var(--color-primary)]";
   const inputClass =
     "mt-1 w-full min-w-[100px] rounded-[var(--radius-control)] border border-[var(--color-border)] px-2 py-1.5 text-xs text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]";
 
   return (
     <div className="min-w-[130px]">
-      <select
-        value={cell.type}
-        onChange={(e) => onChange(emptyCellOfType(e.target.value as TableCellValue["type"]))}
-        className={selectClass}
-      >
-        {(Object.keys(CELL_TYPE_LABELS) as TableCellValue["type"][]).map((t) => (
-          <option key={t} value={t}>
-            {CELL_TYPE_LABELS[t]}
-          </option>
-        ))}
-      </select>
+      <div className="relative">
+        <select
+          aria-label="Cell type"
+          value={cell.type}
+          onChange={(e) => onChange(emptyCellOfType(e.target.value as TableCellValue["type"]))}
+          className={selectFieldCompactClass}
+        >
+          {(Object.keys(CELL_TYPE_LABELS) as TableCellValue["type"][]).map((t) => (
+            <option key={t} value={t}>
+              {CELL_TYPE_LABELS[t]}
+            </option>
+          ))}
+        </select>
+      </div>
 
       {cell.type === "text" && (
         <input
@@ -158,27 +161,20 @@ export function TableBuilder({
                       placeholder={`Column ${i + 1}`}
                       className="w-full min-w-[110px] rounded-[var(--radius-control)] border border-[var(--color-border)] bg-white px-2 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]"
                     />
-                    <button
-                      type="button"
+                    <IconButton
+                      icon={<Trash2 size={12} />}
+                      label="Remove column"
+                      tone="danger"
+                      size="sm"
                       onClick={() => removeColumn(i)}
                       disabled={value.columns.length <= 1}
-                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-[var(--color-danger)] hover:bg-[var(--color-danger-tint)] disabled:cursor-not-allowed disabled:opacity-30"
-                      aria-label="Remove column"
-                    >
-                      <Trash2 size={12} />
-                    </button>
+                      className="h-6 w-6"
+                    />
                   </div>
                 </th>
               ))}
               <th className="w-9 p-1.5">
-                <button
-                  type="button"
-                  onClick={addColumn}
-                  className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-control)] text-[var(--color-primary)] hover:bg-[var(--color-primary-tint)]"
-                  aria-label="Add column"
-                >
-                  <Plus size={14} />
-                </button>
+                <IconButton icon={<Plus size={14} />} label="Add column" tone="primary" size="sm" onClick={addColumn} />
               </th>
             </tr>
           </thead>
@@ -191,15 +187,14 @@ export function TableBuilder({
                   </td>
                 ))}
                 <td className="p-1.5 text-center align-top">
-                  <button
-                    type="button"
+                  <IconButton
+                    icon={<Trash2 size={13} />}
+                    label="Remove row"
+                    tone="danger"
+                    size="sm"
                     onClick={() => removeRow(r)}
                     disabled={value.rows.length <= 1}
-                    className="flex h-7 w-7 items-center justify-center rounded text-[var(--color-danger)] hover:bg-[var(--color-danger-tint)] disabled:cursor-not-allowed disabled:opacity-30"
-                    aria-label="Remove row"
-                  >
-                    <Trash2 size={13} />
-                  </button>
+                  />
                 </td>
               </tr>
             ))}

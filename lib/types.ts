@@ -196,6 +196,7 @@ export interface BotDraft {
   status: "pending" | "approved" | "rejected";
   confidence: "high" | "medium" | "low";
   draftType: DraftType;
+  origin: "bot" | "manual";
   sourceOrderKey?: number;
   extractedFields: Record<string, unknown>;
 }

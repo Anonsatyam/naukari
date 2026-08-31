@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
       sourceUrl: sourceUrl.trim(),
       confidence: "high",
       draftType: draftType ?? "job",
+      origin: "manual",
       extractedFields: extractedFields ?? {},
     });
     return NextResponse.json({ draft }, { status: 201 });

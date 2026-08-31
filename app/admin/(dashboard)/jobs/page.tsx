@@ -107,6 +107,7 @@ export default function AdminJobsPage() {
                     rel="noopener noreferrer"
                     className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
                     aria-label="View public page"
+                    title="View public page"
                   >
                     <ExternalLink size={14} />
                   </a>

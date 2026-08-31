@@ -2,15 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, Eye, Plus, Trash2 } from "lucide-react";
 import { DraftType } from "@/lib/types";
 import { Button } from "@/components/Button";
 import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
-import { TextField, TextAreaField } from "@/components/FormField";
-import { fieldInputClass, fieldLabelClass } from "@/lib/ui";
+import { TextField, TextAreaField, SelectField } from "@/components/FormField";
 import { LinkRowDraft, FaqDraft, TYPE_LABELS, RowsEditor, SectionDivider } from "@/components/admin/DraftFormShared";
 import { ChipInput } from "@/components/admin/ChipInput";
+import { IconButton } from "@/components/admin/IconButton";
+import { openPreviewWindow } from "@/lib/adminPreview";
 import {
   DynamicSectionsEditor,
   DynamicSectionDraft,
@@ -48,6 +49,7 @@ export default function CreatePostPage() {
   const [conclusion, setConclusion] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<{ id: string } | null>(null);
 
@@ -55,6 +57,80 @@ export default function CreatePostPage() {
   const removeKeyDate = (i: number) => setKeyDates((prev) => prev.filter((_, idx) => idx !== i));
   const updateKeyDate = (i: number, patch: Partial<DateRowDraft>) =>
     setKeyDates((prev) => prev.map((d, idx) => (idx === i ? { ...d, ...patch } : d)));
+
+  const buildExtractedFields = (): Record<string, unknown> => {
+    const extractedFields: Record<string, unknown> = {
+      title: title.trim(),
+      organization: organization.trim(),
+      category: category.trim(),
+    };
+    if (tags.length > 0) extractedFields.tags = tags;
+
+    const linkRows = importantLinksRows.filter((r) => r.label.trim() || r.url.trim());
+    if (linkRows.length > 0) extractedFields.importantLinks = linkRows;
+
+    const faqLines = faqs
+      .filter((f) => f.question.trim() && f.answer.trim())
+      .map((f) => `${f.question.trim()} Ans: ${f.answer.trim()}`);
+    if (faqLines.length > 0) extractedFields.faqText = faqLines;
+
+    const genericSections = draftsToSections(sections);
+    if (genericSections.length > 0) extractedFields.genericSections = genericSections;
+
+    if (conclusion.trim()) extractedFields.conclusionText = conclusion.trim();
+
+    if (draftType === "job") {
+      Object.assign(extractedFields, {
+        state: state.trim() || "Bihar",
+        department: department.trim() || organization.trim(),
+        shortInfo: subtitle.trim(),
+        totalVacancies: Number(totalVacancies) || 0,
+        qualification: qualification.trim(),
+      });
+      if (minAge) extractedFields.minAge = Number(minAge);
+      if (maxAge) extractedFields.maxAge = Number(maxAge);
+      const importantDates = keyDates.filter((d) => d.label.trim() && d.date.trim());
+      if (importantDates.length > 0) extractedFields.importantDates = importantDates;
+    } else if (draftType === "result") {
+      extractedFields.resultDate = resultDate || new Date().toISOString().slice(0, 10);
+      if (subtitle.trim()) extractedFields.summary = subtitle.trim();
+    } else {
+      extractedFields.examDate = examDate || new Date().toISOString().slice(0, 10);
+      extractedFields.releaseDate = releaseDate || new Date().toISOString().slice(0, 10);
+    }
+
+    return extractedFields;
+  };
+
+  const handlePreview = async () => {
+    setError(null);
+    if (!title.trim() || !organization.trim()) {
+      setError("Title and Organization are required before you can preview.");
+      return;
+    }
+    setPreviewing(true);
+    try {
+      const primaryLink = importantLinksRows.find((r) => r.url.trim())?.url.trim();
+      const res = await fetch("/api/admin/drafts/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobTitle: title.trim(),
+          organization: organization.trim(),
+          sourceUrl: primaryLink ?? "",
+          draftType,
+          extractedFields: buildExtractedFields(),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not build a preview.");
+      openPreviewWindow(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not build a preview. Please try again.");
+    } finally {
+      setPreviewing(false);
+    }
+  };
 
   const handleCreate = async () => {
     setError(null);
@@ -72,46 +148,6 @@ export default function CreatePostPage() {
 
     setSubmitting(true);
     try {
-      const extractedFields: Record<string, unknown> = {
-        title: title.trim(),
-        organization: organization.trim(),
-        category: category.trim(),
-      };
-      if (tags.length > 0) extractedFields.tags = tags;
-
-      const linkRows = importantLinksRows.filter((r) => r.label.trim() || r.url.trim());
-      if (linkRows.length > 0) extractedFields.importantLinks = linkRows;
-
-      const faqLines = faqs
-        .filter((f) => f.question.trim() && f.answer.trim())
-        .map((f) => `${f.question.trim()} Ans: ${f.answer.trim()}`);
-      if (faqLines.length > 0) extractedFields.faqText = faqLines;
-
-      const genericSections = draftsToSections(sections);
-      if (genericSections.length > 0) extractedFields.genericSections = genericSections;
-
-      if (conclusion.trim()) extractedFields.conclusionText = conclusion.trim();
-
-      if (draftType === "job") {
-        Object.assign(extractedFields, {
-          state: state.trim() || "Bihar",
-          department: department.trim() || organization.trim(),
-          shortInfo: subtitle.trim(),
-          totalVacancies: Number(totalVacancies) || 0,
-          qualification: qualification.trim(),
-        });
-        if (minAge) extractedFields.minAge = Number(minAge);
-        if (maxAge) extractedFields.maxAge = Number(maxAge);
-        const importantDates = keyDates.filter((d) => d.label.trim() && d.date.trim());
-        if (importantDates.length > 0) extractedFields.importantDates = importantDates;
-      } else if (draftType === "result") {
-        extractedFields.resultDate = resultDate || new Date().toISOString().slice(0, 10);
-        if (subtitle.trim()) extractedFields.summary = subtitle.trim();
-      } else {
-        extractedFields.examDate = examDate || new Date().toISOString().slice(0, 10);
-        extractedFields.releaseDate = releaseDate || new Date().toISOString().slice(0, 10);
-      }
-
       const res = await fetch("/api/admin/drafts/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -120,7 +156,7 @@ export default function CreatePostPage() {
           organization: organization.trim(),
           sourceUrl: primaryLink,
           draftType,
-          extractedFields,
+          extractedFields: buildExtractedFields(),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -139,11 +175,14 @@ export default function CreatePostPage() {
         <CheckCircle2 size={32} className="mx-auto text-[var(--color-success)]" />
         <p className="mt-3 text-lg font-bold text-[var(--color-text-primary)]">Draft created</p>
         <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          Review everything one more time, then Approve &amp; Publish or Reject.
+          It&apos;s saved under Drafts — review everything one more time, then Approve &amp; Publish or Reject.
         </p>
-        <Button className="mt-5" onClick={() => router.push(`/admin/drafts/${created.id}`)}>
-          Go to Review
-        </Button>
+        <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
+          <Button onClick={() => router.push(`/admin/drafts/${created.id}`)}>Go to Review</Button>
+          <Button variant="secondary" onClick={() => router.push("/admin/my-drafts")}>
+            Back to Drafts
+          </Button>
+        </div>
       </Card>
     );
   }
@@ -152,28 +191,31 @@ export default function CreatePostPage() {
     <div>
       <Breadcrumb items={[{ label: "Dashboard", href: "/admin/dashboard" }, { label: "Create Post" }]} />
 
-      <div className="mt-1">
-        <h1 className="font-display text-xl font-bold text-[var(--color-text-primary)]">Create Post</h1>
-        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          Write a Job, Result, or Admit Card post from scratch — every section below is yours to name and shape.
-        </p>
+      <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-xl font-bold text-[var(--color-text-primary)]">Create Post</h1>
+          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+            Write a Job, Result, or Admit Card post from scratch — every section below is yours to name and shape.
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={handlePreview}
+          disabled={previewing}
+          title="See how this post will look on the public site before creating it"
+        >
+          <Eye size={15} /> {previewing ? "Building preview…" : "Preview Post"}
+        </Button>
       </div>
 
       <Card className="mt-5 space-y-4">
-        <div>
-          <label className={fieldLabelClass}>Post Type</label>
-          <select
-            value={draftType}
-            onChange={(e) => setDraftType(e.target.value as DraftType)}
-            className={fieldInputClass}
-          >
-            {(Object.keys(TYPE_LABELS) as DraftType[]).map((t) => (
-              <option key={t} value={t}>
-                {TYPE_LABELS[t]}
-              </option>
-            ))}
-          </select>
-        </div>
+        <SelectField
+          label="Post Type"
+          value={draftType}
+          onChange={(e) => setDraftType(e.target.value as DraftType)}
+          options={(Object.keys(TYPE_LABELS) as DraftType[]).map((t) => ({ value: t, label: TYPE_LABELS[t] }))}
+        />
 
         <div className="grid grid-cols-2 gap-4">
           <TextField label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -244,14 +286,7 @@ export default function CreatePostPage() {
                   <div className="flex-1">
                     <TextField label="Date" type="date" value={row.date} onChange={(e) => updateKeyDate(i, { date: e.target.value })} />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => removeKeyDate(i)}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[var(--color-danger)] hover:bg-[var(--color-danger-tint)]"
-                    aria-label="Remove date"
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                  <IconButton icon={<Trash2 size={15} />} label="Remove date" tone="danger" onClick={() => removeKeyDate(i)} />
                 </div>
               ))}
               <Button type="button" variant="secondary" size="sm" onClick={addKeyDate}>
@@ -317,8 +352,17 @@ export default function CreatePostPage() {
           <p className="rounded-lg bg-[var(--color-danger-tint)] p-3 text-sm text-[var(--color-danger)]">{error}</p>
         )}
 
-        <div className="border-t border-[var(--color-border)] pt-4">
-          <Button onClick={handleCreate} disabled={submitting} className="w-full">
+        <div className="flex flex-col gap-2 border-t border-[var(--color-border)] pt-4 sm:flex-row">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={handlePreview}
+            disabled={previewing}
+            className="flex-1"
+          >
+            <Eye size={15} /> {previewing ? "Building preview…" : "Preview Post"}
+          </Button>
+          <Button onClick={handleCreate} disabled={submitting} className="flex-1">
             {submitting ? "Creating…" : "Create Draft"}
           </Button>
         </div>

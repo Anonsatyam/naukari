@@ -329,13 +329,19 @@ export async function getPendingDrafts(): Promise<BotDraft[]> {
   return (data ?? []).map(rowToDraft);
 }
 
-export async function getAllDrafts(): Promise<BotDraft[]> {
+export async function getAllDrafts(origin?: BotDraft["origin"]): Promise<BotDraft[]> {
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("bot_drafts")
-    .select("*")
-    .order("detected_at", { ascending: false });
-  if (error) throw error;
+  let query = supabase.from("bot_drafts").select("*").order("detected_at", { ascending: false });
+  if (origin) query = query.eq("origin", origin);
+  const { data, error } = await query;
+  if (error) {
+    if (isMissingColumnError(error) && origin) {
+      const fallback = await supabase.from("bot_drafts").select("*").order("detected_at", { ascending: false });
+      if (fallback.error) throw fallback.error;
+      return (fallback.data ?? []).map(rowToDraft).filter((d) => d.origin === origin);
+    }
+    throw error;
+  }
   return (data ?? []).map(rowToDraft);
 }
 
@@ -356,6 +362,12 @@ export async function rejectDraft(id: string): Promise<BotDraft | undefined> {
     .maybeSingle();
   if (error) throw error;
   return data ? rowToDraft(data) : undefined;
+}
+
+export async function deleteDraft(id: string): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase.from("bot_drafts").delete().eq("id", id);
+  if (error) throw error;
 }
 
 export type ApprovedEntity =
@@ -462,131 +474,107 @@ function extractSharedNotificationFields(merged: Record<string, unknown>) {
   };
 }
 
-export async function approveDraft(
-  id: string,
-  edits: Record<string, unknown>
-): Promise<ApprovedEntity | undefined> {
-  const supabase = getSupabaseAdmin();
+interface DraftLike {
+  jobTitle: string;
+  organization: string;
+  sourceUrl: string;
+  sourceOrderKey?: number;
+  extractedFields: Record<string, unknown>;
+}
 
-  const { data: draftRow, error: fetchError } = await supabase
-    .from("bot_drafts")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-  if (fetchError) throw fetchError;
-  if (!draftRow) return undefined;
-  const draft = rowToDraft(draftRow);
-
-  if (draft.status === "pending" && (await isSourceAlreadyPublished(draft.sourceUrl))) {
-    await supabase.from("bot_drafts").update({ status: "rejected" }).eq("id", id);
-    throw new Error(
-      "A job/result/admit card for this exact source is already published — this draft was a stale duplicate and has been marked rejected instead."
-    );
-  }
-
+function buildResultFromDraft(draft: DraftLike, edits: Record<string, unknown>): ResultItem {
   const cleanedExtractedFields = deepDecodeEntities(draft.extractedFields) as Record<string, unknown>;
   const cleanedEdits = deepDecodeEntities(edits) as Record<string, unknown>;
   const cleanJobTitle = decodeHtmlEntities(draft.jobTitle);
 
-  const markApproved = async () => {
-    const { error } = await supabase.from("bot_drafts").update({ status: "approved" }).eq("id", id);
-    if (error) throw error;
-  };
+  const merged = { ...cleanedExtractedFields, ...cleanedEdits } as Partial<ResultItem> & Record<string, unknown>;
+  applyRawTextDefaults(merged);
+  const title = merged.title ?? cleanJobTitle;
+  const sanitizedLinks = sanitizeImportantLinks(merged.importantLinks);
+  return {
+    id: "",
+    slug: slugify(title),
+    title,
+    organization: merged.organization ?? draft.organization,
+    category: merged.category ?? "Administrative",
+    tags: ensureOptionalArray<string>(merged.tags),
+    resultDate: merged.resultDate ?? new Date().toISOString().slice(0, 10),
+    officialLink:
+      firstExternalUrl(
+        merged.officialLink,
+        findLinkByKeywords(sanitizedLinks, RESULT_LINK_KEYWORDS),
+        findLinkByKeywords(sanitizedLinks, NOTIFICATION_LINK_KEYWORDS),
+        findLinkByKeywords(sanitizedLinks, APPLY_LINK_KEYWORDS),
+        typeof merged.notificationPdfLink === "string" ? merged.notificationPdfLink : undefined,
+        typeof merged.applyOnlineLink === "string" ? merged.applyOnlineLink : undefined,
+        typeof merged.officialWebsiteLink === "string" ? merged.officialWebsiteLink : undefined
+      ) ?? draft.sourceUrl,
+    sourceUrl: draft.sourceUrl,
+    summary: merged.summary ?? `${title} — see the official notification for full details.`,
+    importantDatesText: merged.importantDatesText,
+    howToCheck: ensureOptionalArray(merged.howToApply),
+    cutoffText: typeof merged.cutoffText === "string" ? merged.cutoffText : undefined,
+    ...extractSharedNotificationFields(merged),
+    examPattern: typeof merged.examPattern === "string" ? merged.examPattern : undefined,
+    documentsRequired: typeof merged.documentsRequired === "string" ? merged.documentsRequired : undefined,
+    importantLinks: sanitizedLinks,
+    faqs: ensureOptionalArray(merged.faqs),
+    conclusion: replaceSourceSitePlug(merged.conclusion),
+    additionalSections: ensureOptionalArray(merged.genericSections),
+    sectionOrder: ensureOptionalArray<string>(merged.sectionOrder),
+    sourceOrderKey: draft.sourceOrderKey,
+  } as ResultItem;
+}
 
-  if (draft.draftType === "result") {
-    const merged = { ...cleanedExtractedFields, ...cleanedEdits } as Partial<ResultItem> & Record<string, unknown>;
-    applyRawTextDefaults(merged);
-    const title = merged.title ?? cleanJobTitle;
-    const sanitizedLinks = sanitizeImportantLinks(merged.importantLinks);
-    const newResult: Partial<ResultItem> = {
-      slug: slugify(title),
-      title,
-      organization: merged.organization ?? draft.organization,
-      category: merged.category ?? "Administrative",
-      tags: ensureOptionalArray<string>(merged.tags),
-      resultDate: merged.resultDate ?? new Date().toISOString().slice(0, 10),
-      officialLink:
-        firstExternalUrl(
-          merged.officialLink,
-          findLinkByKeywords(sanitizedLinks, RESULT_LINK_KEYWORDS),
-          findLinkByKeywords(sanitizedLinks, NOTIFICATION_LINK_KEYWORDS),
-          findLinkByKeywords(sanitizedLinks, APPLY_LINK_KEYWORDS),
-          typeof merged.notificationPdfLink === "string" ? merged.notificationPdfLink : undefined,
-          typeof merged.applyOnlineLink === "string" ? merged.applyOnlineLink : undefined,
-          typeof merged.officialWebsiteLink === "string" ? merged.officialWebsiteLink : undefined
-        ) ?? draft.sourceUrl,
-      sourceUrl: draft.sourceUrl,
-      summary: merged.summary ?? `${title} — see the official notification for full details.`,
-      importantDatesText: merged.importantDatesText,
-      howToCheck: ensureOptionalArray(merged.howToApply),
-      cutoffText: typeof merged.cutoffText === "string" ? merged.cutoffText : undefined,
-      ...extractSharedNotificationFields(merged),
-      examPattern: typeof merged.examPattern === "string" ? merged.examPattern : undefined,
-      documentsRequired: typeof merged.documentsRequired === "string" ? merged.documentsRequired : undefined,
-      importantLinks: sanitizedLinks,
-      faqs: ensureOptionalArray(merged.faqs),
-      conclusion: replaceSourceSitePlug(merged.conclusion),
-      additionalSections: ensureOptionalArray(merged.genericSections),
-      sectionOrder: ensureOptionalArray<string>(merged.sectionOrder),
-      sourceOrderKey: draft.sourceOrderKey,
-    };
-    const resultRow = resultToRow(newResult);
-    const { data: inserted, error: insertError } = await insertWithMissingColumnRetry(
-      (row) => supabase.from("results").insert(row).select().single(),
-      resultRow
-    );
-    if (insertError) throw insertError;
-    await markApproved();
-    return { type: "result", entity: rowToResult(inserted) };
-  }
+function buildAdmitCardFromDraft(draft: DraftLike, edits: Record<string, unknown>): AdmitCardItem {
+  const cleanedExtractedFields = deepDecodeEntities(draft.extractedFields) as Record<string, unknown>;
+  const cleanedEdits = deepDecodeEntities(edits) as Record<string, unknown>;
+  const cleanJobTitle = decodeHtmlEntities(draft.jobTitle);
 
-  if (draft.draftType === "admit_card") {
-    const merged = { ...cleanedExtractedFields, ...cleanedEdits } as Partial<AdmitCardItem> & Record<string, unknown>;
-    applyRawTextDefaults(merged);
-    const title = merged.title ?? cleanJobTitle;
-    const now = new Date();
-    const defaultExamDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const sanitizedLinks = sanitizeImportantLinks(merged.importantLinks);
-    const newCard: Partial<AdmitCardItem> = {
-      slug: slugify(title),
-      title,
-      organization: merged.organization ?? draft.organization,
-      category: merged.category ?? "Administrative",
-      tags: ensureOptionalArray<string>(merged.tags),
-      examDate: merged.examDate ?? defaultExamDate,
-      releaseDate: merged.releaseDate ?? now.toISOString().slice(0, 10),
-      officialLink:
-        firstExternalUrl(
-          merged.officialLink,
-          findLinkByKeywords(sanitizedLinks, ADMIT_CARD_LINK_KEYWORDS),
-          findLinkByKeywords(sanitizedLinks, NOTIFICATION_LINK_KEYWORDS),
-          findLinkByKeywords(sanitizedLinks, APPLY_LINK_KEYWORDS),
-          typeof merged.notificationPdfLink === "string" ? merged.notificationPdfLink : undefined,
-          typeof merged.applyOnlineLink === "string" ? merged.applyOnlineLink : undefined,
-          typeof merged.officialWebsiteLink === "string" ? merged.officialWebsiteLink : undefined
-        ) ?? draft.sourceUrl,
-      sourceUrl: draft.sourceUrl,
-      importantDatesText: merged.importantDatesText,
-      howToDownload: ensureOptionalArray(merged.howToApply),
-      examDayInstructionsText: typeof merged.documentsRequired === "string" ? merged.documentsRequired : undefined,
-      examPattern: merged.examPattern,
-      ...extractSharedNotificationFields(merged),
-      importantLinks: sanitizedLinks,
-      faqs: ensureOptionalArray(merged.faqs),
-      conclusion: replaceSourceSitePlug(merged.conclusion),
-      additionalSections: ensureOptionalArray(merged.genericSections),
-      sectionOrder: ensureOptionalArray<string>(merged.sectionOrder),
-      sourceOrderKey: draft.sourceOrderKey,
-    };
-    const cardRow = admitCardToRow(newCard);
-    const { data: inserted, error: insertError } = await insertWithMissingColumnRetry(
-      (row) => supabase.from("admit_cards").insert(row).select().single(),
-      cardRow
-    );
-    if (insertError) throw insertError;
-    await markApproved();
-    return { type: "admit_card", entity: rowToAdmitCard(inserted) };
-  }
+  const merged = { ...cleanedExtractedFields, ...cleanedEdits } as Partial<AdmitCardItem> & Record<string, unknown>;
+  applyRawTextDefaults(merged);
+  const title = merged.title ?? cleanJobTitle;
+  const now = new Date();
+  const defaultExamDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const sanitizedLinks = sanitizeImportantLinks(merged.importantLinks);
+  return {
+    id: "",
+    slug: slugify(title),
+    title,
+    organization: merged.organization ?? draft.organization,
+    category: merged.category ?? "Administrative",
+    tags: ensureOptionalArray<string>(merged.tags),
+    examDate: merged.examDate ?? defaultExamDate,
+    releaseDate: merged.releaseDate ?? now.toISOString().slice(0, 10),
+    officialLink:
+      firstExternalUrl(
+        merged.officialLink,
+        findLinkByKeywords(sanitizedLinks, ADMIT_CARD_LINK_KEYWORDS),
+        findLinkByKeywords(sanitizedLinks, NOTIFICATION_LINK_KEYWORDS),
+        findLinkByKeywords(sanitizedLinks, APPLY_LINK_KEYWORDS),
+        typeof merged.notificationPdfLink === "string" ? merged.notificationPdfLink : undefined,
+        typeof merged.applyOnlineLink === "string" ? merged.applyOnlineLink : undefined,
+        typeof merged.officialWebsiteLink === "string" ? merged.officialWebsiteLink : undefined
+      ) ?? draft.sourceUrl,
+    sourceUrl: draft.sourceUrl,
+    importantDatesText: merged.importantDatesText,
+    howToDownload: ensureOptionalArray(merged.howToApply),
+    examDayInstructionsText: typeof merged.documentsRequired === "string" ? merged.documentsRequired : undefined,
+    examPattern: merged.examPattern,
+    ...extractSharedNotificationFields(merged),
+    importantLinks: sanitizedLinks,
+    faqs: ensureOptionalArray(merged.faqs),
+    conclusion: replaceSourceSitePlug(merged.conclusion),
+    additionalSections: ensureOptionalArray(merged.genericSections),
+    sectionOrder: ensureOptionalArray<string>(merged.sectionOrder),
+    sourceOrderKey: draft.sourceOrderKey,
+  } as AdmitCardItem;
+}
+
+function buildJobFromDraft(draft: DraftLike, edits: Record<string, unknown>): Job {
+  const cleanedExtractedFields = deepDecodeEntities(draft.extractedFields) as Record<string, unknown>;
+  const cleanedEdits = deepDecodeEntities(edits) as Record<string, unknown>;
+  const cleanJobTitle = decodeHtmlEntities(draft.jobTitle);
 
   const merged = { ...cleanedExtractedFields, ...cleanedEdits } as Partial<Job> & Record<string, unknown>;
   applyRawTextDefaults(merged);
@@ -594,7 +582,8 @@ export async function approveDraft(
   const now = new Date().toISOString();
   const sanitizedLinks = sanitizeImportantLinks(merged.importantLinks);
 
-  const newJob: Partial<Job> = {
+  return {
+    id: "",
     slug: slugify(title),
     state: merged.state ?? "Bihar",
     title,
@@ -663,8 +652,82 @@ export async function approveDraft(
     createdByBot: true,
     publishedAt: now,
     updatedAt: now,
+  } as Job;
+}
+
+export async function previewDraftEntity(
+  input: DraftLike & { draftType: DraftType },
+  edits: Record<string, unknown>
+): Promise<ApprovedEntity> {
+  if (input.draftType === "result") return { type: "result", entity: buildResultFromDraft(input, edits) };
+  if (input.draftType === "admit_card") return { type: "admit_card", entity: buildAdmitCardFromDraft(input, edits) };
+  return { type: "job", entity: buildJobFromDraft(input, edits) };
+}
+
+export async function previewDraft(
+  id: string,
+  edits: Record<string, unknown>
+): Promise<ApprovedEntity | undefined> {
+  const supabase = getSupabaseAdmin();
+  const { data: draftRow, error } = await supabase.from("bot_drafts").select("*").eq("id", id).maybeSingle();
+  if (error) throw error;
+  if (!draftRow) return undefined;
+  const draft = rowToDraft(draftRow);
+  return previewDraftEntity({ ...draft, draftType: draft.draftType }, edits);
+}
+
+export async function approveDraft(
+  id: string,
+  edits: Record<string, unknown>
+): Promise<ApprovedEntity | undefined> {
+  const supabase = getSupabaseAdmin();
+
+  const { data: draftRow, error: fetchError } = await supabase
+    .from("bot_drafts")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (fetchError) throw fetchError;
+  if (!draftRow) return undefined;
+  const draft = rowToDraft(draftRow);
+
+  if (draft.status === "pending" && (await isSourceAlreadyPublished(draft.sourceUrl))) {
+    await supabase.from("bot_drafts").update({ status: "rejected" }).eq("id", id);
+    throw new Error(
+      "A job/result/admit card for this exact source is already published — this draft was a stale duplicate and has been marked rejected instead."
+    );
+  }
+
+  const markApproved = async () => {
+    const { error } = await supabase.from("bot_drafts").update({ status: "approved" }).eq("id", id);
+    if (error) throw error;
   };
 
+  if (draft.draftType === "result") {
+    const newResult = buildResultFromDraft(draft, edits);
+    const resultRow = resultToRow(newResult);
+    const { data: inserted, error: insertError } = await insertWithMissingColumnRetry(
+      (row) => supabase.from("results").insert(row).select().single(),
+      resultRow
+    );
+    if (insertError) throw insertError;
+    await markApproved();
+    return { type: "result", entity: rowToResult(inserted) };
+  }
+
+  if (draft.draftType === "admit_card") {
+    const newCard = buildAdmitCardFromDraft(draft, edits);
+    const cardRow = admitCardToRow(newCard);
+    const { data: inserted, error: insertError } = await insertWithMissingColumnRetry(
+      (row) => supabase.from("admit_cards").insert(row).select().single(),
+      cardRow
+    );
+    if (insertError) throw insertError;
+    await markApproved();
+    return { type: "admit_card", entity: rowToAdmitCard(inserted) };
+  }
+
+  const newJob = buildJobFromDraft(draft, edits);
   const jobRow = jobToRow(newJob);
   const { data: insertedJob, error: insertError } = await insertWithMissingColumnRetry(
     (row) => supabase.from("jobs").insert(row).select().single(),
@@ -708,6 +771,7 @@ export async function createDraft(input: {
   sourceUrl: string;
   confidence: BotDraft["confidence"];
   draftType?: DraftType;
+  origin?: BotDraft["origin"];
   sourceOrderKey?: number;
   extractedFields: Record<string, unknown>;
 }): Promise<BotDraft> {
@@ -720,14 +784,14 @@ export async function createDraft(input: {
     status: "pending",
     confidence: input.confidence,
     draftType: input.draftType ?? "job",
+    origin: input.origin ?? "bot",
     sourceOrderKey: input.sourceOrderKey,
     extractedFields: input.extractedFields,
   });
-  let { data, error } = await supabase.from("bot_drafts").insert(row).select().single();
-  if (isMissingColumnError(error)) {
-    delete row.source_order_key;
-    ({ data, error } = await supabase.from("bot_drafts").insert(row).select().single());
-  }
+  const { data, error } = await insertWithMissingColumnRetry(
+    (attemptRow) => supabase.from("bot_drafts").insert(attemptRow).select().single(),
+    row
+  );
   if (error) throw error;
   return rowToDraft(data);
 }

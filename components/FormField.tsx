@@ -1,5 +1,6 @@
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { fieldInputClass, fieldLabelClass } from "@/lib/ui";
+import { fieldInputClass, fieldLabelClass, selectFieldClass } from "@/lib/ui";
 
 interface BaseProps {
   label: string;
@@ -34,24 +35,41 @@ export function TextAreaField({
   );
 }
 
+export interface SelectFieldOption {
+  value: string;
+  label: string;
+}
+
 export function SelectField({
   label,
   className,
   options,
+  hideLabel,
   ...rest
 }: BaseProps & {
-  options: string[];
+  options: (string | SelectFieldOption)[];
+  hideLabel?: boolean;
 } & React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <div>
-      <label className={fieldLabelClass}>{label}</label>
-      <select className={cn(fieldInputClass, className)} {...rest}>
-        {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
-          </option>
-        ))}
-      </select>
+      {!hideLabel && <label className={fieldLabelClass}>{label}</label>}
+      <div className="relative">
+        <select aria-label={hideLabel ? label : undefined} className={cn(selectFieldClass, className)} {...rest}>
+          {options.map((opt) => {
+            const value = typeof opt === "string" ? opt : opt.value;
+            const text = typeof opt === "string" ? opt : opt.label;
+            return (
+              <option key={value} value={value}>
+                {text}
+              </option>
+            );
+          })}
+        </select>
+        <ChevronDown
+          size={15}
+          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]"
+        />
+      </div>
     </div>
   );
 }

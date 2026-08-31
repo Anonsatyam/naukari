@@ -269,6 +269,7 @@ export function rowToDraft(row: any): BotDraft {
     status: row.status,
     confidence: row.confidence,
     draftType: row.draft_type ?? "job",
+    origin: row.origin === "manual" ? "manual" : "bot",
     sourceOrderKey: row.source_order_key ?? undefined,
     extractedFields: row.extracted_fields ?? {},
   };
@@ -283,6 +284,7 @@ export function draftToRow(draft: Partial<BotDraft>): Record<string, unknown> {
   if (draft.status !== undefined) row.status = draft.status;
   if (draft.confidence !== undefined) row.confidence = draft.confidence;
   if (draft.draftType !== undefined) row.draft_type = draft.draftType;
+  if (draft.origin !== undefined) row.origin = draft.origin;
   if (draft.sourceOrderKey !== undefined) row.source_order_key = draft.sourceOrderKey;
   if (draft.extractedFields !== undefined) row.extracted_fields = draft.extractedFields;
   return row;

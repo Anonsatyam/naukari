@@ -4,6 +4,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { parsePipeTables } from "@/lib/pipeTables";
 import { Button } from "@/components/Button";
 import { TextField, TextAreaField } from "@/components/FormField";
+import { IconButton } from "@/components/admin/IconButton";
 import { DraftType } from "@/lib/types";
 
 export interface AgeLimitRowDraft {
@@ -147,14 +148,12 @@ export function RowsEditor<T extends Record<string, string>>({
                 );
               })}
             </div>
-            <button
-              type="button"
+            <IconButton
+              icon={<Trash2 size={15} />}
+              label="Remove row"
+              tone="danger"
               onClick={() => setRows((prev) => prev.filter((_, idx) => idx !== i))}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[var(--color-danger)] hover:bg-[var(--color-danger-tint)]"
-              aria-label="Remove row"
-            >
-              <Trash2 size={15} />
-            </button>
+            />
           </div>
         </div>
       ))}

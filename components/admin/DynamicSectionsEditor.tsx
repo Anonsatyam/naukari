@@ -4,8 +4,8 @@ import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { AdditionalSection, AdditionalSectionKind, TableCellValue } from "@/lib/types";
 import { buildPipeTable } from "@/lib/pipeTables";
 import { Button } from "@/components/Button";
-import { TextField, TextAreaField } from "@/components/FormField";
-import { fieldInputClass, fieldLabelClass } from "@/lib/ui";
+import { TextField, TextAreaField, SelectField } from "@/components/FormField";
+import { IconButton } from "@/components/admin/IconButton";
 import { ChipInput } from "@/components/admin/ChipInput";
 import { ListItemsEditor } from "@/components/admin/ListItemsEditor";
 import { RowsEditor, LinkRowDraft } from "@/components/admin/DraftFormShared";
@@ -160,46 +160,25 @@ export function DynamicSectionsEditor({
               />
             </div>
             <div className="w-40">
-              <label className={fieldLabelClass}>Content Type</label>
-              <select
+              <SelectField
+                label="Content Type"
                 value={section.kind}
                 onChange={(e) => update(section.id, { kind: e.target.value as AdditionalSectionKind })}
-                className={fieldInputClass}
-              >
-                {(Object.keys(KIND_LABELS) as AdditionalSectionKind[]).map((k) => (
-                  <option key={k} value={k}>
-                    {KIND_LABELS[k]}
-                  </option>
-                ))}
-              </select>
+                options={(Object.keys(KIND_LABELS) as AdditionalSectionKind[]).map((k) => ({
+                  value: k,
+                  label: KIND_LABELS[k],
+                }))}
+              />
             </div>
             <div className="mt-5 flex shrink-0 items-center gap-1">
-              <button
-                type="button"
-                onClick={() => move(section.id, -1)}
-                disabled={i === 0}
-                className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] text-[var(--color-text-secondary)] hover:bg-[var(--color-background)] disabled:cursor-not-allowed disabled:opacity-30"
-                aria-label="Move up"
-              >
-                <ArrowUp size={15} />
-              </button>
-              <button
-                type="button"
+              <IconButton icon={<ArrowUp size={15} />} label="Move section up" onClick={() => move(section.id, -1)} disabled={i === 0} />
+              <IconButton
+                icon={<ArrowDown size={15} />}
+                label="Move section down"
                 onClick={() => move(section.id, 1)}
                 disabled={i === sections.length - 1}
-                className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] text-[var(--color-text-secondary)] hover:bg-[var(--color-background)] disabled:cursor-not-allowed disabled:opacity-30"
-                aria-label="Move down"
-              >
-                <ArrowDown size={15} />
-              </button>
-              <button
-                type="button"
-                onClick={() => remove(section.id)}
-                className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] text-[var(--color-danger)] hover:bg-[var(--color-danger-tint)]"
-                aria-label="Remove section"
-              >
-                <Trash2 size={15} />
-              </button>
+              />
+              <IconButton icon={<Trash2 size={15} />} label="Remove section" tone="danger" onClick={() => remove(section.id)} />
             </div>
           </div>
 
@@ -247,14 +226,12 @@ export function DynamicSectionsEditor({
                         }}
                       />
                     </div>
-                    <button
-                      type="button"
+                    <IconButton
+                      icon={<Trash2 size={15} />}
+                      label="Remove date"
+                      tone="danger"
                       onClick={() => update(section.id, { dates: section.dates.filter((_, idx) => idx !== r) })}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[var(--color-danger)] hover:bg-[var(--color-danger-tint)]"
-                      aria-label="Remove date"
-                    >
-                      <Trash2 size={15} />
-                    </button>
+                    />
                   </div>
                 ))}
                 <Button

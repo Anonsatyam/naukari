@@ -2,10 +2,11 @@
 
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ExternalLink, CheckCircle2, XCircle, FileText, TriangleAlert } from "lucide-react";
+import { ExternalLink, CheckCircle2, XCircle, Eye, FileText, TriangleAlert } from "lucide-react";
 import { BotDraft, AdditionalSection } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { deepDecodeEntities } from "@/lib/entities";
+import { openPreviewWindow } from "@/lib/adminPreview";
 import { TABLE_SEP, deriveAgeRange, deriveSalaryRange, parseFaqLines } from "@/lib/pipeTables";
 import { Button } from "@/components/Button";
 import Badge from "@/components/Badge";
@@ -87,6 +88,7 @@ export default function DraftReviewPage({
 
   const [decision, setDecision] = useState<"approved" | "rejected" | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -225,98 +227,121 @@ export default function DraftReviewPage({
       .finally(() => setLoading(false));
   }, [id]);
 
+  const buildEditsPayload = (): Record<string, unknown> => {
+    const body: Record<string, unknown> = {
+      title: fields.title,
+      organization: fields.organization,
+      category: fields.category,
+    };
+    if (tags.length > 0) body.tags = tags;
+
+    const rawTextFields: Record<string, string | undefined> = {
+      importantDatesText: fields.importantDatesText,
+      applicationFeeText: fields.applicationFeeText,
+      ageLimit: fields.ageLimit,
+      postDetails: fields.postDetails,
+      eligibility: fields.eligibility,
+      selectionProcess: fields.selectionProcess,
+      documentsRequired: fields.documentsRequired,
+      examPattern: fields.examPattern,
+    };
+    for (const [key, value] of Object.entries(rawTextFields)) {
+      if (value?.trim()) body[key] = value;
+    }
+
+    const applicationFee: { general?: number; reserved?: number; note?: string } = {};
+    if (fields.feeGeneral) applicationFee.general = Number(fields.feeGeneral) || 0;
+    if (fields.feeReserved) applicationFee.reserved = Number(fields.feeReserved) || 0;
+    if (fields.feeNote?.trim()) applicationFee.note = fields.feeNote.trim();
+    if (Object.keys(applicationFee).length > 0) body.applicationFee = applicationFee;
+
+    const ageLimitRows = ageLimitByGrade.filter((r) => r.grade || r.minAge || r.maxAge);
+    if (ageLimitRows.length > 0) body.ageLimitByGrade = ageLimitRows;
+
+    const ageRelaxationRows = ageRelaxationBreakdown.filter((r) => r.category || r.relaxation);
+    if (ageRelaxationRows.length > 0) body.ageRelaxationBreakdown = ageRelaxationRows;
+
+    const linkRows = importantLinksRows.filter((r) => r.label || r.url);
+    if (linkRows.length > 0) body.importantLinks = linkRows;
+
+    const howToList = howToLines.split("\n").map((s) => s.trim()).filter(Boolean);
+    if (howToList.length > 0) body.howToApply = howToList;
+
+    const examNotes = examPatternNotes.split("\n").map((s) => s.trim()).filter(Boolean);
+    if (examNotes.length > 0) body.examPatternNotes = examNotes;
+
+    const faqRows = faqs.filter((f) => f.question || f.answer);
+    if (faqRows.length > 0) body.faqs = faqRows;
+
+    if (conclusion.trim()) body.conclusion = conclusion.trim();
+
+    const sectionRows = draftsToSections(additionalSections);
+    if (sectionRows.length > 0) body.genericSections = sectionRows;
+
+    if (draft?.draftType === "job") {
+      body.totalVacancies = Number(fields.totalVacancies) || 0;
+      body.qualification = fields.qualification;
+      body.state = fields.state || "Bihar";
+      body.department = fields.department || fields.organization;
+      if (fields.shortInfo?.trim()) body.shortInfo = fields.shortInfo.trim();
+      if (fields.minAge) body.minAge = Number(fields.minAge) || undefined;
+      if (fields.maxAge) body.maxAge = Number(fields.maxAge) || undefined;
+      if (fields.salaryMin) body.salaryMin = Number(fields.salaryMin) || undefined;
+      if (fields.salaryMax) body.salaryMax = Number(fields.salaryMax) || undefined;
+      if (fields.ageRelaxation?.trim()) body.ageRelaxation = fields.ageRelaxation.trim();
+      if (fields.syllabusSummary?.trim()) body.syllabusSummary = fields.syllabusSummary.trim();
+      if (fields.officialApplyUrl?.trim()) body.officialApplyUrl = fields.officialApplyUrl.trim();
+      if (fields.officialNotificationUrl?.trim()) body.officialNotificationUrl = fields.officialNotificationUrl.trim();
+
+      const importantDates = JOB_DATE_FIELDS.filter(({ key }) => fields[key]).map(
+        ({ key, label }) => ({ label, date: fields[key] })
+      );
+      if (importantDates.length > 0) body.importantDates = importantDates;
+
+      if (ageAsOnDate) body.ageAsOnDate = ageAsOnDate;
+
+      const eligibilityLines = eligibilityDetails.split("\n").map((s) => s.trim()).filter(Boolean);
+      if (eligibilityLines.length > 0) body.eligibilityDetails = eligibilityLines;
+    } else if (draft?.draftType === "result") {
+      body.resultDate = fields.resultDate;
+      if (fields.summary?.trim()) body.summary = fields.summary.trim();
+      if (fields.officialLink?.trim()) body.officialLink = fields.officialLink.trim();
+    } else if (draft?.draftType === "admit_card") {
+      body.examDate = fields.examDate;
+      body.releaseDate = fields.releaseDate;
+      if (fields.officialLink?.trim()) body.officialLink = fields.officialLink.trim();
+    }
+
+    return body;
+  };
+
+  const handlePreview = async () => {
+    setPreviewing(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/drafts/${id}/preview`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildEditsPayload()),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not build a preview.");
+      openPreviewWindow(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not build a preview. Please try again.");
+    } finally {
+      setPreviewing(false);
+    }
+  };
+
   const handleApprove = async () => {
     setSubmitting(true);
     setError(null);
     try {
-      const body: Record<string, unknown> = {
-        title: fields.title,
-        organization: fields.organization,
-        category: fields.category,
-      };
-      if (tags.length > 0) body.tags = tags;
-
-      const rawTextFields: Record<string, string | undefined> = {
-        importantDatesText: fields.importantDatesText,
-        applicationFeeText: fields.applicationFeeText,
-        ageLimit: fields.ageLimit,
-        postDetails: fields.postDetails,
-        eligibility: fields.eligibility,
-        selectionProcess: fields.selectionProcess,
-        documentsRequired: fields.documentsRequired,
-        examPattern: fields.examPattern,
-      };
-      for (const [key, value] of Object.entries(rawTextFields)) {
-        if (value?.trim()) body[key] = value;
-      }
-
-      const applicationFee: { general?: number; reserved?: number; note?: string } = {};
-      if (fields.feeGeneral) applicationFee.general = Number(fields.feeGeneral) || 0;
-      if (fields.feeReserved) applicationFee.reserved = Number(fields.feeReserved) || 0;
-      if (fields.feeNote?.trim()) applicationFee.note = fields.feeNote.trim();
-      if (Object.keys(applicationFee).length > 0) body.applicationFee = applicationFee;
-
-      const ageLimitRows = ageLimitByGrade.filter((r) => r.grade || r.minAge || r.maxAge);
-      if (ageLimitRows.length > 0) body.ageLimitByGrade = ageLimitRows;
-
-      const ageRelaxationRows = ageRelaxationBreakdown.filter((r) => r.category || r.relaxation);
-      if (ageRelaxationRows.length > 0) body.ageRelaxationBreakdown = ageRelaxationRows;
-
-      const linkRows = importantLinksRows.filter((r) => r.label || r.url);
-      if (linkRows.length > 0) body.importantLinks = linkRows;
-
-      const howToList = howToLines.split("\n").map((s) => s.trim()).filter(Boolean);
-      if (howToList.length > 0) body.howToApply = howToList;
-
-      const examNotes = examPatternNotes.split("\n").map((s) => s.trim()).filter(Boolean);
-      if (examNotes.length > 0) body.examPatternNotes = examNotes;
-
-      const faqRows = faqs.filter((f) => f.question || f.answer);
-      if (faqRows.length > 0) body.faqs = faqRows;
-
-      if (conclusion.trim()) body.conclusion = conclusion.trim();
-
-      const sectionRows = draftsToSections(additionalSections);
-      if (sectionRows.length > 0) body.genericSections = sectionRows;
-
-      if (draft?.draftType === "job") {
-        body.totalVacancies = Number(fields.totalVacancies) || 0;
-        body.qualification = fields.qualification;
-        body.state = fields.state || "Bihar";
-        body.department = fields.department || fields.organization;
-        if (fields.shortInfo?.trim()) body.shortInfo = fields.shortInfo.trim();
-        if (fields.minAge) body.minAge = Number(fields.minAge) || undefined;
-        if (fields.maxAge) body.maxAge = Number(fields.maxAge) || undefined;
-        if (fields.salaryMin) body.salaryMin = Number(fields.salaryMin) || undefined;
-        if (fields.salaryMax) body.salaryMax = Number(fields.salaryMax) || undefined;
-        if (fields.ageRelaxation?.trim()) body.ageRelaxation = fields.ageRelaxation.trim();
-        if (fields.syllabusSummary?.trim()) body.syllabusSummary = fields.syllabusSummary.trim();
-        if (fields.officialApplyUrl?.trim()) body.officialApplyUrl = fields.officialApplyUrl.trim();
-        if (fields.officialNotificationUrl?.trim()) body.officialNotificationUrl = fields.officialNotificationUrl.trim();
-
-        const importantDates = JOB_DATE_FIELDS.filter(({ key }) => fields[key]).map(
-          ({ key, label }) => ({ label, date: fields[key] })
-        );
-        if (importantDates.length > 0) body.importantDates = importantDates;
-
-        if (ageAsOnDate) body.ageAsOnDate = ageAsOnDate;
-
-        const eligibilityLines = eligibilityDetails.split("\n").map((s) => s.trim()).filter(Boolean);
-        if (eligibilityLines.length > 0) body.eligibilityDetails = eligibilityLines;
-      } else if (draft?.draftType === "result") {
-        body.resultDate = fields.resultDate;
-        if (fields.summary?.trim()) body.summary = fields.summary.trim();
-        if (fields.officialLink?.trim()) body.officialLink = fields.officialLink.trim();
-      } else if (draft?.draftType === "admit_card") {
-        body.examDate = fields.examDate;
-        body.releaseDate = fields.releaseDate;
-        if (fields.officialLink?.trim()) body.officialLink = fields.officialLink.trim();
-      }
-
       const res = await fetch(`/api/admin/drafts/${id}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(buildEditsPayload()),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Approve failed");
@@ -360,6 +385,9 @@ export default function DraftReviewPage({
     );
   }
 
+  const listHref = draft.origin === "manual" ? "/admin/my-drafts" : "/admin/drafts";
+  const listLabel = draft.origin === "manual" ? "Drafts" : "Bot Drafts";
+
   if (decision) {
     return (
       <Card padding="p-8" className="mx-auto max-w-lg text-center">
@@ -376,8 +404,8 @@ export default function DraftReviewPage({
             ? "This is now live on the public site."
             : "This draft has been discarded and will not be published."}
         </p>
-        <Button className="mt-5" onClick={() => router.push("/admin/drafts")}>
-          Back to Drafts
+        <Button className="mt-5" onClick={() => router.push(listHref)}>
+          Back to {listLabel}
         </Button>
       </Card>
     );
@@ -394,7 +422,7 @@ export default function DraftReviewPage({
       <Breadcrumb
         items={[
           { label: "Dashboard", href: "/admin/dashboard" },
-          { label: "Bot Drafts", href: "/admin/drafts" },
+          { label: listLabel, href: listHref },
           { label: draft.jobTitle },
         ]}
       />
@@ -826,6 +854,15 @@ export default function DraftReviewPage({
           )}
 
           <div className="flex flex-col gap-2 border-t border-[var(--color-border)] pt-4 sm:flex-row">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handlePreview}
+              disabled={previewing}
+              className="flex-1"
+            >
+              <Eye size={15} /> {previewing ? "Building preview…" : "Preview Post"}
+            </Button>
             <Button onClick={handleApprove} disabled={submitting} className="flex-1">
               <CheckCircle2 size={15} /> {submitting ? "Approving…" : "Approve & Publish"}
             </Button>
