@@ -130,22 +130,6 @@ button:not(:disabled) {
   animation: breathe 1.8s ease-out infinite;
 }
 
-.tricolor-text {
-  background: linear-gradient(
-    90deg,
-    #ff9933 0%,
-    #ff9933 33%,
-    #ffffff 33%,
-    #ffffff 67%,
-    #138808 67%,
-    #138808 100%
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  -webkit-text-stroke: 0.6px var(--color-text-primary);
-}
-
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;
