@@ -133,7 +133,7 @@ export function RowsEditor<T extends Record<string, string>>({
     <div className="space-y-3">
       {rows.map((row, i) => (
         <div key={i} className="rounded-lg bg-[var(--color-border)] p-3">
-          <div className="flex items-start gap-2">
+          <div className="flex items-center gap-2">
             <div className="flex-1 space-y-2">
               {fields.map((f) => {
                 const Field = f.multiline ? TextAreaField : TextField;
