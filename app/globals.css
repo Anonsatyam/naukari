@@ -79,7 +79,6 @@ body {
   background: var(--color-background);
   color: var(--color-text-primary);
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
-  overflow-x: hidden;
 }
 
 * {

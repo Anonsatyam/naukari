@@ -1,12 +1,12 @@
 "use client";
 
-import { ChevronDown, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { TableCellValue } from "@/lib/types";
 import { Button } from "@/components/Button";
 import { RichTable } from "@/components/DetailSections";
 import { ListItemsEditor } from "@/components/admin/ListItemsEditor";
 import { IconButton } from "@/components/admin/IconButton";
-import { compactFieldClass, compactSelectClass } from "@/lib/ui";
+import { selectFieldCompactClass } from "@/lib/ui";
 import { parsePipeTables } from "@/lib/pipeTables";
 
 export interface TableBuilderValue {
@@ -47,14 +47,17 @@ function emptyCellOfType(type: TableCellValue["type"]): TableCellValue {
 }
 
 function TableCellEditor({ cell, onChange }: { cell: TableCellValue; onChange: (cell: TableCellValue) => void }) {
+  const inputClass =
+    "mt-1 w-full min-w-[100px] rounded-[var(--radius-control)] border border-[var(--color-border)] px-2 py-1.5 text-xs text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]";
+
   return (
-    <div className="w-[150px] space-y-1.5">
+    <div className="min-w-[130px]">
       <div className="relative">
         <select
           aria-label="Cell type"
           value={cell.type}
           onChange={(e) => onChange(emptyCellOfType(e.target.value as TableCellValue["type"]))}
-          className={compactSelectClass}
+          className={selectFieldCompactClass}
         >
           {(Object.keys(CELL_TYPE_LABELS) as TableCellValue["type"][]).map((t) => (
             <option key={t} value={t}>
@@ -62,17 +65,13 @@ function TableCellEditor({ cell, onChange }: { cell: TableCellValue; onChange: (
             </option>
           ))}
         </select>
-        <ChevronDown
-          size={12}
-          className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]"
-        />
       </div>
 
       {cell.type === "text" && (
         <input
           value={cell.value}
           onChange={(e) => onChange({ type: "text", value: e.target.value })}
-          className={compactFieldClass}
+          className={inputClass}
         />
       )}
 
@@ -81,7 +80,7 @@ function TableCellEditor({ cell, onChange }: { cell: TableCellValue; onChange: (
           type="date"
           value={cell.value}
           onChange={(e) => onChange({ type: "date", value: e.target.value })}
-          className={compactFieldClass}
+          className={inputClass}
         />
       )}
 
@@ -91,19 +90,19 @@ function TableCellEditor({ cell, onChange }: { cell: TableCellValue; onChange: (
             value={cell.label}
             onChange={(e) => onChange({ ...cell, label: e.target.value })}
             placeholder="Label"
-            className={compactFieldClass}
+            className={inputClass}
           />
           <input
             value={cell.url}
             onChange={(e) => onChange({ ...cell, url: e.target.value })}
             placeholder="URL"
-            className={compactFieldClass}
+            className={inputClass}
           />
         </>
       )}
 
       {cell.type === "list" && (
-        <div className="min-w-[200px]">
+        <div className="mt-1 min-w-[220px]">
           <ListItemsEditor items={cell.items} onChange={(items) => onChange({ type: "list", items })} />
         </div>
       )}
@@ -160,7 +159,7 @@ export function TableBuilder({
       {hint && <p className="text-xs text-[var(--color-text-secondary)]">{hint}</p>}
 
       <div className="overflow-x-auto rounded-lg border border-[var(--color-border)]">
-        <table className="w-full text-xs">
+        <table className="w-full min-w-[560px] text-xs">
           <thead>
             <tr className="bg-[var(--color-background)]">
               {value.columns.map((col, i) => (
@@ -170,7 +169,7 @@ export function TableBuilder({
                       value={col}
                       onChange={(e) => setColumn(i, e.target.value)}
                       placeholder={`Column ${i + 1}`}
-                      className={`${compactFieldClass} font-semibold`}
+                      className="w-full min-w-[110px] rounded-[var(--radius-control)] border border-[var(--color-border)] bg-white px-2 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]"
                     />
                     <IconButton
                       icon={<Trash2 size={12} />}
@@ -179,6 +178,7 @@ export function TableBuilder({
                       size="sm"
                       onClick={() => removeColumn(i)}
                       disabled={value.columns.length <= 1}
+                      className="h-6 w-6"
                     />
                   </div>
                 </th>

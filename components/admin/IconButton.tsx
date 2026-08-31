@@ -9,7 +9,7 @@ const TONE_CLASSES = {
 } as const;
 
 const SIZE_CLASSES = {
-  sm: "h-8 w-8",
+  sm: "h-7 w-7",
   md: "h-9 w-9",
 } as const;
 
@@ -39,7 +39,6 @@ export function IconButton({
         onClick={onClick}
         disabled={disabled}
         aria-label={label}
-        title={label}
         className={cn(
           "flex shrink-0 items-center justify-center rounded-[var(--radius-control)] transition-colors disabled:cursor-not-allowed disabled:opacity-30",
           SIZE_CLASSES[size],

@@ -32,6 +32,10 @@ export default function CreatePostPage() {
 
   const [state, setState] = useState("Bihar");
   const [department, setDepartment] = useState("");
+  const [totalVacancies, setTotalVacancies] = useState("0");
+  const [qualification, setQualification] = useState("");
+  const [minAge, setMinAge] = useState("");
+  const [maxAge, setMaxAge] = useState("");
   const [keyDates, setKeyDates] = useState<DateRowDraft[]>([]);
 
   const [resultDate, setResultDate] = useState("");
@@ -80,7 +84,11 @@ export default function CreatePostPage() {
         state: state.trim() || "Bihar",
         department: department.trim() || organization.trim(),
         shortInfo: subtitle.trim(),
+        totalVacancies: Number(totalVacancies) || 0,
+        qualification: qualification.trim(),
       });
+      if (minAge) extractedFields.minAge = Number(minAge);
+      if (maxAge) extractedFields.maxAge = Number(maxAge);
       const importantDates = keyDates.filter((d) => d.label.trim() && d.date.trim());
       if (importantDates.length > 0) extractedFields.importantDates = importantDates;
     } else if (draftType === "result") {
@@ -223,10 +231,32 @@ export default function CreatePostPage() {
         />
 
         {draftType === "job" && (
-          <div className="grid grid-cols-2 gap-4">
-            <TextField label="State" value={state} onChange={(e) => setState(e.target.value)} />
-            <TextField label="Department" value={department} onChange={(e) => setDepartment(e.target.value)} />
-          </div>
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <TextField label="State" value={state} onChange={(e) => setState(e.target.value)} />
+              <TextField label="Department" value={department} onChange={(e) => setDepartment(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <TextField label="Total Vacancies" type="number" value={totalVacancies} onChange={(e) => setTotalVacancies(e.target.value)} />
+              <TextField label="Qualification" value={qualification} onChange={(e) => setQualification(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <TextField
+                label="Min. Age"
+                type="number"
+                value={minAge}
+                onChange={(e) => setMinAge(e.target.value)}
+                placeholder="Used for the Eligibility Checker"
+              />
+              <TextField
+                label="Max. Age"
+                type="number"
+                value={maxAge}
+                onChange={(e) => setMaxAge(e.target.value)}
+                placeholder="Used for the Eligibility Checker"
+              />
+            </div>
+          </>
         )}
 
         {draftType === "result" && (
