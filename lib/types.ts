@@ -41,10 +41,18 @@ export interface ImportantLink {
 
 export type AdditionalSectionKind = "table" | "list" | "links" | "dates" | "chips" | "text";
 
+export type TableCellValue =
+  | { type: "text"; value: string }
+  | { type: "link"; label: string; url: string }
+  | { type: "button"; label: string; url: string }
+  | { type: "list"; items: string[] };
+
 export interface AdditionalSection {
   heading: string;
   kind?: AdditionalSectionKind;
   content?: string;
+  tableHeader?: string[];
+  tableRows?: TableCellValue[][];
   links?: ImportantLink[];
   dates?: ImportantDate[];
   chips?: string[];

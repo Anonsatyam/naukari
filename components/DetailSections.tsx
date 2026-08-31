@@ -1,6 +1,6 @@
 import { ExternalLink } from "lucide-react";
 import { parsePipeBlocks, TOTAL_ROW_LABEL } from "@/lib/pipeTables";
-import { AdditionalSection } from "@/lib/types";
+import { AdditionalSection, TableCellValue } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import Card from "@/components/Card";
 import { ButtonLink } from "@/components/Button";
@@ -160,12 +160,82 @@ export function PipeTableOrText({ text }: { text: string }) {
   );
 }
 
+export function CellContent({ cell }: { cell: TableCellValue }) {
+  if (cell.type === "link") {
+    return (
+      <a
+        href={cell.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-medium text-[var(--color-primary)] underline underline-offset-2"
+      >
+        {cell.label || cell.url}
+      </a>
+    );
+  }
+  if (cell.type === "button") {
+    return (
+      <ButtonLink href={cell.url} target="_blank" variant="secondary" size="sm">
+        {cell.label || "Open"} <ExternalLink size={12} />
+      </ButtonLink>
+    );
+  }
+  if (cell.type === "list") {
+    const items = cell.items.filter(Boolean);
+    if (items.length === 0) return null;
+    return (
+      <ul className="space-y-1">
+        {items.map((item, i) => (
+          <li key={i} className="flex gap-1.5">
+            <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-[var(--color-text-secondary)]" />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  return <>{cell.value}</>;
+}
+
+export function RichTable({ header, rows }: { header: string[]; rows: TableCellValue[][] }) {
+  return (
+    <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="bg-[var(--color-primary)] text-left text-white">
+              {header.map((cell, j) => (
+                <th key={j} className="px-3 py-2 align-top font-semibold">
+                  {cell}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[var(--color-border)]">
+            {rows.map((row, r) => (
+              <tr key={r}>
+                {row.map((cell, c) => (
+                  <td key={c} className="whitespace-normal break-words px-3 py-2 align-top text-[var(--color-text-secondary)]">
+                    <CellContent cell={cell} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export function GenericSection({ section, icon, accent = "neutral" }: { section: AdditionalSection; icon?: React.ReactNode; accent?: Accent }) {
   const kind = section.kind ?? "table";
 
   return (
     <Section title={section.heading} icon={icon} accent={accent}>
-      {kind === "links" && Array.isArray(section.links) && section.links.length > 0 ? (
+      {kind === "table" && Array.isArray(section.tableHeader) && Array.isArray(section.tableRows) ? (
+        <RichTable header={section.tableHeader} rows={section.tableRows} />
+      ) : kind === "links" && Array.isArray(section.links) && section.links.length > 0 ? (
         <div className="space-y-2">
           {section.links.map((link, i) => (
             <ButtonLink key={i} href={link.url} target="_blank" variant="secondary" className="w-full">

@@ -1,7 +1,8 @@
 "use client";
 
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
-import { AdditionalSection, AdditionalSectionKind } from "@/lib/types";
+import { AdditionalSection, AdditionalSectionKind, TableCellValue } from "@/lib/types";
+import { buildPipeTable } from "@/lib/pipeTables";
 import { Button } from "@/components/Button";
 import { TextField, TextAreaField } from "@/components/FormField";
 import { fieldInputClass, fieldLabelClass } from "@/lib/ui";
@@ -11,9 +12,14 @@ import {
   TableBuilder,
   TableBuilderValue,
   emptyTableBuilderValue,
-  tableBuilderToPipeText,
   pipeTextToTableBuilderValue,
 } from "@/components/admin/TableBuilder";
+
+function cellToPlainText(cell: TableCellValue): string {
+  if (cell.type === "text") return cell.value;
+  if (cell.type === "list") return cell.items.filter(Boolean).join("; ");
+  return cell.label || cell.url;
+}
 
 export interface DateRowDraft {
   label: string;
@@ -63,11 +69,17 @@ export function newSectionDraft(kind: AdditionalSectionKind = "table"): DynamicS
 
 export function sectionToDraft(section: AdditionalSection): DynamicSectionDraft {
   const kind = section.kind ?? "table";
+  const table =
+    kind === "table"
+      ? Array.isArray(section.tableHeader) && Array.isArray(section.tableRows)
+        ? { columns: section.tableHeader, rows: section.tableRows }
+        : pipeTextToTableBuilderValue(section.content ?? "")
+      : emptyTableBuilderValue();
   return {
     id: newId(),
     heading: section.heading ?? "",
     kind,
-    table: kind === "table" ? pipeTextToTableBuilderValue(section.content ?? "") : emptyTableBuilderValue(),
+    table,
     list: kind === "list" ? (section.content ?? "").split(" || ").join("\n") : "",
     links: kind === "links" ? section.links ?? [] : [],
     dates: kind === "dates" ? section.dates ?? [] : [],
@@ -81,8 +93,10 @@ export function draftToSection(draft: DynamicSectionDraft): AdditionalSection | 
   if (!heading) return null;
 
   if (draft.kind === "table") {
-    const content = tableBuilderToPipeText(draft.table);
-    return content ? { heading, kind: "table", content } : null;
+    const columns = draft.table.columns.map((c) => c.trim());
+    if (columns.every((c) => !c)) return null;
+    const content = buildPipeTable(columns, draft.table.rows.map((row) => row.map(cellToPlainText)));
+    return { heading, kind: "table", tableHeader: columns, tableRows: draft.table.rows, content };
   }
   if (draft.kind === "list") {
     const items = draft.list.split("\n").map((s) => s.trim()).filter(Boolean);

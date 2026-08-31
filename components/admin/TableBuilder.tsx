@@ -1,32 +1,103 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
+import { TableCellValue } from "@/lib/types";
 import { Button } from "@/components/Button";
-import { PipeTable } from "@/components/admin/DraftFormShared";
-import { buildPipeTable, parsePipeTables } from "@/lib/pipeTables";
+import { RichTable } from "@/components/DetailSections";
+import { parsePipeTables } from "@/lib/pipeTables";
 
 export interface TableBuilderValue {
   columns: string[];
-  rows: string[][];
+  rows: TableCellValue[][];
+}
+
+export function emptyTextCell(): TableCellValue {
+  return { type: "text", value: "" };
 }
 
 export function emptyTableBuilderValue(): TableBuilderValue {
-  return { columns: ["", ""], rows: [["", ""]] };
-}
-
-export function tableBuilderToPipeText(value: TableBuilderValue): string {
-  const columns = value.columns.map((c) => c.trim());
-  if (columns.every((c) => !c)) return "";
-  return buildPipeTable(columns, value.rows);
+  return { columns: ["", ""], rows: [[emptyTextCell(), emptyTextCell()]] };
 }
 
 export function pipeTextToTableBuilderValue(text: string): TableBuilderValue {
   const table = parsePipeTables(text)[0];
   if (!table) return emptyTableBuilderValue();
+  const rows = table.body.length > 0 ? table.body : [table.header.map(() => "")];
   return {
     columns: table.header,
-    rows: table.body.length > 0 ? table.body : [table.header.map(() => "")],
+    rows: rows.map((row) => row.map((cell): TableCellValue => ({ type: "text", value: cell }))),
   };
+}
+
+const CELL_TYPE_LABELS: Record<TableCellValue["type"], string> = {
+  text: "Text",
+  link: "Link",
+  button: "Button",
+  list: "List",
+};
+
+function emptyCellOfType(type: TableCellValue["type"]): TableCellValue {
+  if (type === "text") return { type: "text", value: "" };
+  if (type === "list") return { type: "list", items: [] };
+  return { type, label: "", url: "" };
+}
+
+function TableCellEditor({ cell, onChange }: { cell: TableCellValue; onChange: (cell: TableCellValue) => void }) {
+  const selectClass =
+    "w-full rounded border border-[var(--color-border)] bg-white px-1.5 py-1 text-[10px] font-medium text-[var(--color-text-secondary)] outline-none focus:border-[var(--color-primary)]";
+  const inputClass =
+    "mt-1 w-full min-w-[100px] rounded-[var(--radius-control)] border border-[var(--color-border)] px-2 py-1.5 text-xs text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]";
+
+  return (
+    <div className="min-w-[130px]">
+      <select
+        value={cell.type}
+        onChange={(e) => onChange(emptyCellOfType(e.target.value as TableCellValue["type"]))}
+        className={selectClass}
+      >
+        {(Object.keys(CELL_TYPE_LABELS) as TableCellValue["type"][]).map((t) => (
+          <option key={t} value={t}>
+            {CELL_TYPE_LABELS[t]}
+          </option>
+        ))}
+      </select>
+
+      {cell.type === "text" && (
+        <input
+          value={cell.value}
+          onChange={(e) => onChange({ type: "text", value: e.target.value })}
+          className={inputClass}
+        />
+      )}
+
+      {(cell.type === "link" || cell.type === "button") && (
+        <>
+          <input
+            value={cell.label}
+            onChange={(e) => onChange({ ...cell, label: e.target.value })}
+            placeholder="Label"
+            className={inputClass}
+          />
+          <input
+            value={cell.url}
+            onChange={(e) => onChange({ ...cell, url: e.target.value })}
+            placeholder="URL"
+            className={inputClass}
+          />
+        </>
+      )}
+
+      {cell.type === "list" && (
+        <textarea
+          value={cell.items.join("\n")}
+          onChange={(e) => onChange({ type: "list", items: e.target.value.split("\n") })}
+          placeholder="One item per line"
+          rows={3}
+          className={`${inputClass} resize-y`}
+        />
+      )}
+    </div>
+  );
 }
 
 export function TableBuilder({
@@ -46,7 +117,7 @@ export function TableBuilder({
   const addColumn = () => {
     onChange({
       columns: [...value.columns, ""],
-      rows: value.rows.map((row) => [...row, ""]),
+      rows: value.rows.map((row) => [...row, emptyTextCell()]),
     });
   };
 
@@ -58,27 +129,27 @@ export function TableBuilder({
     });
   };
 
-  const setCell = (rowIdx: number, colIdx: number, text: string) => {
-    const rows = value.rows.map((row, r) => (r === rowIdx ? row.map((c, cIdx) => (cIdx === colIdx ? text : c)) : row));
+  const setCell = (rowIdx: number, colIdx: number, cell: TableCellValue) => {
+    const rows = value.rows.map((row, r) => (r === rowIdx ? row.map((c, cIdx) => (cIdx === colIdx ? cell : c)) : row));
     onChange({ ...value, rows });
   };
 
   const addRow = () => {
-    onChange({ ...value, rows: [...value.rows, value.columns.map(() => "")] });
+    onChange({ ...value, rows: [...value.rows, value.columns.map(() => emptyTextCell())] });
   };
 
   const removeRow = (rowIdx: number) => {
     onChange({ ...value, rows: value.rows.filter((_, r) => r !== rowIdx) });
   };
 
-  const pipeText = tableBuilderToPipeText(value);
+  const hasContent = value.columns.some((c) => c.trim());
 
   return (
     <div className="space-y-3">
       {hint && <p className="text-xs text-[var(--color-text-secondary)]">{hint}</p>}
 
       <div className="overflow-x-auto rounded-lg border border-[var(--color-border)]">
-        <table className="w-full min-w-[480px] text-xs">
+        <table className="w-full min-w-[560px] text-xs">
           <thead>
             <tr className="bg-[var(--color-background)]">
               {value.columns.map((col, i) => (
@@ -118,15 +189,11 @@ export function TableBuilder({
             {value.rows.map((row, r) => (
               <tr key={r}>
                 {value.columns.map((_, c) => (
-                  <td key={c} className="p-1.5">
-                    <input
-                      value={row[c] ?? ""}
-                      onChange={(e) => setCell(r, c, e.target.value)}
-                      className="w-full min-w-[110px] rounded-[var(--radius-control)] border border-[var(--color-border)] px-2 py-1.5 text-xs text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]"
-                    />
+                  <td key={c} className="p-1.5 align-top">
+                    <TableCellEditor cell={row[c] ?? emptyTextCell()} onChange={(cell) => setCell(r, c, cell)} />
                   </td>
                 ))}
-                <td className="p-1.5 text-center">
+                <td className="p-1.5 text-center align-top">
                   <button
                     type="button"
                     onClick={() => removeRow(r)}
@@ -147,12 +214,12 @@ export function TableBuilder({
         <Plus size={14} /> Add Row
       </Button>
 
-      {pipeText && (
+      {hasContent && (
         <div>
           <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
             Preview
           </p>
-          <PipeTable text={pipeText} />
+          <RichTable header={value.columns} rows={value.rows} />
         </div>
       )}
     </div>
