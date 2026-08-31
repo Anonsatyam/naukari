@@ -241,7 +241,7 @@ export default function CreatePostPage() {
         )}
 
         {draftType === "job" && (
-          <div className="border-t border-[var(--color-border)] pt-4">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <SectionDivider label="Key Dates" />
             <p className="mb-3 text-xs text-[var(--color-text-secondary)]">
               Name each date yourself — e.g. &quot;Application Start&quot;, &quot;Application End&quot;, &quot;Exam Date&quot;.
@@ -266,7 +266,7 @@ export default function CreatePostPage() {
           </div>
         )}
 
-        <div className="border-t border-[var(--color-border)] pt-4">
+        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
           <SectionDivider label="Important Links (sidebar buttons)" />
           <p className="mb-3 text-xs text-[var(--color-text-secondary)]">
             Add every action link here — Apply Online, Download Notification, Official Website, Check Result,
@@ -284,7 +284,7 @@ export default function CreatePostPage() {
           />
         </div>
 
-        <div className="border-t border-[var(--color-border)] pt-4">
+        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
           <SectionDivider label="Sections" />
           <p className="mb-3 text-xs text-[var(--color-text-secondary)]">
             Add as many sections as you need, in any order — Important Dates, Age Limit, Post Details, Eligibility,
@@ -294,7 +294,7 @@ export default function CreatePostPage() {
           <DynamicSectionsEditor sections={sections} setSections={setSections} />
         </div>
 
-        <div className="border-t border-[var(--color-border)] pt-4">
+        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
           <SectionDivider label="FAQ Section" />
           <RowsEditor
             rows={faqs}
@@ -308,8 +308,8 @@ export default function CreatePostPage() {
           />
         </div>
 
-        <div className="border-t border-[var(--color-border)] pt-4">
-          <SectionDivider label="Conclusion Section" />
+        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+          {/* <SectionDivider label="Conclusion Section" /> */}
           <TextAreaField
             label="Conclusion"
             value={conclusion}
@@ -322,7 +322,7 @@ export default function CreatePostPage() {
           <p className="rounded-lg bg-[var(--color-danger-tint)] p-3 text-sm text-[var(--color-danger)]">{error}</p>
         )}
 
-        <div className="flex flex-col gap-2 border-t border-[var(--color-border)] pt-4 sm:flex-row">
+        <div className="flex flex-col gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4 sm:flex-row">
           <Button
             type="button"
             variant="secondary"

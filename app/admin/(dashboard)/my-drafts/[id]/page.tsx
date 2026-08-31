@@ -541,7 +541,7 @@ export default function ManualDraftReviewPage({
                 />
               </div>
 
-              <div className="border-t border-[var(--color-border)] pt-4">
+              <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
                 <SectionDivider label="Important Dates" />
                 <div className="grid grid-cols-2 gap-4">
                   {JOB_DATE_FIELDS.map(({ key, label }) => (
@@ -607,7 +607,7 @@ export default function ManualDraftReviewPage({
           )}
 
 
-          <div className="border-t border-[var(--color-border)] pt-4">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <SectionDivider label="Important Dates (full table)" />
             <RawTableField
               label="Raw dates table"
@@ -617,7 +617,7 @@ export default function ManualDraftReviewPage({
             />
           </div>
 
-          <div className="border-t border-[var(--color-border)] pt-4">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <SectionDivider label="Application Fee" />
             <div className="grid grid-cols-2 gap-4">
               <TextField
@@ -649,7 +649,7 @@ export default function ManualDraftReviewPage({
             </div>
           </div>
 
-          <div className="border-t border-[var(--color-border)] pt-4">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <SectionDivider label="Age Limit" />
             {draft.draftType === "job" && (
               <TextField
@@ -712,7 +712,7 @@ export default function ManualDraftReviewPage({
             </div>
           </div>
 
-          <div className="border-t border-[var(--color-border)] pt-4">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <SectionDivider label="Post / Vacancy Details" />
             <RawTableField
               label="Raw vacancy / post details table"
@@ -722,7 +722,7 @@ export default function ManualDraftReviewPage({
             />
           </div>
 
-          <div className="border-t border-[var(--color-border)] pt-4">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <SectionDivider label="Eligibility" />
             {draft.draftType === "job" && (
               <TextAreaField
@@ -741,7 +741,7 @@ export default function ManualDraftReviewPage({
             </div>
           </div>
 
-          <div className="border-t border-[var(--color-border)] pt-4">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <SectionDivider label="Selection Process" />
             <RawTableField
               label="Raw selection process table"
@@ -751,7 +751,7 @@ export default function ManualDraftReviewPage({
             />
           </div>
 
-          <div className="border-t border-[var(--color-border)] pt-4">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <SectionDivider label="Exam Pattern" />
             <RawTableField
               label="Raw exam pattern table"
@@ -768,7 +768,7 @@ export default function ManualDraftReviewPage({
             </div>
           </div>
 
-          <div className="border-t border-[var(--color-border)] pt-4">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <SectionDivider label={documentsLabel} />
             <RawTableField
               label="Raw table/list"
@@ -777,7 +777,7 @@ export default function ManualDraftReviewPage({
             />
           </div>
 
-          <div className="border-t border-[var(--color-border)] pt-4">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <TextAreaField
               label={howToLabel}
               value={howToLines}
@@ -786,7 +786,7 @@ export default function ManualDraftReviewPage({
             />
           </div>
 
-          <div className="border-t border-[var(--color-border)] pt-4">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <SectionDivider label="Important Links" />
             <RowsEditor
               rows={importantLinksRows}
@@ -800,7 +800,7 @@ export default function ManualDraftReviewPage({
             />
           </div>
 
-          <div className="border-t border-[var(--color-border)] pt-4">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <SectionDivider label="FAQs" />
             <RowsEditor
               rows={faqs}
@@ -814,7 +814,7 @@ export default function ManualDraftReviewPage({
             />
           </div>
 
-          <div className="border-t border-[var(--color-border)] pt-4">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <SectionDivider label="Sections" />
             <p className="mb-3 text-xs text-[var(--color-text-secondary)]">
               Add as many sections as you need, in any order. Retitle, edit, reorder, remove, or add your own
@@ -823,7 +823,7 @@ export default function ManualDraftReviewPage({
             <DynamicSectionsEditor sections={additionalSections} setSections={setAdditionalSections} />
           </div>
 
-          <div className="border-t border-[var(--color-border)] pt-4">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             {draft.draftType === "job" && (
               <TextAreaField
                 label="Syllabus"
@@ -833,7 +833,7 @@ export default function ManualDraftReviewPage({
             )}
           </div>
 
-          <div className="border-t border-[var(--color-border)] pt-4">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <TextAreaField
               label="Conclusion"
               value={conclusion}
@@ -848,7 +848,7 @@ export default function ManualDraftReviewPage({
             </p>
           )}
 
-          <div className="flex flex-col gap-2 border-t border-[var(--color-border)] pt-4 sm:flex-row">
+          <div className="flex flex-col gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4 sm:flex-row">
             <Button
               type="button"
               variant="secondary"
