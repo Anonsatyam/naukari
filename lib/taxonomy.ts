@@ -100,3 +100,84 @@ export function classifyQualification(text: string | undefined | null): string |
   }
   return undefined;
 }
+
+const categoryLabelsHi: Record<string, string> = {
+  All: "सभी",
+  Police: "पुलिस",
+  Teaching: "शिक्षण",
+  Banking: "बैंकिंग",
+  Engineering: "इंजीनियरिंग",
+  Healthcare: "स्वास्थ्य सेवा",
+  Administrative: "प्रशासनिक",
+  Judiciary: "न्यायपालिका",
+};
+
+const departmentLabelsHi: Record<string, string> = {
+  All: "सभी",
+  "Bihar Police": "बिहार पुलिस",
+  "Bihar Education Department": "बिहार शिक्षा विभाग",
+  BPSC: "बीपीएससी",
+  BSSC: "बीएसएससी",
+  "Bihar Health Department": "बिहार स्वास्थ्य विभाग",
+  "Bihar PWD": "बिहार लोक निर्माण विभाग",
+  "Patna High Court": "पटना उच्च न्यायालय",
+};
+
+const qualificationLabelsHi: Record<string, string> = {
+  All: "सभी",
+  "10th Pass": "10वीं पास",
+  "12th Pass": "12वीं पास",
+  Diploma: "डिप्लोमा",
+  Graduate: "स्नातक",
+  "Post Graduate": "स्नातकोत्तर",
+  "B.Tech / B.E.": "बी.टेक / बी.ई.",
+  "B.Ed": "बी.एड",
+};
+
+const stateLabelsHi: Record<string, string> = {
+  All: "सभी",
+  "Andhra Pradesh": "आंध्र प्रदेश",
+  "Arunachal Pradesh": "अरुणाचल प्रदेश",
+  Assam: "असम",
+  Bihar: "बिहार",
+  Chhattisgarh: "छत्तीसगढ़",
+  Goa: "गोवा",
+  Gujarat: "गुजरात",
+  Haryana: "हरियाणा",
+  "Himachal Pradesh": "हिमाचल प्रदेश",
+  Jharkhand: "झारखंड",
+  Karnataka: "कर्नाटक",
+  Kerala: "केरल",
+  "Madhya Pradesh": "मध्य प्रदेश",
+  Maharashtra: "महाराष्ट्र",
+  Manipur: "मणिपुर",
+  Meghalaya: "मेघालय",
+  Mizoram: "मिज़ोरम",
+  Nagaland: "नागालैंड",
+  Odisha: "ओडिशा",
+  Punjab: "पंजाब",
+  Rajasthan: "राजस्थान",
+  Sikkim: "सिक्किम",
+  "Tamil Nadu": "तमिलनाडु",
+  Telangana: "तेलंगाना",
+  Tripura: "त्रिपुरा",
+  "Uttar Pradesh": "उत्तर प्रदेश",
+  Uttarakhand: "उत्तराखंड",
+  "West Bengal": "पश्चिम बंगाल",
+};
+
+export const taxonomyLabelMaps = {
+  category: categoryLabelsHi,
+  department: departmentLabelsHi,
+  qualification: qualificationLabelsHi,
+  state: stateLabelsHi,
+} as const;
+
+export function taxonomyLabel(
+  value: string,
+  locale: string,
+  dimension: keyof typeof taxonomyLabelMaps
+): string {
+  if (locale !== "hi") return value;
+  return taxonomyLabelMaps[dimension][value] ?? value;
+}

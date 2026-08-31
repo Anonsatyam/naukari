@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { IdCard } from "lucide-react";
 import { AdmitCardItem } from "@/lib/types";
 import { isRecent } from "@/lib/dateHelpers";
@@ -11,6 +12,10 @@ import SearchInput from "@/components/SearchInput";
 import Card from "@/components/Card";
 
 export default function AdmitCardsExplorer() {
+  const locale = useLocale();
+  const t = useTranslations("admitCardsPage");
+  const tCommon = useTranslations("common");
+  const localePath = (path: string) => (locale === "en" ? path : `/${locale}${path}`);
   const [query, setQuery] = useState("");
   const [admitCards, setAdmitCards] = useState<AdmitCardItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,35 +37,35 @@ export default function AdmitCardsExplorer() {
 
   return (
     <div className="container-page py-8">
-      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Admit Cards" }]} />
+      <Breadcrumb items={[{ label: tCommon("home"), href: localePath("/") }, { label: t("breadcrumb") }]} />
 
       <div className="flex items-center gap-2">
         <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-primary-tint)] text-[var(--color-primary)]">
           <IdCard size={18} />
         </span>
         <h1 className="font-display text-2xl font-bold text-[var(--color-text-primary)]">
-          Admit Cards
+          {t("heading")}
         </h1>
       </div>
 
       <SearchInput
         value={query}
         onChange={setQuery}
-        placeholder="Search admit cards by exam or organization"
+        placeholder={t("searchPlaceholder")}
         className="mt-4 sm:max-w-md"
       />
 
       {loading ? (
         <Card padding="p-10" className="mt-6 text-center">
-          <p className="text-sm text-[var(--color-text-secondary)]">Loading admit cards…</p>
+          <p className="text-sm text-[var(--color-text-secondary)]">{t("loading")}</p>
         </Card>
       ) : admitCards.length === 0 ? (
         <Card padding="p-10" className="mt-6 border-dashed text-center">
           <p className="text-sm font-semibold text-[var(--color-text-primary)]">
-            {query ? "No admit cards match your search" : "No admit cards published yet"}
+            {query ? t("noSearchMatch") : t("noneYet")}
           </p>
           <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-            {query ? "Try a different exam or organization name." : "Check back once admit cards have been released."}
+            {query ? t("tryDifferent") : t("checkBack")}
           </p>
         </Card>
       ) : (
@@ -73,7 +78,7 @@ export default function AdmitCardsExplorer() {
               title={a.title}
               category={a.category}
               tags={a.tags}
-              meta={`Exam on ${formatDate(a.examDate)}`}
+              meta={t("examOn", { date: formatDate(a.examDate) })}
               isNew={isRecent(a.releaseDate)}
             />
           ))}

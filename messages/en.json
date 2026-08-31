@@ -53,5 +53,64 @@
     "jobs": "Jobs",
     "results": "Results",
     "admitCards": "Admit Cards"
+  },
+  "common": {
+    "home": "Home"
+  },
+  "filters": {
+    "title": "Filters",
+    "subtitle": "Pick as many as you like",
+    "reset": "Reset",
+    "category": "Category",
+    "department": "Department",
+    "qualification": "Qualification",
+    "state": "State",
+    "showJobs": "{count, plural, one {Show # job} other {Show # jobs}}"
+  },
+  "jobsPage": {
+    "breadcrumb": "Jobs",
+    "heading": "Government Jobs",
+    "searching": "Searching…",
+    "jobsFound": "{count, plural, one {# job found} other {# jobs found}}",
+    "searchPlaceholder": "Search jobs, organizations, departments",
+    "filtersButton": "Filters",
+    "closeFilters": "Close filters",
+    "loading": "Loading jobs…",
+    "noMatch": "No jobs match these filters",
+    "noMatchHint": "Try clearing a filter or searching a different term.",
+    "clearFilters": "Clear filters"
+  },
+  "resultsPage": {
+    "breadcrumb": "Results",
+    "heading": "Results",
+    "searchPlaceholder": "Search results by exam or organization",
+    "loading": "Loading results…",
+    "noSearchMatch": "No results match your search",
+    "noneYet": "No results published yet",
+    "tryDifferent": "Try a different exam or organization name.",
+    "checkBack": "Check back once results have been declared.",
+    "declared": "Declared {date}"
+  },
+  "admitCardsPage": {
+    "breadcrumb": "Admit Cards",
+    "heading": "Admit Cards",
+    "searchPlaceholder": "Search admit cards by exam or organization",
+    "loading": "Loading admit cards…",
+    "noSearchMatch": "No admit cards match your search",
+    "noneYet": "No admit cards published yet",
+    "tryDifferent": "Try a different exam or organization name.",
+    "checkBack": "Check back once admit cards have been released.",
+    "examOn": "Exam on {date}"
+  },
+  "closingSoonPage": {
+    "breadcrumb": "Closing Soon",
+    "heading": "Closing Soon",
+    "subtitle": "Applications closing within the next 7 days",
+    "searchPlaceholder": "Search jobs closing soon",
+    "loading": "Loading jobs…",
+    "noneClosing": "Nothing closing in the next 7 days",
+    "checkBackHint": "Check back soon, or browse all open jobs.",
+    "noSearchMatch": "No closing-soon jobs match your search",
+    "tryDifferentSearch": "Try a different search term."
   }
 }

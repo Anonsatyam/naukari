@@ -2,17 +2,23 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { SlidersHorizontal, X } from "lucide-react";
 import JobCard from "./JobCard";
 import Breadcrumb from "./Breadcrumb";
 import SearchInput from "./SearchInput";
 import Card from "./Card";
-import { categories, departments, qualifications, states } from "@/lib/taxonomy";
+import { categories, departments, qualifications, states, taxonomyLabel } from "@/lib/taxonomy";
 import { Job } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export default function JobsExplorer() {
   const searchParams = useSearchParams();
+  const locale = useLocale();
+  const t = useTranslations("jobsPage");
+  const tFilters = useTranslations("filters");
+  const tCommon = useTranslations("common");
+  const localePath = (path: string) => (locale === "en" ? path : `/${locale}${path}`);
 
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const initialCategory = searchParams.get("category");
@@ -70,13 +76,13 @@ export default function JobsExplorer() {
 
   return (
     <div className="container-page py-8">
-      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Jobs" }]} />
+      <Breadcrumb items={[{ label: tCommon("home"), href: localePath("/") }, { label: t("breadcrumb") }]} />
       <div className="mb-6">
         <h1 className="font-display text-2xl font-bold text-[var(--color-text-primary)] md:text-3xl">
-          Government Jobs
+          {t("heading")}
         </h1>
         <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          {loading ? "Searching…" : `${filtered.length} job${filtered.length === 1 ? "" : "s"} found`}
+          {loading ? t("searching") : t("jobsFound", { count: filtered.length })}
         </p>
       </div>
 
@@ -84,7 +90,7 @@ export default function JobsExplorer() {
         <SearchInput
           value={query}
           onChange={setQuery}
-          placeholder="Search jobs, organizations, departments"
+          placeholder={t("searchPlaceholder")}
           className="flex-1"
         />
         <button
@@ -92,7 +98,7 @@ export default function JobsExplorer() {
           className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-text-primary)] lg:hidden"
         >
           <SlidersHorizontal size={16} />
-          Filters
+          {t("filtersButton")}
           {activeFilterCount > 0 && (
             <span className="rounded-full bg-[var(--color-primary)] px-1.5 py-0.5 text-[10px] font-bold text-white">
               {activeFilterCount}
@@ -112,8 +118,8 @@ export default function JobsExplorer() {
         >
           {filtersOpen && (
             <div className="mb-4 flex items-center justify-between lg:hidden">
-              <p className="font-display text-lg font-bold">Filters</p>
-              <button onClick={() => setFiltersOpen(false)} aria-label="Close filters">
+              <p className="font-display text-lg font-bold">{tFilters("title")}</p>
+              <button onClick={() => setFiltersOpen(false)} aria-label={t("closeFilters")}>
                 <X size={20} />
               </button>
             </div>
@@ -122,43 +128,47 @@ export default function JobsExplorer() {
           <Card padding="p-4" className="space-y-6 lg:sticky lg:top-24">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-[var(--color-text-primary)]">Filters</p>
-                <p className="text-xs text-[var(--color-text-muted)]">Pick as many as you like</p>
+                <p className="text-sm font-semibold text-[var(--color-text-primary)]">{tFilters("title")}</p>
+                <p className="text-xs text-[var(--color-text-muted)]">{tFilters("subtitle")}</p>
               </div>
               {activeFilterCount > 0 && (
                 <button
                   onClick={resetFilters}
                   className="text-xs font-medium text-[var(--color-primary)]"
                 >
-                  Reset
+                  {tFilters("reset")}
                 </button>
               )}
             </div>
 
             <FilterGroup
-              label="Category"
+              label={tFilters("category")}
               options={categories}
               selected={category}
               onToggle={(opt) => toggle(setCategory, opt)}
+              getLabel={(opt) => taxonomyLabel(opt, locale, "category")}
             />
             <FilterGroup
-              label="Department"
+              label={tFilters("department")}
               options={departments}
               selected={department}
               onToggle={(opt) => toggle(setDepartment, opt)}
+              getLabel={(opt) => taxonomyLabel(opt, locale, "department")}
             />
             <FilterGroup
-              label="Qualification"
+              label={tFilters("qualification")}
               options={qualifications}
               selected={qualification}
               onToggle={(opt) => toggle(setQualification, opt)}
+              getLabel={(opt) => taxonomyLabel(opt, locale, "qualification")}
             />
 
             <FilterGroup
-              label="State"
+              label={tFilters("state")}
               options={states}
               selected={state}
               onToggle={(opt) => toggle(setState, opt)}
+              getLabel={(opt) => taxonomyLabel(opt, locale, "state")}
             />
 
             {filtersOpen && (
@@ -166,7 +176,7 @@ export default function JobsExplorer() {
                 onClick={() => setFiltersOpen(false)}
                 className="w-full rounded-[var(--radius-control)] bg-[var(--color-primary)] py-2.5 text-sm font-semibold text-white lg:hidden"
               >
-                Show {filtered.length} jobs
+                {tFilters("showJobs", { count: filtered.length })}
               </button>
             )}
           </Card>
@@ -175,21 +185,21 @@ export default function JobsExplorer() {
         <div>
           {loading ? (
             <Card padding="p-10" className="text-center">
-              <p className="text-sm text-[var(--color-text-secondary)]">Loading jobs…</p>
+              <p className="text-sm text-[var(--color-text-secondary)]">{t("loading")}</p>
             </Card>
           ) : filtered.length === 0 ? (
             <Card padding="p-10" className="border-dashed text-center">
               <p className="text-sm font-semibold text-[var(--color-text-primary)]">
-                No jobs match these filters
+                {t("noMatch")}
               </p>
               <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                Try clearing a filter or searching a different term.
+                {t("noMatchHint")}
               </p>
               <button
                 onClick={resetFilters}
                 className="mt-4 rounded-[var(--radius-control)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white"
               >
-                Clear filters
+                {t("clearFilters")}
               </button>
               </Card>
           ) : (
@@ -210,11 +220,13 @@ function FilterGroup({
   options,
   selected,
   onToggle,
+  getLabel,
 }: {
   label: string;
   options: string[];
   selected: string[];
   onToggle: (option: string) => void;
+  getLabel?: (option: string) => string;
 }) {
   return (
     <div>
@@ -236,7 +248,7 @@ function FilterGroup({
                   : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]"
               )}
             >
-              {opt}
+              {getLabel ? getLabel(opt) : opt}
             </button>
           );
         })}

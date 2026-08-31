@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { Trophy } from "lucide-react";
 import { ResultItem } from "@/lib/types";
 import { isRecent } from "@/lib/dateHelpers";
@@ -11,6 +12,10 @@ import SearchInput from "@/components/SearchInput";
 import Card from "@/components/Card";
 
 export default function ResultsExplorer() {
+  const locale = useLocale();
+  const t = useTranslations("resultsPage");
+  const tCommon = useTranslations("common");
+  const localePath = (path: string) => (locale === "en" ? path : `/${locale}${path}`);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ResultItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,35 +37,35 @@ export default function ResultsExplorer() {
 
   return (
     <div className="container-page py-8">
-      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Results" }]} />
+      <Breadcrumb items={[{ label: tCommon("home"), href: localePath("/") }, { label: t("breadcrumb") }]} />
 
       <div className="flex items-center gap-2">
         <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-primary-tint)] text-[var(--color-primary)]">
           <Trophy size={18} />
         </span>
         <h1 className="font-display text-2xl font-bold text-[var(--color-text-primary)]">
-          Results
+          {t("heading")}
         </h1>
       </div>
 
       <SearchInput
         value={query}
         onChange={setQuery}
-        placeholder="Search results by exam or organization"
+        placeholder={t("searchPlaceholder")}
         className="mt-4 sm:max-w-md"
       />
 
       {loading ? (
         <Card padding="p-10" className="mt-6 text-center">
-          <p className="text-sm text-[var(--color-text-secondary)]">Loading results…</p>
+          <p className="text-sm text-[var(--color-text-secondary)]">{t("loading")}</p>
         </Card>
       ) : results.length === 0 ? (
         <Card padding="p-10" className="mt-6 border-dashed text-center">
           <p className="text-sm font-semibold text-[var(--color-text-primary)]">
-            {query ? "No results match your search" : "No results published yet"}
+            {query ? t("noSearchMatch") : t("noneYet")}
           </p>
           <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-            {query ? "Try a different exam or organization name." : "Check back once results have been declared."}
+            {query ? t("tryDifferent") : t("checkBack")}
           </p>
         </Card>
       ) : (
@@ -74,7 +79,7 @@ export default function ResultsExplorer() {
               description={r.summary}
               category={r.category}
               tags={r.tags}
-              meta={`Declared ${formatDate(r.resultDate)}`}
+              meta={t("declared", { date: formatDate(r.resultDate) })}
               isNew={isRecent(r.resultDate)}
             />
           ))}

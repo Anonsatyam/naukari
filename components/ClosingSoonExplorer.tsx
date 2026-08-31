@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { AlarmClock } from "lucide-react";
 import { Job } from "@/lib/types";
 import { isClosingSoon } from "@/lib/dateHelpers";
@@ -11,6 +12,10 @@ import SearchInput from "@/components/SearchInput";
 import Card from "@/components/Card";
 
 export default function ClosingSoonExplorer() {
+  const locale = useLocale();
+  const t = useTranslations("closingSoonPage");
+  const tCommon = useTranslations("common");
+  const localePath = (path: string) => (locale === "en" ? path : `/${locale}${path}`);
   const [allJobs, setAllJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,7 +36,7 @@ export default function ClosingSoonExplorer() {
 
   return (
     <div className="container-page py-8">
-      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Closing Soon" }]} />
+      <Breadcrumb items={[{ label: tCommon("home"), href: localePath("/") }, { label: t("breadcrumb") }]} />
 
       <div className="flex items-center gap-2">
         <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-danger-tint)] text-[var(--color-danger)]">
@@ -39,10 +44,10 @@ export default function ClosingSoonExplorer() {
         </span>
         <div>
           <h1 className="font-display text-2xl font-bold text-[var(--color-text-primary)]">
-            Closing Soon
+            {t("heading")}
           </h1>
           <p className="text-sm text-[var(--color-text-secondary)]">
-            Applications closing within the next 7 days
+            {t("subtitle")}
           </p>
         </div>
       </div>
@@ -51,31 +56,31 @@ export default function ClosingSoonExplorer() {
         <SearchInput
           value={query}
           onChange={setQuery}
-          placeholder="Search jobs closing soon"
+          placeholder={t("searchPlaceholder")}
           className="mt-4 sm:max-w-md"
         />
       )}
 
       {loading ? (
         <Card padding="p-10" className="mt-8 text-center">
-          <p className="text-sm text-[var(--color-text-secondary)]">Loading jobs…</p>
+          <p className="text-sm text-[var(--color-text-secondary)]">{t("loading")}</p>
         </Card>
       ) : closingSoonJobs.length === 0 ? (
         <Card padding="p-10" className="mt-8 border-dashed text-center">
           <p className="text-sm font-semibold text-[var(--color-text-primary)]">
-            Nothing closing in the next 7 days
+            {t("noneClosing")}
           </p>
           <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-            Check back soon, or browse all open jobs.
+            {t("checkBackHint")}
           </p>
         </Card>
       ) : filtered.length === 0 ? (
         <Card padding="p-10" className="mt-8 border-dashed text-center">
           <p className="text-sm font-semibold text-[var(--color-text-primary)]">
-            No closing-soon jobs match your search
+            {t("noSearchMatch")}
           </p>
           <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-            Try a different search term.
+            {t("tryDifferentSearch")}
           </p>
         </Card>
       ) : (
