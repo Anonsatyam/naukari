@@ -30,7 +30,7 @@ import Breadcrumb from "@/components/Breadcrumb";
 import { KeyValueRow } from "@/components/KeyValueRow";
 import SourceVerified from "@/components/SourceVerified";
 import JobCard from "@/components/JobCard";
-import { Section, StepList, PipeTableOrText } from "@/components/DetailSections";
+import { Section, StepList, PipeTableOrText, GenericSection } from "@/components/DetailSections";
 import {
   ApplicationFeeSection,
   VacancyDetailsSection,
@@ -290,11 +290,7 @@ export default async function JobDetailPage({
               if (genericIdx !== null) {
                 const section = additionalSections[genericIdx];
                 if (!section) return null;
-                return (
-                  <Section key={key} title={section.heading} icon={<FileText size={16} />} accent="neutral">
-                    <PipeTableOrText text={section.content} />
-                  </Section>
-                );
+                return <GenericSection key={key} section={section} icon={<FileText size={16} />} />;
               }
               return <Fragment key={key}>{sectionRenderers[key] ?? null}</Fragment>;
             });

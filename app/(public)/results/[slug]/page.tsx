@@ -5,7 +5,7 @@ import { Calendar, ExternalLink, FileText, HelpCircle, Link2, ListChecks, CheckC
 import { getResults, getResultBySlug } from "@/lib/server/data";
 import { formatDate, isSourceSiteUrl } from "@/lib/utils";
 import { resolveSectionOrder, parseGenericKey } from "@/lib/sectionOrder";
-import { Section, StepList, PipeTableOrText } from "@/components/DetailSections";
+import { Section, StepList, PipeTableOrText, GenericSection } from "@/components/DetailSections";
 import {
   ApplicationFeeSection,
   AgeLimitSection,
@@ -156,11 +156,7 @@ export default async function ResultDetailPage({
               if (genericIdx !== null) {
                 const section = additionalSections[genericIdx];
                 if (!section) return null;
-                return (
-                  <Section key={key} title={section.heading} icon={<FileText size={16} />} accent="neutral">
-                    <PipeTableOrText text={section.content} />
-                  </Section>
-                );
+                return <GenericSection key={key} section={section} icon={<FileText size={16} />} />;
               }
               return <Fragment key={key}>{sectionRenderers[key] ?? null}</Fragment>;
             });

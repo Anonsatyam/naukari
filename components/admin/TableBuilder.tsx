@@ -3,7 +3,7 @@
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/Button";
 import { PipeTable } from "@/components/admin/DraftFormShared";
-import { buildPipeTable } from "@/lib/pipeTables";
+import { buildPipeTable, parsePipeTables } from "@/lib/pipeTables";
 
 export interface TableBuilderValue {
   columns: string[];
@@ -18,6 +18,15 @@ export function tableBuilderToPipeText(value: TableBuilderValue): string {
   const columns = value.columns.map((c) => c.trim());
   if (columns.every((c) => !c)) return "";
   return buildPipeTable(columns, value.rows);
+}
+
+export function pipeTextToTableBuilderValue(text: string): TableBuilderValue {
+  const table = parsePipeTables(text)[0];
+  if (!table) return emptyTableBuilderValue();
+  return {
+    columns: table.header,
+    rows: table.body.length > 0 ? table.body : [table.header.map(() => "")],
+  };
 }
 
 export function TableBuilder({

@@ -39,9 +39,15 @@ export interface ImportantLink {
   url: string;
 }
 
+export type AdditionalSectionKind = "table" | "list" | "links" | "dates" | "chips" | "text";
+
 export interface AdditionalSection {
   heading: string;
-  content: string;
+  kind?: AdditionalSectionKind;
+  content?: string;
+  links?: ImportantLink[];
+  dates?: ImportantDate[];
+  chips?: string[];
 }
 
 export interface Job {

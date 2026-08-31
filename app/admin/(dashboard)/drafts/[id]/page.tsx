@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ExternalLink, CheckCircle2, XCircle, FileText, TriangleAlert } from "lucide-react";
-import { BotDraft } from "@/lib/types";
+import { BotDraft, AdditionalSection } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { deepDecodeEntities } from "@/lib/entities";
 import { TABLE_SEP, deriveAgeRange, deriveSalaryRange, parseFaqLines } from "@/lib/pipeTables";
@@ -18,7 +18,6 @@ import {
   AgeRelaxationRowDraft,
   LinkRowDraft,
   FaqDraft,
-  SectionDraft,
   TYPE_LABELS,
   JOB_DATE_FIELDS,
   RawTableField,
@@ -26,6 +25,12 @@ import {
   SectionDivider,
   pipeRowsToLines as pipeRowsToLinesShared,
 } from "@/components/admin/DraftFormShared";
+import {
+  DynamicSectionsEditor,
+  DynamicSectionDraft,
+  sectionToDraft,
+  draftsToSections,
+} from "@/components/admin/DynamicSectionsEditor";
 
 function pipeRowsToLines(text: string): string[] {
   return pipeRowsToLinesShared(text, TABLE_SEP);
@@ -76,7 +81,7 @@ export default function DraftReviewPage({
   const [examPatternNotes, setExamPatternNotes] = useState("");
   const [howToLines, setHowToLines] = useState("");
   const [faqs, setFaqs] = useState<FaqDraft[]>([]);
-  const [additionalSections, setAdditionalSections] = useState<SectionDraft[]>([]);
+  const [additionalSections, setAdditionalSections] = useState<DynamicSectionDraft[]>([]);
   const [conclusion, setConclusion] = useState("");
   const [tags, setTags] = useState<string[]>([]);
 
@@ -213,7 +218,7 @@ export default function DraftReviewPage({
           setImportantLinksRows(ex.importantLinks as LinkRowDraft[]);
         }
         if (Array.isArray(ex.genericSections) && ex.genericSections.length > 0) {
-          setAdditionalSections(ex.genericSections as SectionDraft[]);
+          setAdditionalSections((ex.genericSections as AdditionalSection[]).map(sectionToDraft));
         }
       })
       .catch(() => setNotFoundState(true))
@@ -271,7 +276,7 @@ export default function DraftReviewPage({
 
       if (conclusion.trim()) body.conclusion = conclusion.trim();
 
-      const sectionRows = additionalSections.filter((s) => s.heading || s.content);
+      const sectionRows = draftsToSections(additionalSections);
       if (sectionRows.length > 0) body.genericSections = sectionRows;
 
       if (draft?.draftType === "job") {
@@ -787,22 +792,12 @@ export default function DraftReviewPage({
           </div>
 
           <div className="border-t border-[var(--color-border)] pt-4">
-            <SectionDivider label="Additional Sections (from source page)" />
+            <SectionDivider label="Sections" />
             <p className="mb-3 text-xs text-[var(--color-text-secondary)]">
-              Any source heading that doesn&apos;t match one of the sections above — e.g. &quot;Physical
-              Eligibility&quot; or &quot;Reservation Policy&quot; — lands here automatically. Retitle, edit, or
-              remove any of these before publishing.
+              Everything the bot found beyond the fields above lands here automatically, one section per source
+              heading. Retitle, edit, reorder, remove, or add your own before publishing.
             </p>
-            <RowsEditor
-              rows={additionalSections}
-              setRows={setAdditionalSections}
-              fields={[
-                { key: "heading", label: "Heading" },
-                { key: "content", label: "Content (raw table/list)", multiline: true },
-              ]}
-              addLabel="Add Section"
-              newRow={{ heading: "", content: "" }}
-            />
+            <DynamicSectionsEditor sections={additionalSections} setSections={setAdditionalSections} />
           </div>
 
           <div className="border-t border-[var(--color-border)] pt-4">

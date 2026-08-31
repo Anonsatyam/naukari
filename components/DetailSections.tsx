@@ -1,5 +1,11 @@
+import { ExternalLink } from "lucide-react";
 import { parsePipeBlocks, TOTAL_ROW_LABEL } from "@/lib/pipeTables";
+import { AdditionalSection } from "@/lib/types";
+import { formatDate } from "@/lib/utils";
 import Card from "@/components/Card";
+import { ButtonLink } from "@/components/Button";
+import Badge from "@/components/Badge";
+import { KeyValueRow } from "@/components/KeyValueRow";
 
 
 export type Accent = "blue" | "green" | "purple" | "orange" | "teal" | "amber" | "pink" | "neutral";
@@ -151,5 +157,39 @@ export function PipeTableOrText({ text }: { text: string }) {
         );
       })}
     </div>
+  );
+}
+
+export function GenericSection({ section, icon, accent = "neutral" }: { section: AdditionalSection; icon?: React.ReactNode; accent?: Accent }) {
+  const kind = section.kind ?? "table";
+
+  return (
+    <Section title={section.heading} icon={icon} accent={accent}>
+      {kind === "links" && Array.isArray(section.links) && section.links.length > 0 ? (
+        <div className="space-y-2">
+          {section.links.map((link, i) => (
+            <ButtonLink key={i} href={link.url} target="_blank" variant="secondary" className="w-full">
+              {link.label} <ExternalLink size={14} />
+            </ButtonLink>
+          ))}
+        </div>
+      ) : kind === "dates" && Array.isArray(section.dates) && section.dates.length > 0 ? (
+        <div className="space-y-2.5">
+          {section.dates.map((d, i) => (
+            <KeyValueRow key={i} label={d.label} value={formatDate(d.date)} />
+          ))}
+        </div>
+      ) : kind === "chips" && Array.isArray(section.chips) && section.chips.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {section.chips.map((chip, i) => (
+            <Badge key={i} tone="neutral">
+              {chip}
+            </Badge>
+          ))}
+        </div>
+      ) : (
+        <PipeTableOrText text={section.content ?? ""} />
+      )}
+    </Section>
   );
 }
