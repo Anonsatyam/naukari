@@ -47,18 +47,34 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const navLinkClass = (active: boolean) =>
+    cn(
+      "rounded-md px-3 py-2 text-sm font-medium transition-colors",
+      active
+        ? "bg-white/15 text-white"
+        : "text-white/85 underline decoration-white/40 underline-offset-4 hover:bg-white/10 hover:text-white hover:decoration-white"
+    );
+
+  const mobileLinkClass = (active: boolean) =>
+    cn(
+      "rounded-md px-2 py-3 text-sm font-medium transition-colors",
+      active
+        ? "text-white"
+        : "text-white/85 underline decoration-white/40 underline-offset-4 hover:text-white hover:decoration-white"
+    );
+
   return (
-    <header className="sticky top-0 z-40 border-b border-[var(--color-border)] bg-white/90 backdrop-blur">
+    <header className="sticky top-0 z-40 bg-[var(--color-primary)]">
       <div className="container-page flex h-16 items-center justify-between">
         <Link href="/" className="flex items-center gap-2 shrink-0">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-primary)] text-white">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-[var(--color-primary)]">
             <Landmark size={18} />
           </span>
           <span className="flex flex-col leading-tight">
-            <span className="text-[15px] font-bold text-[var(--color-text-primary)]">
+            <span className="text-[15px] font-bold text-white">
               {t("brand.name")}
             </span>
-            <span className="text-[11px] text-[var(--color-text-secondary)]">
+            <span className="text-[11px] text-white/75">
               {t("brand.tagline")}
             </span>
           </span>
@@ -66,16 +82,7 @@ export default function Header() {
 
         <nav className="hidden lg:flex items-center gap-1">
           {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={cn(
-                "rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                isActive(link.href)
-                  ? "bg-[var(--color-primary-tint)] text-[var(--color-primary)]"
-                  : "text-[var(--color-text-secondary)] hover:bg-[var(--color-primary-tint)] hover:text-[var(--color-primary)]"
-              )}
-            >
+            <Link key={link.href} href={link.href} className={navLinkClass(isActive(link.href))}>
               {link.label}
             </Link>
           ))}
@@ -87,8 +94,8 @@ export default function Header() {
               className={cn(
                 "flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                 toolsActive || toolsOpen
-                  ? "bg-[var(--color-primary-tint)] text-[var(--color-primary)]"
-                  : "text-[var(--color-text-secondary)] hover:bg-[var(--color-primary-tint)] hover:text-[var(--color-primary)]"
+                  ? "bg-white/15 text-white"
+                  : "text-white/85 underline decoration-white/40 underline-offset-4 hover:bg-white/10 hover:text-white hover:decoration-white"
               )}
             >
               <Wrench size={14} />
@@ -127,15 +134,7 @@ export default function Header() {
         </nav>
 
         <div className="hidden items-center gap-2 lg:flex">
-          <Link
-            href={aboutLink.href}
-            className={cn(
-              "rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              isActive(aboutLink.href)
-                ? "bg-[var(--color-primary-tint)] text-[var(--color-primary)]"
-                : "text-[var(--color-text-secondary)] hover:bg-[var(--color-primary-tint)] hover:text-[var(--color-primary)]"
-            )}
-          >
+          <Link href={aboutLink.href} className={navLinkClass(isActive(aboutLink.href))}>
             {aboutLink.label}
           </Link>
           <Link
@@ -143,7 +142,7 @@ export default function Header() {
             locale={otherLocale}
             aria-label={t("nav.language")}
             title={t("nav.language")}
-            className="flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-2 text-sm font-semibold text-[var(--color-text-primary)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+            className="flex items-center gap-1.5 rounded-md border border-white/40 px-3 py-2 text-sm font-semibold text-white transition-colors hover:border-white hover:bg-white/10"
           >
             <Languages size={14} />
             {otherLocale === "hi" ? "हिं" : "EN"}
@@ -156,14 +155,14 @@ export default function Header() {
             locale={otherLocale}
             aria-label={t("nav.language")}
             title={t("nav.language")}
-            className="flex h-9 items-center gap-1 rounded-md border border-[var(--color-border)] px-2.5 text-xs font-semibold text-[var(--color-text-primary)]"
+            className="flex h-9 items-center gap-1 rounded-md border border-white/40 px-2.5 text-xs font-semibold text-white"
           >
             <Languages size={14} />
             {otherLocale === "hi" ? "हिं" : "EN"}
           </Link>
           <button
             aria-label={open ? t("nav.closeMenu") : t("nav.openMenu")}
-            className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--color-border)] text-[var(--color-text-primary)]"
+            className="flex h-9 w-9 items-center justify-center rounded-md border border-white/40 text-white"
             onClick={() => setOpen((v) => !v)}
           >
             {open ? <X size={18} /> : <Menu size={18} />}
@@ -173,7 +172,7 @@ export default function Header() {
 
       <div
         className={cn(
-          "lg:hidden overflow-y-auto border-t border-[var(--color-border)] bg-white transition-[max-height] duration-200",
+          "lg:hidden overflow-y-auto border-t border-white/15 bg-[var(--color-primary)] transition-[max-height] duration-200",
           open ? "max-h-[80vh] border-t" : "max-h-0 border-t-0"
         )}
       >
@@ -183,12 +182,7 @@ export default function Header() {
               key={link.href}
               href={link.href}
               onClick={() => setOpen(false)}
-              className={cn(
-                "rounded-md px-2 py-3 text-sm font-medium transition-colors",
-                isActive(link.href)
-                  ? "text-[var(--color-primary)]"
-                  : "text-[var(--color-text-primary)] hover:text-[var(--color-primary)]"
-              )}
+              className={mobileLinkClass(isActive(link.href))}
             >
               {link.label}
             </Link>
@@ -199,7 +193,7 @@ export default function Header() {
             onClick={() => setMobileToolsOpen((v) => !v)}
             className={cn(
               "flex items-center justify-between rounded-md px-2 py-3 text-sm font-medium transition-colors",
-              toolsActive ? "text-[var(--color-primary)]" : "text-[var(--color-text-primary)]"
+              toolsActive ? "text-white" : "text-white/85"
             )}
           >
             <span className="flex items-center gap-1.5">
@@ -208,11 +202,11 @@ export default function Header() {
             <ChevronDown size={14} className={cn("transition-transform", mobileToolsOpen && "rotate-180")} />
           </button>
           {mobileToolsOpen && (
-            <div className="ml-4 flex flex-col border-l border-[var(--color-border)] pl-3">
+            <div className="ml-4 flex flex-col border-l border-white/20 pl-3">
               <Link
                 href="/tools"
                 onClick={() => setOpen(false)}
-                className="rounded-md px-2 py-2.5 text-sm font-semibold text-[var(--color-primary)]"
+                className="rounded-md px-2 py-2.5 text-sm font-semibold text-white underline decoration-white/40 underline-offset-4"
               >
                 {t("nav.allTools")}
               </Link>
@@ -224,8 +218,8 @@ export default function Header() {
                   className={cn(
                     "rounded-md px-2 py-2.5 text-sm transition-colors",
                     isActive(tool.href)
-                      ? "text-[var(--color-primary)]"
-                      : "text-[var(--color-text-secondary)] hover:text-[var(--color-primary)]"
+                      ? "text-white"
+                      : "text-white/85 underline decoration-white/40 underline-offset-4 hover:text-white hover:decoration-white"
                   )}
                 >
                   {tool.label}
@@ -237,12 +231,7 @@ export default function Header() {
           <Link
             href={aboutLink.href}
             onClick={() => setOpen(false)}
-            className={cn(
-              "rounded-md px-2 py-3 text-sm font-medium transition-colors",
-              isActive(aboutLink.href)
-                ? "text-[var(--color-primary)]"
-                : "text-[var(--color-text-primary)] hover:text-[var(--color-primary)]"
-            )}
+            className={mobileLinkClass(isActive(aboutLink.href))}
           >
             {aboutLink.label}
           </Link>
