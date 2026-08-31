@@ -5,6 +5,7 @@ import { parsePipeTables } from "@/lib/pipeTables";
 import { Button } from "@/components/Button";
 import { TextField, TextAreaField } from "@/components/FormField";
 import { IconButton } from "@/components/admin/IconButton";
+import { PdfUploadButton } from "@/components/admin/PdfUploadButton";
 import { DraftType } from "@/lib/types";
 
 export interface AgeLimitRowDraft {
@@ -124,7 +125,7 @@ export function RowsEditor<T extends Record<string, string>>({
 }: {
   rows: T[];
   setRows: (updater: (prev: T[]) => T[]) => void;
-  fields: { key: keyof T & string; label: string; multiline?: boolean }[];
+  fields: { key: keyof T & string; label: string; multiline?: boolean; kind?: "url" }[];
   addLabel: string;
   newRow: T;
 }) {
@@ -136,14 +137,29 @@ export function RowsEditor<T extends Record<string, string>>({
             <div className="flex-1 space-y-2">
               {fields.map((f) => {
                 const Field = f.multiline ? TextAreaField : TextField;
+                const setValue = (value: string) =>
+                  setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, [f.key]: value } : r)));
+                if (f.kind === "url") {
+                  return (
+                    <div key={f.key} className="flex items-end gap-1.5">
+                      <div className="flex-1">
+                        <Field
+                          label={f.label}
+                          value={row[f.key] ?? ""}
+                          onChange={(e) => setValue(e.target.value)}
+                          placeholder="https://... or upload a PDF"
+                        />
+                      </div>
+                      <PdfUploadButton onUploaded={setValue} />
+                    </div>
+                  );
+                }
                 return (
                   <Field
                     key={f.key}
                     label={f.label}
                     value={row[f.key] ?? ""}
-                    onChange={(e) =>
-                      setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, [f.key]: e.target.value } : r)))
-                    }
+                    onChange={(e) => setValue(e.target.value)}
                   />
                 );
               })}

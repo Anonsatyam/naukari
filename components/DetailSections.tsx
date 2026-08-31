@@ -1,7 +1,7 @@
 import { ExternalLink } from "lucide-react";
 import { parsePipeBlocks, TOTAL_ROW_LABEL } from "@/lib/pipeTables";
 import { AdditionalSection, TableCellValue } from "@/lib/types";
-import { formatDate } from "@/lib/utils";
+import { formatDate, documentViewerHref } from "@/lib/utils";
 import { parseInlineLinks } from "@/lib/richText";
 import Card from "@/components/Card";
 import { ButtonLink } from "@/components/Button";
@@ -198,7 +198,7 @@ export function CellContent({ cell }: { cell: TableCellValue }) {
     if (!cell.label.trim() && !cell.url.trim()) return null;
     return (
       <a
-        href={cell.url}
+        href={documentViewerHref(cell.url, cell.label)}
         target="_blank"
         rel="noopener noreferrer"
         className="font-medium text-[var(--color-primary)] underline underline-offset-2"
@@ -210,7 +210,7 @@ export function CellContent({ cell }: { cell: TableCellValue }) {
   if (cell.type === "button") {
     if (!cell.label.trim() && !cell.url.trim()) return null;
     return (
-      <ButtonLink href={cell.url} target="_blank" variant="secondary" size="sm">
+      <ButtonLink href={documentViewerHref(cell.url, cell.label)} target="_blank" variant="secondary" size="sm">
         {cell.label || "Open"} <ExternalLink size={12} />
       </ButtonLink>
     );
@@ -275,7 +275,7 @@ export function GenericSection({ section, icon, accent = "neutral" }: { section:
       ) : kind === "links" && Array.isArray(section.links) && section.links.length > 0 ? (
         <div className="space-y-2">
           {section.links.map((link, i) => (
-            <ButtonLink key={i} href={link.url} target="_blank" variant="secondary" className="w-full">
+            <ButtonLink key={i} href={documentViewerHref(link.url, link.label)} target="_blank" variant="secondary" className="w-full">
               {link.label} <ExternalLink size={14} />
             </ButtonLink>
           ))}

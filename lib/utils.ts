@@ -14,6 +14,20 @@ export function isSourceSiteUrl(url: string | undefined | null): boolean {
   }
 }
 
+const DOCUMENTS_BUCKET_PATH = "/storage/v1/object/public/documents/";
+
+export function isOwnDocumentUrl(url: string | undefined | null): boolean {
+  if (!url) return false;
+  return url.includes(DOCUMENTS_BUCKET_PATH);
+}
+
+export function documentViewerHref(url: string, label?: string): string {
+  if (!isOwnDocumentUrl(url)) return url;
+  const params = new URLSearchParams({ src: url });
+  if (label) params.set("title", label);
+  return `/documents/view?${params.toString()}`;
+}
+
 export function formatDate(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;

@@ -195,7 +195,7 @@ export function DynamicSectionsEditor({
                 setRows={(updater) => update(section.id, { links: updater(section.links) })}
                 fields={[
                   { key: "label", label: "Label" },
-                  { key: "url", label: "URL" },
+                  { key: "url", label: "URL", kind: "url" },
                 ]}
                 addLabel="Add Link"
                 newRow={{ label: "", url: "" }}

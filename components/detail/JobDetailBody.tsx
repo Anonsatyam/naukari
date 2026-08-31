@@ -12,7 +12,7 @@ import {
   Users,
 } from "lucide-react";
 import { Job } from "@/lib/types";
-import { formatDate, daysUntil, isSourceSiteUrl } from "@/lib/utils";
+import { formatDate, daysUntil, isSourceSiteUrl, documentViewerHref } from "@/lib/utils";
 import { getApplicationEndDate, isClosingSoon } from "@/lib/dateHelpers";
 import { resolveSectionOrder, parseGenericKey } from "@/lib/sectionOrder";
 import { ButtonLink } from "@/components/Button";
@@ -237,7 +237,7 @@ export function JobDetailBody({ job, relatedJobs = [] }: { job: Job; relatedJobs
               sourceLinks.map((link, i) => (
                 <ButtonLink
                   key={`${link.label}-${i}`}
-                  href={link.url}
+                  href={documentViewerHref(link.url, link.label)}
                   target="_blank"
                   variant="secondary"
                   className={i === 0 ? "w-full" : "mt-2 w-full"}
@@ -248,13 +248,13 @@ export function JobDetailBody({ job, relatedJobs = [] }: { job: Job; relatedJobs
             ) : hasRealApplyUrl || hasRealNotificationUrl ? (
               <>
                 {hasRealApplyUrl && (
-                  <ButtonLink href={job.officialApplyUrl} target="_blank" className="w-full">
+                  <ButtonLink href={documentViewerHref(job.officialApplyUrl, "Apply Officially")} target="_blank" className="w-full">
                     Apply Officially <ExternalLink size={14} />
                   </ButtonLink>
                 )}
                 {hasRealNotificationUrl && (
                   <ButtonLink
-                    href={job.officialNotificationUrl}
+                    href={documentViewerHref(job.officialNotificationUrl, "Official Notification")}
                     target="_blank"
                     variant="secondary"
                     className={hasRealApplyUrl ? "mt-2 w-full" : "w-full"}

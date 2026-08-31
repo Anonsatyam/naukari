@@ -798,7 +798,7 @@ export default function DraftReviewPage({
               setRows={setImportantLinksRows}
               fields={[
                 { key: "label", label: "Label" },
-                { key: "url", label: "URL" },
+                { key: "url", label: "URL", kind: "url" },
               ]}
               addLabel="Add Link"
               newRow={{ label: "", url: "" }}

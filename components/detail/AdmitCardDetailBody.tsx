@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { Calendar, ExternalLink, ClipboardList, FileText, HelpCircle, Link2, ListChecks, CheckCircle2 } from "lucide-react";
 import { AdmitCardItem } from "@/lib/types";
-import { formatDate, isSourceSiteUrl } from "@/lib/utils";
+import { formatDate, isSourceSiteUrl, documentViewerHref } from "@/lib/utils";
 import { resolveSectionOrder, parseGenericKey } from "@/lib/sectionOrder";
 import { Section, StepList, PipeTableOrText, GenericSection } from "@/components/DetailSections";
 import {
@@ -169,7 +169,7 @@ export function AdmitCardDetailBody({ card }: { card: AdmitCardItem }) {
               sourceLinks.map((link, i) => (
                 <ButtonLink
                   key={`${link.label}-${i}`}
-                  href={link.url}
+                  href={documentViewerHref(link.url, link.label)}
                   target="_blank"
                   variant="secondary"
                   className={i === 0 ? "w-full" : "mt-2 w-full"}
@@ -178,7 +178,7 @@ export function AdmitCardDetailBody({ card }: { card: AdmitCardItem }) {
                 </ButtonLink>
               ))
             ) : hasRealOfficialLink ? (
-              <ButtonLink href={card.officialLink} target="_blank" className="w-full">
+              <ButtonLink href={documentViewerHref(card.officialLink, "Download Admit Card")} target="_blank" className="w-full">
                 Download Admit Card <ExternalLink size={14} />
               </ButtonLink>
             ) : (
