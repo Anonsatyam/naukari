@@ -36,15 +36,15 @@ export default async function Home() {
       <section className="border-b border-[var(--color-border)] bg-white">
         <div className="container-page py-14 md:py-20">
           <div className="mx-auto max-w-2xl text-center">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-success-tint)] px-3 py-1 text-xs font-semibold text-[var(--color-success)]">
-              Verified from official sources
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-success-tint)] px-3 py-1 text-xs font-semibold text-[var(--color-success)] animate-breathe">
+              Live · Verified from official sources
             </span>
             <h1 className="font-display mt-5 text-3xl font-extrabold leading-tight text-[var(--color-text-primary)] md:text-5xl">
               Sarkari <RotatingHeroWord />
               <br />
               in
               <br />
-              <IndiaHeading className="text-4xl md:text-6xl" />
+              <IndiaHeading className="text-6xl md:text-8xl" />
             </h1>
             <p className="mt-4 text-base leading-relaxed text-[var(--color-text-secondary)] md:text-lg">
               Find the right job faster with verified details, smart filters, <br />and a clear eligibility check — no login required.
