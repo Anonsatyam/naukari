@@ -42,9 +42,7 @@ export default async function Home() {
             <h1 className="font-display mt-5 text-3xl font-extrabold leading-tight text-[var(--color-text-primary)] md:text-5xl">
               Sarkari <RotatingHeroWord />
               <br />
-              in
-              <br />
-              <IndiaHeading className="text-6xl md:text-8xl" />
+              in <IndiaHeading />
             </h1>
             <p className="mt-4 text-base leading-relaxed text-[var(--color-text-secondary)] md:text-lg">
               Find the right job faster with verified details, smart filters, <br />and a clear eligibility check — no login required.
