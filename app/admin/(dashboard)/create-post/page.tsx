@@ -61,7 +61,7 @@ const defaultValues: FormValues = {
   category: "",
   tags: [],
   subtitle: "",
-  state: "Bihar",
+  state: "",
   department: "",
   keyDates: [],
   resultDate: "",
@@ -296,7 +296,7 @@ export default function CreatePostPage() {
           {...register("draftType")}
         />
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <TextField label="Title" {...register("title")} />
           <TextField label="Organization" {...register("organization")} />
         </div>
@@ -320,7 +320,7 @@ export default function CreatePostPage() {
         />
 
         {draftType === "job" && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Controller
               control={control}
               name="state"
@@ -346,7 +346,7 @@ export default function CreatePostPage() {
         )}
 
         {draftType === "admit_card" && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Controller
               control={control}
               name="releaseDate"

@@ -176,7 +176,7 @@ export default function ManualDraftReviewPage({
           const derivedSalary = deriveSalaryRange(ex.postDetails);
 
           typeSpecific = {
-            state: String(ex.state ?? "Bihar"),
+            state: String(ex.state ?? ""),
             department: String(ex.department ?? data.draft.organization),
             shortInfo: typeof ex.shortInfo === "string" ? ex.shortInfo : "",
             totalVacancies: String(ex.totalVacancies ?? 0),
