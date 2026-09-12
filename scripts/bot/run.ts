@@ -33,9 +33,11 @@ function isDefinitelyExpired(extractedFields: { importantDates?: { label: string
   return end < startOfToday.getTime();
 }
 
+const PLAYWRIGHT_HOSTNAMES = new Set(["state.bihar.gov.in", "www.sarkariresult.com"]);
+
 function shouldUsePlaywright(url: string): boolean {
   try {
-    return new URL(url).hostname === "state.bihar.gov.in";
+    return PLAYWRIGHT_HOSTNAMES.has(new URL(url).hostname);
   } catch {
     return false;
   }

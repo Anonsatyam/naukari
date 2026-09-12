@@ -10,4 +10,9 @@ export const SOURCES: BotSource[] = [
     url: "https://biharjob.co.in/",
     orgHint: "Unknown (see extracted organization)",
   },
+  {
+    name: "Sarkari Result (sarkariresult.com)",
+    url: "https://www.sarkariresult.com/latestjob/",
+    orgHint: "Unknown (see extracted organization)",
+  },
 ];
