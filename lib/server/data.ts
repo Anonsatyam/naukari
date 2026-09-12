@@ -181,12 +181,7 @@ export async function getPublishedJobs(filters: JobFilters = {}): Promise<Job[]>
     return q;
   };
 
-  let { data, error } = await buildQuery()
-    .order("source_order_key", { ascending: false, nullsFirst: false })
-    .order("published_at", { ascending: false });
-  if (isMissingColumnError(error)) {
-    ({ data, error } = await buildQuery().order("published_at", { ascending: false }));
-  }
+  const { data, error } = await buildQuery().order("published_at", { ascending: false });
   if (error) throw error;
   return (data ?? []).map(rowToJob);
 }
@@ -251,7 +246,7 @@ export async function getResults(q?: string): Promise<ResultItem[]> {
     return query;
   };
   let { data, error } = await buildQuery()
-    .order("source_order_key", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false, nullsFirst: false })
     .order("result_date", { ascending: false });
   if (isMissingColumnError(error)) {
     ({ data, error } = await buildQuery().order("result_date", { ascending: false }));
@@ -275,7 +270,7 @@ export async function getAdmitCards(q?: string): Promise<AdmitCardItem[]> {
     return query;
   };
   let { data, error } = await buildQuery()
-    .order("source_order_key", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false, nullsFirst: false })
     .order("release_date", { ascending: false });
   if (isMissingColumnError(error)) {
     ({ data, error } = await buildQuery().order("release_date", { ascending: false }));

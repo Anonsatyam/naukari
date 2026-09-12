@@ -14,6 +14,7 @@ import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
 import { TextField, TextAreaField } from "@/components/FormField";
 import { ChipInput } from "@/components/admin/ChipInput";
+import { useToast } from "@/components/admin/Toast";
 import {
   AgeLimitRowDraft,
   AgeRelaxationRowDraft,
@@ -69,6 +70,7 @@ export default function ManualDraftReviewPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { showToast } = useToast();
 
   const [draft, setDraft] = useState<BotDraft | null>(null);
   const [loading, setLoading] = useState(true);
@@ -92,7 +94,6 @@ export default function ManualDraftReviewPage({
   const [decision, setDecision] = useState<"approved" | "rejected" | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [previewing, setPreviewing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/admin/drafts/${id}`)
@@ -320,7 +321,6 @@ export default function ManualDraftReviewPage({
 
   const handlePreview = async () => {
     setPreviewing(true);
-    setError(null);
     try {
       const res = await fetch(`/api/admin/drafts/${id}/preview`, {
         method: "POST",
@@ -331,7 +331,7 @@ export default function ManualDraftReviewPage({
       if (!res.ok) throw new Error(data.error || "Could not build a preview.");
       openPreviewWindow(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not build a preview. Please try again.");
+      showToast(err instanceof Error ? err.message : "Could not build a preview. Please try again.");
     } finally {
       setPreviewing(false);
     }
@@ -339,7 +339,6 @@ export default function ManualDraftReviewPage({
 
   const handleApprove = async () => {
     setSubmitting(true);
-    setError(null);
     try {
       const res = await fetch(`/api/admin/drafts/${id}/approve`, {
         method: "POST",
@@ -350,7 +349,7 @@ export default function ManualDraftReviewPage({
       if (!res.ok) throw new Error(data.error || "Approve failed");
       setDecision("approved");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not approve this draft. Please try again.");
+      showToast(err instanceof Error ? err.message : "Could not approve this draft. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -358,13 +357,12 @@ export default function ManualDraftReviewPage({
 
   const handleReject = async () => {
     setSubmitting(true);
-    setError(null);
     try {
       const res = await fetch(`/api/admin/drafts/${id}/reject`, { method: "POST" });
       if (!res.ok) throw new Error("Reject failed");
       setDecision("rejected");
     } catch {
-      setError("Could not reject this draft. Please try again.");
+      showToast("Could not reject this draft. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -841,12 +839,6 @@ export default function ManualDraftReviewPage({
               hint="Closing summary paragraph shown at the bottom of the page."
             />
           </div>
-
-          {error && (
-            <p className="rounded-lg bg-[var(--color-danger-tint)] p-3 text-sm text-[var(--color-danger)]">
-              {error}
-            </p>
-          )}
 
           <div className="flex flex-col gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4 sm:flex-row">
             <Button

@@ -17,6 +17,7 @@ import { BotDraft } from "@/lib/types";
 import { openPreviewWindow } from "@/lib/adminPreview";
 import { Button } from "@/components/Button";
 import { IconButton } from "@/components/admin/IconButton";
+import { useToast } from "@/components/admin/Toast";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
@@ -90,6 +91,7 @@ export function DraftsListView() {
   const title = "Drafts";
   const description = "Posts you created from scratch — edit, preview, publish, or delete them here.";
   const breadcrumbLabel = "Drafts";
+  const { showToast } = useToast();
 
   const [drafts, setDrafts] = useState<BotDraft[]>([]);
   const [loading, setLoading] = useState(true);
@@ -180,8 +182,8 @@ export function DraftsListView() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Could not build a preview.");
       openPreviewWindow(data);
-    } catch {
-      window.alert("Could not build a preview for this draft.");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Could not build a preview for this draft.");
     } finally {
       setPreviewingId(null);
     }
@@ -195,7 +197,7 @@ export function DraftsListView() {
       if (!res.ok) throw new Error("Delete failed");
       loadDrafts();
     } catch {
-      window.alert("Could not delete this draft.");
+      showToast("Could not delete this draft.");
     } finally {
       setDeletingId(null);
     }

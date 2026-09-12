@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { NextIntlClientProvider } from "next-intl";
 import { AlertTriangle, X } from "lucide-react";
 import { Job, ResultItem, AdmitCardItem } from "@/lib/types";
 import { PREVIEW_STORAGE_KEY } from "@/lib/adminPreview";
@@ -9,6 +10,7 @@ import Footer from "@/components/Footer";
 import { JobDetailBody } from "@/components/detail/JobDetailBody";
 import { ResultDetailBody } from "@/components/detail/ResultDetailBody";
 import { AdmitCardDetailBody } from "@/components/detail/AdmitCardDetailBody";
+import enMessages from "@/messages/en.json";
 
 type PreviewPayload =
   | { type: "job"; entity: Job }
@@ -52,24 +54,26 @@ export default function AdminPreviewPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <div className="sticky top-0 z-40 flex items-center justify-between gap-3 bg-[var(--color-warning)] px-4 py-2.5 text-sm font-semibold text-black">
-        <span>👁 PREVIEW MODE — this post has not been published yet. Nothing here is live.</span>
-        <button
-          type="button"
-          onClick={() => window.close()}
-          className="flex shrink-0 items-center gap-1 rounded-md bg-black/10 px-2.5 py-1 text-xs hover:bg-black/20"
-        >
-          <X size={13} /> Close
-        </button>
+    <NextIntlClientProvider locale="en" messages={enMessages}>
+      <div className="flex min-h-screen flex-col">
+        <div className="sticky top-0 z-40 flex items-center justify-between gap-3 bg-[var(--color-warning)] px-4 py-2.5 text-sm font-semibold text-black">
+          <span>👁 PREVIEW MODE — this post has not been published yet. Nothing here is live.</span>
+          <button
+            type="button"
+            onClick={() => window.close()}
+            className="flex shrink-0 items-center gap-1 rounded-md bg-black/10 px-2.5 py-1 text-xs hover:bg-black/20"
+          >
+            <X size={13} /> Close
+          </button>
+        </div>
+        <Header />
+        <main className="flex-1">
+          {payload.type === "job" && <JobDetailBody job={payload.entity} relatedJobs={[]} />}
+          {payload.type === "result" && <ResultDetailBody result={payload.entity} />}
+          {payload.type === "admit_card" && <AdmitCardDetailBody card={payload.entity} />}
+        </main>
+        <Footer />
       </div>
-      <Header />
-      <main className="flex-1">
-        {payload.type === "job" && <JobDetailBody job={payload.entity} relatedJobs={[]} />}
-        {payload.type === "result" && <ResultDetailBody result={payload.entity} />}
-        {payload.type === "admit_card" && <AdmitCardDetailBody card={payload.entity} />}
-      </main>
-      <Footer />
-    </div>
+    </NextIntlClientProvider>
   );
 }

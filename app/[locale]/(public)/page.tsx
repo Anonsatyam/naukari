@@ -25,15 +25,9 @@ export default async function Home() {
   ]);
 
   const closingSoonJobs = jobs.filter(isClosingSoon);
-  const latestJobs = [...jobs]
-    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
-    .slice(0, 3);
-  const latestResults = [...results]
-    .sort((a, b) => new Date(b.resultDate).getTime() - new Date(a.resultDate).getTime())
-    .slice(0, 3);
-  const latestAdmitCards = [...admitCards]
-    .sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime())
-    .slice(0, 3);
+  const latestJobs = jobs.slice(0, 3);
+  const latestResults = results.slice(0, 3);
+  const latestAdmitCards = admitCards.slice(0, 3);
 
   return (
     <div>

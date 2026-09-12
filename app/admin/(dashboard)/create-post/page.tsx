@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Eye, Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, Eye, Plus, Rocket, Trash2 } from "lucide-react";
 import { DraftType } from "@/lib/types";
 import { Button } from "@/components/Button";
 import Card from "@/components/Card";
@@ -11,6 +11,7 @@ import { TextField, TextAreaField, SelectField } from "@/components/FormField";
 import { LinkRowDraft, FaqDraft, TYPE_LABELS, RowsEditor, SectionDivider } from "@/components/admin/DraftFormShared";
 import { ChipInput } from "@/components/admin/ChipInput";
 import { IconButton } from "@/components/admin/IconButton";
+import { useToast } from "@/components/admin/Toast";
 import { openPreviewWindow } from "@/lib/adminPreview";
 import {
   DynamicSectionsEditor,
@@ -19,8 +20,15 @@ import {
   draftsToSections,
 } from "@/components/admin/DynamicSectionsEditor";
 
+const PUBLIC_PATH_PREFIX: Record<DraftType, string> = {
+  job: "/jobs",
+  result: "/results",
+  admit_card: "/admit-cards",
+};
+
 export default function CreatePostPage() {
   const router = useRouter();
+  const { showToast } = useToast();
 
   const [draftType, setDraftType] = useState<DraftType>("job");
 
@@ -45,9 +53,10 @@ export default function CreatePostPage() {
   const [conclusion, setConclusion] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [previewing, setPreviewing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<{ id: string } | null>(null);
+  const [published, setPublished] = useState<{ type: DraftType; slug: string } | null>(null);
 
   const addKeyDate = () => setKeyDates((prev) => [...prev, { label: "", date: "" }]);
   const removeKeyDate = (i: number) => setKeyDates((prev) => prev.filter((_, idx) => idx !== i));
@@ -95,9 +104,8 @@ export default function CreatePostPage() {
   };
 
   const handlePreview = async () => {
-    setError(null);
     if (!title.trim() || !organization.trim()) {
-      setError("Title and Organization are required before you can preview.");
+      showToast("Title and Organization are required before you can preview.");
       return;
     }
     setPreviewing(true);
@@ -118,26 +126,31 @@ export default function CreatePostPage() {
       if (!res.ok) throw new Error(data.error || "Could not build a preview.");
       openPreviewWindow(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not build a preview. Please try again.");
+      showToast(err instanceof Error ? err.message : "Could not build a preview. Please try again.");
     } finally {
       setPreviewing(false);
     }
   };
 
-  const handleCreate = async () => {
-    setError(null);
-
+  const validateBeforeSubmit = (): string | undefined => {
     if (!title.trim() || !organization.trim()) {
-      setError("Title and Organization are required.");
-      return;
+      return "Title and Organization are required.";
     }
-
     const primaryLink = importantLinksRows.find((r) => r.url.trim())?.url.trim();
     if (!primaryLink) {
-      setError("Add at least one Important Link — the first one becomes this post's official reference link.");
+      return "Add at least one Important Link — the first one becomes this post's official reference link.";
+    }
+    return undefined;
+  };
+
+  const handleCreate = async () => {
+    const validationError = validateBeforeSubmit();
+    if (validationError) {
+      showToast(validationError);
       return;
     }
 
+    const primaryLink = importantLinksRows.find((r) => r.url.trim())!.url.trim();
     setSubmitting(true);
     try {
       const res = await fetch("/api/admin/drafts/create", {
@@ -155,11 +168,65 @@ export default function CreatePostPage() {
       if (!res.ok) throw new Error(data.error || "Could not create this post.");
       setCreated({ id: data.draft.id });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create this post. Please try again.");
+      showToast(err instanceof Error ? err.message : "Could not create this post. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
+
+  const handlePublish = async () => {
+    const validationError = validateBeforeSubmit();
+    if (validationError) {
+      showToast(validationError);
+      return;
+    }
+
+    const primaryLink = importantLinksRows.find((r) => r.url.trim())!.url.trim();
+    setPublishing(true);
+    try {
+      const res = await fetch("/api/admin/drafts/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobTitle: title.trim(),
+          organization: organization.trim(),
+          sourceUrl: primaryLink,
+          draftType,
+          extractedFields: buildExtractedFields(),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not publish this post.");
+      showToast("Published — it's live on the site now.", "success");
+      setPublished({ type: data.approved.type, slug: data.approved.entity.slug });
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Could not publish this post. Please try again.");
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  if (published) {
+    return (
+      <Card padding="p-8" className="mx-auto max-w-lg text-center">
+        <CheckCircle2 size={32} className="mx-auto text-[var(--color-success)]" />
+        <p className="mt-3 text-lg font-bold text-[var(--color-text-primary)]">Published</p>
+        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+          It&apos;s live on the site right now — no review step needed.
+        </p>
+        <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
+          <Button
+            onClick={() => window.open(`${PUBLIC_PATH_PREFIX[published.type]}/${published.slug}`, "_blank", "noopener")}
+          >
+            View Live
+          </Button>
+          <Button variant="secondary" onClick={() => window.location.reload()}>
+            Create Another Post
+          </Button>
+        </div>
+      </Card>
+    );
+  }
 
   if (created) {
     return (
@@ -194,7 +261,7 @@ export default function CreatePostPage() {
           type="button"
           variant="secondary"
           onClick={handlePreview}
-          disabled={previewing}
+          disabled={previewing || submitting || publishing}
           title="See how this post will look on the public site before creating it"
         >
           <Eye size={15} /> {previewing ? "Building preview…" : "Preview Post"}
@@ -318,22 +385,30 @@ export default function CreatePostPage() {
           />
         </div>
 
-        {error && (
-          <p className="rounded-lg bg-[var(--color-danger-tint)] p-3 text-sm text-[var(--color-danger)]">{error}</p>
-        )}
-
         <div className="flex flex-col gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4 sm:flex-row">
           <Button
             type="button"
             variant="secondary"
             onClick={handlePreview}
-            disabled={previewing}
+            disabled={previewing || submitting || publishing}
             className="flex-1"
           >
             <Eye size={15} /> {previewing ? "Building preview…" : "Preview Post"}
           </Button>
-          <Button onClick={handleCreate} disabled={submitting} className="flex-1">
+          <Button
+            variant="secondary"
+            onClick={handleCreate}
+            disabled={submitting || previewing || publishing}
+            className="flex-1"
+          >
             {submitting ? "Creating…" : "Create Draft"}
+          </Button>
+          <Button
+            onClick={handlePublish}
+            disabled={publishing || previewing || submitting}
+            className="flex-1"
+          >
+            <Rocket size={15} /> {publishing ? "Publishing…" : "Publish Directly"}
           </Button>
         </div>
       </Card>
