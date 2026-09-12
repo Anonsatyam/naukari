@@ -136,28 +136,23 @@ export function RowsEditor<T extends Record<string, string>>({
 
         return (
           <div key={i} className="space-y-2 rounded-lg bg-[var(--color-border)] p-3">
-            {fields.map((f, fieldIdx) => {
+            <div className="flex justify-end">
+              <IconButton icon={<Trash2 size={13} />} label="Remove row" tone="danger" size="sm" onClick={removeRow} />
+            </div>
+            {fields.map((f) => {
               const Field = f.multiline ? TextAreaField : TextField;
               const setValue = (value: string) =>
                 setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, [f.key]: value } : r)));
-              const trailing =
-                f.kind === "url" ? (
-                  <PdfUploadButton onUploaded={setValue} />
-                ) : fieldIdx === 0 ? (
-                  <IconButton icon={<Trash2 size={15} />} label="Remove row" tone="danger" onClick={removeRow} />
-                ) : null;
+              const trailing = f.kind === "url" ? <PdfUploadButton onUploaded={setValue} size="sm" /> : undefined;
               return (
-                <div key={f.key} className="flex items-center gap-1.5">
-                  <div className="flex-1">
-                    <Field
-                      label={f.label}
-                      value={row[f.key] ?? ""}
-                      onChange={(e) => setValue(e.target.value)}
-                      placeholder={f.kind === "url" ? "https://... or upload a PDF" : undefined}
-                    />
-                  </div>
-                  {trailing}
-                </div>
+                <Field
+                  key={f.key}
+                  label={f.label}
+                  value={row[f.key] ?? ""}
+                  onChange={(e) => setValue(e.target.value)}
+                  placeholder={f.kind === "url" ? "https://... or upload a PDF" : undefined}
+                  trailing={trailing}
+                />
               );
             })}
           </div>

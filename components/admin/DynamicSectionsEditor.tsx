@@ -171,14 +171,15 @@ export function DynamicSectionsEditor({
               />
             </div>
             <div className="flex shrink-0 items-center gap-1">
-              <IconButton icon={<ArrowUp size={15} />} label="Move section up" onClick={() => move(section.id, -1)} disabled={i === 0} />
+              <IconButton icon={<ArrowUp size={13} />} label="Move section up" size="sm" onClick={() => move(section.id, -1)} disabled={i === 0} />
               <IconButton
-                icon={<ArrowDown size={15} />}
+                icon={<ArrowDown size={13} />}
                 label="Move section down"
+                size="sm"
                 onClick={() => move(section.id, 1)}
                 disabled={i === sections.length - 1}
               />
-              <IconButton icon={<Trash2 size={15} />} label="Remove section" tone="danger" onClick={() => remove(section.id)} />
+              <IconButton icon={<Trash2 size={13} />} label="Remove section" tone="danger" size="sm" onClick={() => remove(section.id)} />
             </div>
           </div>
 
@@ -204,32 +205,31 @@ export function DynamicSectionsEditor({
             {section.kind === "dates" && (
               <div className="space-y-3">
                 {section.dates.map((row, r) => (
-                  <div key={r} className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-                    <div className="flex-1">
-                      <TextField
-                        label="Label"
-                        value={row.label}
-                        onChange={(e) => {
-                          const dates = section.dates.map((d, idx) => (idx === r ? { ...d, label: e.target.value } : d));
-                          update(section.id, { dates });
-                        }}
+                  <div key={r} className="space-y-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+                    <div className="flex justify-end">
+                      <IconButton
+                        icon={<Trash2 size={13} />}
+                        label="Remove date"
+                        tone="danger"
+                        size="sm"
+                        onClick={() => update(section.id, { dates: section.dates.filter((_, idx) => idx !== r) })}
                       />
                     </div>
-                    <div className="flex-1">
-                      <DateField
-                        label="Date"
-                        value={row.date}
-                        onChange={(iso) => {
-                          const dates = section.dates.map((d, idx) => (idx === r ? { ...d, date: iso } : d));
-                          update(section.id, { dates });
-                        }}
-                      />
-                    </div>
-                    <IconButton
-                      icon={<Trash2 size={15} />}
-                      label="Remove date"
-                      tone="danger"
-                      onClick={() => update(section.id, { dates: section.dates.filter((_, idx) => idx !== r) })}
+                    <TextField
+                      label="Label"
+                      value={row.label}
+                      onChange={(e) => {
+                        const dates = section.dates.map((d, idx) => (idx === r ? { ...d, label: e.target.value } : d));
+                        update(section.id, { dates });
+                      }}
+                    />
+                    <DateField
+                      label="Date"
+                      value={row.date}
+                      onChange={(iso) => {
+                        const dates = section.dates.map((d, idx) => (idx === r ? { ...d, date: iso } : d));
+                        update(section.id, { dates });
+                      }}
                     />
                   </div>
                 ))}

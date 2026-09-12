@@ -362,24 +362,23 @@ export default function CreatePostPage() {
             </p>
             <div className="space-y-3">
               {keyDateFields.map((field, i) => (
-                <div key={field.id} className="flex items-center gap-2 rounded-lg bg-[var(--color-border)] p-3">
-                  <div className="flex-1">
-                    <TextField label="Label" {...register(`keyDates.${i}.label`)} />
-                  </div>
-                  <div className="flex-1">
-                    <Controller
-                      control={control}
-                      name={`keyDates.${i}.date`}
-                      render={({ field: dateField }) => (
-                        <DateField label="Date" value={dateField.value} onChange={dateField.onChange} />
-                      )}
+                <div key={field.id} className="space-y-2 rounded-lg bg-[var(--color-border)] p-3">
+                  <div className="flex justify-end">
+                    <IconButton
+                      icon={<Trash2 size={13} />}
+                      label="Remove date"
+                      tone="danger"
+                      size="sm"
+                      onClick={() => removeKeyDate(i)}
                     />
                   </div>
-                  <IconButton
-                    icon={<Trash2 size={15} />}
-                    label="Remove date"
-                    tone="danger"
-                    onClick={() => removeKeyDate(i)}
+                  <TextField label="Label" {...register(`keyDates.${i}.label`)} />
+                  <Controller
+                    control={control}
+                    name={`keyDates.${i}.date`}
+                    render={({ field: dateField }) => (
+                      <DateField label="Date" value={dateField.value} onChange={dateField.onChange} />
+                    )}
                   />
                 </div>
               ))}

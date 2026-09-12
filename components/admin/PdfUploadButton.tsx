@@ -8,7 +8,13 @@ import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
-export function PdfUploadButton({ onUploaded }: { onUploaded: (url: string) => void }) {
+export function PdfUploadButton({
+  onUploaded,
+  size = "md",
+}: {
+  onUploaded: (url: string) => void;
+  size?: "sm" | "md";
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -71,9 +77,10 @@ export function PdfUploadButton({ onUploaded }: { onUploaded: (url: string) => v
         }}
       />
       <IconButton
-        icon={<Upload size={15} />}
+        icon={<Upload size={size === "sm" ? 13 : 15} />}
         label={uploading ? "Uploading & watermarking…" : "Upload a PDF instead of pasting a link"}
         tone="primary"
+        size={size}
         disabled={uploading}
         onClick={() => inputRef.current?.click()}
       />
