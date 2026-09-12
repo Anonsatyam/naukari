@@ -37,8 +37,8 @@
   --color-accent-pink: #be185d;
   --color-accent-pink-tint: #fce7f0;
 
-  --radius-card: 14px;
-  --radius-control: 10px;
+  --radius-card: 6px;
+  --radius-control: 2px;
 
   --font-system: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
     "Noto Sans", sans-serif;
@@ -220,4 +220,10 @@ button:not(:disabled) {
     padding-left: 2rem;
     padding-right: 2rem;
   }
+}
+
+[data-sonner-toast] [data-close-button] {
+  left: unset !important;
+  right: 0 !important;
+  transform: translate(35%, -35%) !important;
 }
