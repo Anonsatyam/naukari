@@ -1,9 +1,9 @@
 import { getLocale, getTranslations } from "next-intl/server";
-import { Search, ArrowRight } from "lucide-react";
-import { Link } from "@/i18n/navigation";
+import { Search } from "lucide-react";
 import JobCard from "@/components/JobCard";
 import ListItemCard from "@/components/ListItemCard";
 import HotUpdates from "@/components/HotUpdates";
+import SectionPanel from "@/components/SectionPanel";
 import RotatingHeroWord from "@/components/RotatingHeroWord";
 import IndiaHeading from "@/components/IndiaHeading";
 import { ButtonLink } from "@/components/Button";
@@ -74,60 +74,27 @@ export default async function Home() {
 
       {closingSoonJobs.length > 0 && (
         <section className="container-page py-10">
-          <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-bold text-[var(--color-text-primary)]">
-              {t("closingSoon")}
-            </h2>
-            <Link
-              href="/closing-soon"
-              className="inline-flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]"
-            >
-              {t("viewAll")} <ArrowRight size={14} />
-            </Link>
-          </div>
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <SectionPanel title={t("closingSoon")} viewAllHref="/closing-soon" viewAllLabel={t("viewAll")}>
             {closingSoonJobs.slice(0, 3).map((job) => (
               <JobCard key={job.id} job={job} />
             ))}
-          </div>
+          </SectionPanel>
         </section>
       )}
 
       {latestJobs.length > 0 && (
         <section className="container-page py-10">
-          <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-bold text-[var(--color-text-primary)]">
-              {t("latestJobs")}
-            </h2>
-            <Link
-              href="/jobs"
-              className="inline-flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]"
-            >
-              {t("viewAll")} <ArrowRight size={14} />
-            </Link>
-          </div>
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <SectionPanel title={t("latestJobs")} viewAllHref="/jobs" viewAllLabel={t("viewAll")}>
             {latestJobs.map((job) => (
               <JobCard key={job.id} job={job} />
             ))}
-          </div>
+          </SectionPanel>
         </section>
       )}
 
       {latestResults.length > 0 && (
         <section className="container-page py-10">
-          <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-bold text-[var(--color-text-primary)]">
-              {t("latestResults")}
-            </h2>
-            <Link
-              href="/results"
-              className="inline-flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]"
-            >
-              {t("viewAll")} <ArrowRight size={14} />
-            </Link>
-          </div>
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <SectionPanel title={t("latestResults")} viewAllHref="/results" viewAllLabel={t("viewAll")}>
             {latestResults.map((r) => (
               <ListItemCard
                 key={r.id}
@@ -140,24 +107,13 @@ export default async function Home() {
                 isNew={isRecent(r.resultDate)}
               />
             ))}
-          </div>
+          </SectionPanel>
         </section>
       )}
 
       {latestAdmitCards.length > 0 && (
         <section className="container-page py-10">
-          <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-bold text-[var(--color-text-primary)]">
-              {t("latestAdmitCards")}
-            </h2>
-            <Link
-              href="/admit-cards"
-              className="inline-flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]"
-            >
-              {t("viewAll")} <ArrowRight size={14} />
-            </Link>
-          </div>
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <SectionPanel title={t("latestAdmitCards")} viewAllHref="/admit-cards" viewAllLabel={t("viewAll")}>
             {latestAdmitCards.map((a) => (
               <ListItemCard
                 key={a.id}
@@ -170,7 +126,7 @@ export default async function Home() {
                 isNew={isRecent(a.releaseDate)}
               />
             ))}
-          </div>
+          </SectionPanel>
         </section>
       )}
 
