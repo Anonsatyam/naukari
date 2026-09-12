@@ -1,19 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getAdmitCards, getAdmitCardBySlug } from "@/lib/server/data";
+import { getAdmitCardBySlug } from "@/lib/server/data";
 import { AdmitCardDetailBody } from "@/components/detail/AdmitCardDetailBody";
 
-export const revalidate = 300;
-
-export async function generateStaticParams() {
-  try {
-    const admitCards = await getAdmitCards();
-    return admitCards.map((a) => ({ slug: a.slug }));
-  } catch (err) {
-    console.warn("generateStaticParams: could not fetch admit cards at build time, skipping pre-render.", err);
-    return [];
-  }
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,

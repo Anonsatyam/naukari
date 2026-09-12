@@ -1,19 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getPublishedJobs, getPublishedJobBySlug, getRelatedJobs } from "@/lib/server/data";
+import { getPublishedJobBySlug, getRelatedJobs } from "@/lib/server/data";
 import { JobDetailBody } from "@/components/detail/JobDetailBody";
 
-export const revalidate = 300;
-
-export async function generateStaticParams() {
-  try {
-    const jobs = await getPublishedJobs();
-    return jobs.map((job) => ({ slug: job.slug }));
-  } catch (err) {
-    console.warn("generateStaticParams: could not fetch jobs at build time, skipping pre-render.", err);
-    return [];
-  }
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,

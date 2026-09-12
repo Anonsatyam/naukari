@@ -1,19 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getResults, getResultBySlug } from "@/lib/server/data";
+import { getResultBySlug } from "@/lib/server/data";
 import { ResultDetailBody } from "@/components/detail/ResultDetailBody";
 
-export const revalidate = 300;
-
-export async function generateStaticParams() {
-  try {
-    const results = await getResults();
-    return results.map((r) => ({ slug: r.slug }));
-  } catch (err) {
-    console.warn("generateStaticParams: could not fetch results at build time, skipping pre-render.", err);
-    return [];
-  }
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
