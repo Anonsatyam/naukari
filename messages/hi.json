@@ -8,7 +8,6 @@
     "eligibilityChecker": "पात्रता जांचें",
     "about": "हमारे बारे में",
     "tools": "टूल्स",
-    "allTools": "सभी टूल्स",
     "openMenu": "मेनू खोलें",
     "closeMenu": "मेनू बंद करें",
     "language": "भाषा"
@@ -323,6 +322,8 @@
     "successMessage": "आप सब्सक्राइब हो गए हैं — हम आपको नई लिस्टिंग के बारे में ईमेल करेंगे।",
     "errorNameRequired": "कृपया अपना नाम दर्ज करें।",
     "errorEmailRequired": "कृपया एक मान्य ईमेल पता दर्ज करें।",
+    "errorMobileInvalid": "कृपया एक मान्य 10-अंकों का मोबाइल नंबर दर्ज करें।",
+    "whatsappSameLabel": "यह नंबर व्हाट्सएप पर भी है",
     "closeLabel": "बंद करें"
   },
   "pwaInstall": {

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/server/supabaseClient";
+import { insertWithMissingColumnRetry } from "@/lib/server/data";
 
-function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MOBILE_PATTERN = /^[6-9]\d{9}$/;
 
 export async function POST(request: NextRequest) {
-  let body: { name?: string; email?: string; mobile?: string };
+  let body: { name?: string; email?: string; mobile?: string; sameOnWhatsapp?: boolean };
   try {
     body = await request.json();
   } catch {
@@ -20,13 +20,24 @@ export async function POST(request: NextRequest) {
   if (!name) {
     return NextResponse.json({ error: "Name is required." }, { status: 400 });
   }
-  if (!email || !isValidEmail(email)) {
+  if (!email || !EMAIL_PATTERN.test(email)) {
     return NextResponse.json({ error: "A valid email is required." }, { status: 400 });
+  }
+  if (mobile && !MOBILE_PATTERN.test(mobile)) {
+    return NextResponse.json({ error: "Please enter a valid 10-digit mobile number." }, { status: 400 });
   }
 
   try {
     const supabase = getSupabaseAdmin();
-    const { error } = await supabase.from("subscribers").insert({ name, email, mobile });
+    const { error } = await insertWithMissingColumnRetry(
+      (row) => supabase.from("subscribers").insert(row),
+      {
+        name,
+        email,
+        mobile,
+        same_on_whatsapp: mobile ? Boolean(body.sameOnWhatsapp) : false,
+      }
+    );
     if (error) {
       if (error.code === "23505") {
         return NextResponse.json({ success: true, alreadySubscribed: true });

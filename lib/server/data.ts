@@ -44,7 +44,7 @@ function extractMissingColumnName(message: string | undefined): string | undefin
   return match?.[1]?.split(".").pop();
 }
 
-async function insertWithMissingColumnRetry<T>(
+export async function insertWithMissingColumnRetry<T>(
   insert: (
     row: Record<string, unknown>
   ) => PromiseLike<{ data: T | null; error: { code?: string; message?: string } | null }>,

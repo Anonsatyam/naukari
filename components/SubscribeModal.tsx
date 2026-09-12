@@ -7,13 +7,16 @@ import { Mail, X, CheckCircle2 } from "lucide-react";
 const DISMISSED_KEY = "subscribeModalDismissed";
 const SCROLL_TRIGGER_RATIO = 0.5;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MOBILE_PATTERN = /^[6-9]\d{9}$/;
 
 export default function SubscribeModal() {
   const t = useTranslations("subscribeModal");
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [nameTouched, setNameTouched] = useState(false);
   const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
+  const [sameOnWhatsapp, setSameOnWhatsapp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -53,25 +56,43 @@ export default function SubscribeModal() {
     }
   };
 
+  const trimmedName = name.trim();
+  const trimmedEmail = email.trim();
+  const trimmedMobile = mobile.trim();
+
+  const nameError = nameTouched && !trimmedName ? t("errorNameRequired") : null;
+  const emailError = trimmedEmail.length > 0 && !EMAIL_PATTERN.test(trimmedEmail) ? t("errorEmailRequired") : null;
+  const mobileError =
+    trimmedMobile.length > 0 && !MOBILE_PATTERN.test(trimmedMobile) ? t("errorMobileInvalid") : null;
+
+  const canSubmit =
+    trimmedName.length > 0 &&
+    EMAIL_PATTERN.test(trimmedEmail) &&
+    (trimmedMobile.length === 0 || MOBILE_PATTERN.test(trimmedMobile));
+
+  const handleMobileChange = (value: string) => {
+    setMobile(value);
+    if (!value.trim()) setSameOnWhatsapp(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setNameTouched(true);
 
-    if (!name.trim()) {
-      setError(t("errorNameRequired"));
-      return;
-    }
-    if (!EMAIL_PATTERN.test(email.trim())) {
-      setError(t("errorEmailRequired"));
-      return;
-    }
+    if (!canSubmit) return;
 
     setSubmitting(true);
     try {
       const res = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), email: email.trim(), mobile: mobile.trim() || undefined }),
+        body: JSON.stringify({
+          name: trimmedName,
+          email: trimmedEmail,
+          mobile: trimmedMobile || undefined,
+          sameOnWhatsapp: trimmedMobile ? sameOnWhatsapp : undefined,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Could not subscribe. Please try again.");
@@ -89,8 +110,6 @@ export default function SubscribeModal() {
       setSubmitting(false);
     }
   };
-
-  const canSubmit = name.trim().length > 0 && EMAIL_PATTERN.test(email.trim());
 
   if (!open) return null;
 
@@ -127,9 +146,11 @@ export default function SubscribeModal() {
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  onBlur={() => setNameTouched(true)}
                   placeholder={t("namePlaceholder")}
                   className="w-full rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]"
                 />
+                {nameError && <p className="mt-1 text-xs text-[var(--color-danger)]">{nameError}</p>}
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[var(--color-text-primary)]">
@@ -142,6 +163,7 @@ export default function SubscribeModal() {
                   placeholder={t("emailPlaceholder")}
                   className="w-full rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]"
                 />
+                {emailError && <p className="mt-1 text-xs text-[var(--color-danger)]">{emailError}</p>}
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[var(--color-text-primary)]">
@@ -149,11 +171,25 @@ export default function SubscribeModal() {
                 </label>
                 <input
                   type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
                   value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
+                  onChange={(e) => handleMobileChange(e.target.value.replace(/\D/g, ""))}
                   placeholder={t("mobilePlaceholder")}
                   className="w-full rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]"
                 />
+                {mobileError && <p className="mt-1 text-xs text-[var(--color-danger)]">{mobileError}</p>}
+                {trimmedMobile.length > 0 && !mobileError && (
+                  <label className="mt-2 flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
+                    <input
+                      type="checkbox"
+                      checked={sameOnWhatsapp}
+                      onChange={(e) => setSameOnWhatsapp(e.target.checked)}
+                      className="h-4 w-4 rounded accent-[var(--color-primary)]"
+                    />
+                    {t("whatsappSameLabel")}
+                  </label>
+                )}
               </div>
 
               {error && <p className="text-xs text-[var(--color-danger)]">{error}</p>}

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
-import { Menu, X, Landmark, Wrench, ChevronDown, Languages } from "lucide-react";
+import { Menu, X, Landmark, Wrench, Languages } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -21,32 +21,13 @@ export default function Header() {
     { href: "/eligibility-checker", label: t("nav.eligibilityChecker") },
   ];
 
-  const toolLinks = [
-    { href: "/tools/photo-resizer", label: t("toolsNav.photoResizer") },
-    { href: "/tools/name-date-photo", label: t("toolsNav.nameDatePhoto") },
-    { href: "/tools/signature-merge", label: t("toolsNav.signatureMerge") },
-  ];
-
+  const toolsLink = { href: "/tools", label: t("nav.tools") };
   const aboutLink = { href: "/about", label: t("nav.about") };
 
   const [open, setOpen] = useState(false);
-  const [toolsOpen, setToolsOpen] = useState(false);
-  const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
-  const toolsRef = useRef<HTMLDivElement>(null);
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
-  const toolsActive = pathname.startsWith("/tools");
   const otherLocale = locale === "en" ? "hi" : "en";
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (toolsRef.current && !toolsRef.current.contains(e.target as Node)) {
-        setToolsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   const navLinkClass = (active: boolean) =>
     cn(
@@ -88,50 +69,13 @@ export default function Header() {
             </Link>
           ))}
 
-          <div className="relative" ref={toolsRef}>
-            <button
-              type="button"
-              onClick={() => setToolsOpen((v) => !v)}
-              className={cn(
-                "flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                toolsActive || toolsOpen
-                  ? "bg-white/15 text-white"
-                  : "text-white/85 underline decoration-white/40 underline-offset-4 hover:bg-white/10 hover:text-white hover:decoration-white"
-              )}
-            >
-              <Wrench size={14} />
-              {t("nav.tools")}
-              <ChevronDown size={14} className={cn("transition-transform", toolsOpen && "rotate-180")} />
-            </button>
-
-            {toolsOpen && (
-              <div className="absolute right-0 top-full z-50 mt-1 w-64 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 shadow-lg">
-                <Link
-                  href="/tools"
-                  onClick={() => setToolsOpen(false)}
-                  className="block rounded-md px-3 py-2 text-sm font-semibold text-[var(--color-primary)] hover:bg-[var(--color-primary-tint)]"
-                >
-                  {t("nav.allTools")}
-                </Link>
-                <div className="my-1 border-t border-[var(--color-border)]" />
-                {toolLinks.map((tool) => (
-                  <Link
-                    key={tool.href}
-                    href={tool.href}
-                    onClick={() => setToolsOpen(false)}
-                    className={cn(
-                      "block rounded-md px-3 py-2 text-sm transition-colors",
-                      isActive(tool.href)
-                        ? "bg-[var(--color-primary-tint)] text-[var(--color-primary)]"
-                        : "text-[var(--color-text-secondary)] hover:bg-[var(--color-background)] hover:text-[var(--color-text-primary)]"
-                    )}
-                  >
-                    {tool.label}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
+          <Link
+            href={toolsLink.href}
+            className={cn("flex items-center gap-1.5", navLinkClass(isActive(toolsLink.href)))}
+          >
+            <Wrench size={14} />
+            {toolsLink.label}
+          </Link>
         </nav>
 
         <div className="hidden items-center gap-2 lg:flex">
@@ -191,45 +135,14 @@ export default function Header() {
             </Link>
           ))}
 
-          <button
-            type="button"
-            onClick={() => setMobileToolsOpen((v) => !v)}
-            className={cn(
-              "flex items-center justify-between rounded-md px-2 py-3 text-sm font-medium transition-colors",
-              toolsActive ? "text-white" : "text-white/85"
-            )}
+          <Link
+            href={toolsLink.href}
+            onClick={() => setOpen(false)}
+            className={cn("flex items-center gap-1.5", mobileLinkClass(isActive(toolsLink.href)))}
           >
-            <span className="flex items-center gap-1.5">
-              <Wrench size={14} /> {t("nav.tools")}
-            </span>
-            <ChevronDown size={14} className={cn("transition-transform", mobileToolsOpen && "rotate-180")} />
-          </button>
-          {mobileToolsOpen && (
-            <div className="ml-4 flex flex-col border-l border-white/20 pl-3">
-              <Link
-                href="/tools"
-                onClick={() => setOpen(false)}
-                className="rounded-md px-2 py-2.5 text-sm font-semibold text-white underline decoration-white/40 underline-offset-4"
-              >
-                {t("nav.allTools")}
-              </Link>
-              {toolLinks.map((tool) => (
-                <Link
-                  key={tool.href}
-                  href={tool.href}
-                  onClick={() => setOpen(false)}
-                  className={cn(
-                    "rounded-md px-2 py-2.5 text-sm transition-colors",
-                    isActive(tool.href)
-                      ? "text-white"
-                      : "text-white/85 underline decoration-white/40 underline-offset-4 hover:text-white hover:decoration-white"
-                  )}
-                >
-                  {tool.label}
-                </Link>
-              ))}
-            </div>
-          )}
+            <Wrench size={14} />
+            {toolsLink.label}
+          </Link>
 
           <Link
             href={aboutLink.href}
