@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { ArrowUpRight, Briefcase, Clock, Users } from "lucide-react";
 import { Job } from "@/lib/types";
@@ -7,6 +8,7 @@ import Badge from "./Badge";
 import WhatsAppShareButton from "./WhatsAppShareButton";
 
 export default function JobCard({ job }: { job: Job }) {
+  const t = useTranslations("common");
   const endDate = getApplicationEndDate(job);
   const closingSoon = isClosingSoon(job);
   const remaining = endDate ? daysUntil(endDate) : null;
@@ -35,7 +37,9 @@ export default function JobCard({ job }: { job: Job }) {
       <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-[var(--color-text-secondary)]">
         <span className="inline-flex items-center gap-1.5">
           <Users size={14} />
-          {job.totalVacancies > 0 ? `${job.totalVacancies.toLocaleString("en-IN")} posts` : "Posts: as notified"}
+          {job.totalVacancies > 0
+            ? t("postsCount", { count: job.totalVacancies.toLocaleString("en-IN") })
+            : t("postsAsNotified")}
         </span>
         <span className="inline-flex items-center gap-1.5">
           <Briefcase size={14} />
@@ -44,14 +48,14 @@ export default function JobCard({ job }: { job: Job }) {
         {endDate && (
           <span className="inline-flex items-center gap-1.5">
             <Clock size={14} />
-            Closes {formatDate(endDate)}
+            {t("closesOn", { date: formatDate(endDate) })}
           </span>
         )}
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          {isNew && <Badge tone="success">New</Badge>}
+          {isNew && <Badge tone="success">{t("newBadge")}</Badge>}
           <Badge tone="primary">{job.category}</Badge>
           {job.tags?.map((tag) => (
             <Badge key={tag} tone="neutral">
@@ -60,7 +64,7 @@ export default function JobCard({ job }: { job: Job }) {
           ))}
           {closingSoon && remaining !== null && (
             <Badge tone="danger">
-              {remaining === 0 ? "Closes today" : `Closing in ${remaining}d`}
+              {remaining === 0 ? t("closesToday") : t("closingInDays", { days: remaining })}
             </Badge>
           )}
         </div>

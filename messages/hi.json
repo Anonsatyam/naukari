@@ -55,7 +55,19 @@
     "admitCards": "एडमिट कार्ड"
   },
   "common": {
-    "home": "होम"
+    "home": "होम",
+    "newBadge": "नया",
+    "postsAsNotified": "पद: अधिसूचना अनुसार",
+    "postsCount": "{count} पद",
+    "closesOn": "{date} को बंद हो रहा है",
+    "closesToday": "आज बंद हो रहा है",
+    "closingInDays": "{days} दिन में बंद हो रहा है",
+    "hotRightNow": "अभी की ताज़ा अपडेट",
+    "hotRightNowSubtitle": "जैसे ही सत्यापित हों — नई नौकरियां, परिणाम और एडमिट कार्ड",
+    "live": "लाइव",
+    "typeJob": "नौकरी",
+    "typeResult": "परिणाम",
+    "typeAdmitCard": "एडमिट कार्ड"
   },
   "filters": {
     "title": "फ़िल्टर",

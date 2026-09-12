@@ -55,7 +55,19 @@
     "admitCards": "Admit Cards"
   },
   "common": {
-    "home": "Home"
+    "home": "Home",
+    "newBadge": "New",
+    "postsAsNotified": "Posts: as notified",
+    "postsCount": "{count} posts",
+    "closesOn": "Closes {date}",
+    "closesToday": "Closes today",
+    "closingInDays": "Closing in {days}d",
+    "hotRightNow": "Hot Right Now",
+    "hotRightNowSubtitle": "Latest jobs, results and admit cards as they're verified",
+    "live": "Live",
+    "typeJob": "Job",
+    "typeResult": "Result",
+    "typeAdmitCard": "Admit Card"
   },
   "filters": {
     "title": "Filters",

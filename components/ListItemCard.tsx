@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { ArrowUpRight, Calendar } from "lucide-react";
 import Badge from "./Badge";
@@ -22,6 +23,8 @@ export default function ListItemCard({
   meta: string;
   isNew?: boolean;
 }) {
+  const t = useTranslations("common");
+
   return (
     <Link
       href={href}
@@ -51,7 +54,7 @@ export default function ListItemCard({
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          {isNew && <Badge tone="success">New</Badge>}
+          {isNew && <Badge tone="success">{t("newBadge")}</Badge>}
           <Badge tone="primary">{category}</Badge>
           {tags?.map((tag) => (
             <Badge key={tag} tone="neutral">

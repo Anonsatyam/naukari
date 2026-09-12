@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Flame } from "lucide-react";
 import { HotUpdateItem } from "@/lib/types";
@@ -9,7 +10,15 @@ const typeTone: Record<HotUpdateItem["type"], "primary" | "neutral" | "warning">
   "Admit Card": "warning",
 };
 
+const typeLabelKey: Record<HotUpdateItem["type"], "typeJob" | "typeResult" | "typeAdmitCard"> = {
+  Job: "typeJob",
+  Result: "typeResult",
+  "Admit Card": "typeAdmitCard",
+};
+
 export default function HotUpdates({ items }: { items: HotUpdateItem[] }) {
+  const t = useTranslations("common");
+
   if (items.length === 0) return null;
 
   return (
@@ -23,10 +32,10 @@ export default function HotUpdates({ items }: { items: HotUpdateItem[] }) {
               </span>
               <div>
                 <h2 className="font-display text-base font-bold text-[var(--color-text-primary)] sm:text-lg">
-                  Hot Right Now
+                  {t("hotRightNow")}
                 </h2>
                 <p className="text-xs text-[var(--color-text-secondary)]">
-                  Latest jobs, results and admit cards as they&apos;re verified
+                  {t("hotRightNowSubtitle")}
                 </p>
               </div>
             </div>
@@ -37,14 +46,19 @@ export default function HotUpdates({ items }: { items: HotUpdateItem[] }) {
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--color-success)]" />
               </span>
               <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-success)]">
-                Live
+                {t("live")}
               </span>
             </span>
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {items.map((item) => (
-              <HotUpdateCard key={`${item.type}-${item.href}`} item={item} />
+              <HotUpdateCard
+                key={`${item.type}-${item.href}`}
+                item={item}
+                newLabel={t("newBadge")}
+                typeLabel={t(typeLabelKey[item.type])}
+              />
             ))}
           </div>
         </div>
@@ -53,15 +67,23 @@ export default function HotUpdates({ items }: { items: HotUpdateItem[] }) {
   );
 }
 
-function HotUpdateCard({ item }: { item: HotUpdateItem }) {
+function HotUpdateCard({
+  item,
+  newLabel,
+  typeLabel,
+}: {
+  item: HotUpdateItem;
+  newLabel: string;
+  typeLabel: string;
+}) {
   return (
     <Link
       href={item.href}
       className="group block rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 transition-all hover:border-[var(--color-primary)] hover:shadow-[0_4px_20px_rgba(60,68,194,0.08)]"
     >
       <div className="flex flex-wrap items-center gap-1.5">
-        {item.isNew && <Badge tone="success">New</Badge>}
-        <Badge tone={typeTone[item.type]}>{item.type}</Badge>
+        {item.isNew && <Badge tone="success">{newLabel}</Badge>}
+        <Badge tone={typeTone[item.type]}>{typeLabel}</Badge>
       </div>
       <h3 className="mt-2 line-clamp-2 text-sm font-semibold leading-snug text-[var(--color-text-primary)] group-hover:text-[var(--color-primary)]">
         {item.title}
