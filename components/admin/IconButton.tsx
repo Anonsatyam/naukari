@@ -71,7 +71,7 @@ export function IconButton({
         createPortal(
           <span
             role="tooltip"
-            className="pointer-events-none fixed z-[100] -translate-x-full -translate-y-full whitespace-nowrap rounded-md bg-[var(--color-text-primary)] px-2 py-1 text-[11px] font-medium text-white shadow-lg"
+            className="pointer-events-none fixed z-[100] -translate-x-full -translate-y-full whitespace-nowrap rounded-md bg-[var(--color-ink)] px-2 py-1 text-[11px] font-medium text-white shadow-lg"
             style={{ top: tooltipPos.top, left: tooltipPos.left }}
           >
             {label}

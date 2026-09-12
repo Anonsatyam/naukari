@@ -123,7 +123,7 @@ export default function PhotoResizerTool() {
           />
         ) : (
           <div>
-            <div className="relative mx-auto h-[360px] w-full max-w-[440px] overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-text-primary)]">
+            <div className="relative mx-auto h-[360px] w-full max-w-[440px] overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-ink)]">
               <Cropper
                 image={loaded.image.src}
                 crop={crop}

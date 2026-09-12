@@ -5,6 +5,7 @@
 :root {
   --color-brand: #3c44c2;
   --color-brand-hover: #2f37a3;
+  --color-ink: #181b25;
 
   --color-primary: #3c44c2;
   --color-primary-hover: #2f37a3;
@@ -56,7 +57,7 @@
   --color-background: #101218;
   --color-surface: #262b35;
   --color-panel: #1c2028;
-  --color-border: #2b2f3a;
+  --color-border: #3d4451;
 
   --color-success: #3ddc93;
   --color-success-tint: color-mix(in srgb, var(--color-success) 8%, var(--color-background));
@@ -78,6 +79,7 @@
 @theme inline {
   --color-brand: var(--color-brand);
   --color-brand-hover: var(--color-brand-hover);
+  --color-ink: var(--color-ink);
 
   --color-primary: var(--color-primary);
   --color-primary-hover: var(--color-primary-hover);
