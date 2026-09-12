@@ -286,6 +286,38 @@ export async function getAdmitCardBySlug(slug: string): Promise<AdmitCardItem | 
   return data ? rowToAdmitCard(data) : undefined;
 }
 
+export async function getLatestActivityAt(): Promise<string | null> {
+  const supabase = getSupabasePublic();
+
+  const [jobsRes, resultsRes, admitRes] = await Promise.all([
+    supabase
+      .from("jobs")
+      .select("published_at")
+      .eq("status", "published")
+      .order("published_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("results")
+      .select("created_at")
+      .order("created_at", { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("admit_cards")
+      .select("created_at")
+      .order("created_at", { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  const candidates = [jobsRes.data?.published_at, resultsRes.data?.created_at, admitRes.data?.created_at].filter(
+    (v): v is string => Boolean(v)
+  );
+  if (candidates.length === 0) return null;
+  return candidates.reduce((latest, cur) => (new Date(cur) > new Date(latest) ? cur : latest));
+}
+
 
 export async function getAllJobsAdmin(): Promise<Job[]> {
   const supabase = getSupabaseAdmin();

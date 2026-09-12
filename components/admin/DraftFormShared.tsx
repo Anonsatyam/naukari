@@ -129,13 +129,44 @@ export function RowsEditor<T extends Record<string, string>>({
   addLabel: string;
   newRow: T;
 }) {
+  const hasUrlField = fields.some((f) => f.kind === "url");
+
   return (
     <div className="space-y-3">
       {rows.map((row, i) => {
-        const urlField = fields.find((f) => f.kind === "url");
-        const setUrlValue = urlField
-          ? (value: string) => setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, [urlField.key]: value } : r)))
-          : null;
+        const removeRow = () => setRows((prev) => prev.filter((_, idx) => idx !== i));
+
+        if (hasUrlField) {
+          return (
+            <div key={i} className="space-y-2 rounded-lg bg-[var(--color-border)] p-3">
+              {fields.map((f, fieldIdx) => {
+                const Field = f.multiline ? TextAreaField : TextField;
+                const setValue = (value: string) =>
+                  setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, [f.key]: value } : r)));
+                const trailing =
+                  f.kind === "url" ? (
+                    <PdfUploadButton onUploaded={setValue} />
+                  ) : fieldIdx === 0 ? (
+                    <IconButton icon={<Trash2 size={15} />} label="Remove row" tone="danger" onClick={removeRow} />
+                  ) : null;
+                return (
+                  <div key={f.key} className="flex items-end gap-1.5">
+                    <div className="flex-1">
+                      <Field
+                        label={f.label}
+                        value={row[f.key] ?? ""}
+                        onChange={(e) => setValue(e.target.value)}
+                        placeholder={f.kind === "url" ? "https://... or upload a PDF" : undefined}
+                      />
+                    </div>
+                    {trailing}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        }
+
         return (
           <div key={i} className="rounded-lg bg-[var(--color-border)] p-3">
             <div className="flex items-start gap-2">
@@ -145,25 +176,11 @@ export function RowsEditor<T extends Record<string, string>>({
                   const setValue = (value: string) =>
                     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, [f.key]: value } : r)));
                   return (
-                    <Field
-                      key={f.key}
-                      label={f.label}
-                      value={row[f.key] ?? ""}
-                      onChange={(e) => setValue(e.target.value)}
-                      placeholder={f.kind === "url" ? "https://... or upload a PDF" : undefined}
-                    />
+                    <Field key={f.key} label={f.label} value={row[f.key] ?? ""} onChange={(e) => setValue(e.target.value)} />
                   );
                 })}
               </div>
-              <div className="mt-5 flex flex-col items-center gap-1.5">
-                <IconButton
-                  icon={<Trash2 size={15} />}
-                  label="Remove row"
-                  tone="danger"
-                  onClick={() => setRows((prev) => prev.filter((_, idx) => idx !== i))}
-                />
-                {setUrlValue && <PdfUploadButton onUploaded={setUrlValue} />}
-              </div>
+              <IconButton icon={<Trash2 size={15} />} label="Remove row" tone="danger" onClick={removeRow} className="mt-5" />
             </div>
           </div>
         );

@@ -423,5 +423,10 @@
     "installButton": "Install",
     "iosBody": "Tap the Share icon, then \"Add to Home Screen\".",
     "dismissLabel": "Dismiss"
+  },
+  "newContentBanner": {
+    "message": "New listings have been posted.",
+    "refreshButton": "Refresh",
+    "dismiss": "Dismiss"
   }
 }

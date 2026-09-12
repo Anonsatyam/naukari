@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { TableCellValue } from "@/lib/types";
 import { Button } from "@/components/Button";
@@ -8,6 +9,48 @@ import { ListItemsEditor } from "@/components/admin/ListItemsEditor";
 import { IconButton } from "@/components/admin/IconButton";
 import { selectFieldCompactClass } from "@/lib/ui";
 import { parsePipeTables } from "@/lib/pipeTables";
+import { autoFormatDmy, dmyToIso, isoToDmy } from "@/lib/dateFormat";
+
+function DateCellInput({
+  value,
+  onChange,
+  className,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  className: string;
+}) {
+  const [prevValue, setPrevValue] = useState(value);
+  const [text, setText] = useState(() => isoToDmy(value));
+  if (value !== prevValue) {
+    setPrevValue(value);
+    setText(isoToDmy(value));
+  }
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      placeholder="dd/mm/yyyy"
+      value={text}
+      onChange={(e) => {
+        const formatted = autoFormatDmy(e.target.value);
+        setText(formatted);
+        const iso = dmyToIso(formatted);
+        if (iso) onChange(iso);
+      }}
+      onBlur={() => {
+        const iso = dmyToIso(text);
+        if (iso) setText(isoToDmy(iso));
+        else {
+          setText("");
+          onChange("");
+        }
+      }}
+      className={className}
+    />
+  );
+}
 
 export interface TableBuilderValue {
   columns: string[];
@@ -76,13 +119,7 @@ function TableCellEditor({ cell, onChange }: { cell: TableCellValue; onChange: (
       )}
 
       {cell.type === "date" && (
-        <input
-          type="date"
-          lang="en-GB"
-          value={cell.value}
-          onChange={(e) => onChange({ type: "date", value: e.target.value })}
-          className={inputClass}
-        />
+        <DateCellInput value={cell.value} onChange={(value) => onChange({ type: "date", value })} className={inputClass} />
       )}
 
       {(cell.type === "link" || cell.type === "button") && (

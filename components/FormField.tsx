@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fieldInputClass, fieldLabelClass, selectFieldClass } from "@/lib/ui";
+import { autoFormatDmy, dmyToIso, isoToDmy } from "@/lib/dateFormat";
 
 interface BaseProps {
   label: string;
@@ -70,6 +72,52 @@ export function SelectField({
           className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]"
         />
       </div>
+    </div>
+  );
+}
+
+export function DateField({
+  label,
+  value,
+  onChange,
+  className,
+}: {
+  label: string;
+  value: string;
+  onChange: (isoValue: string) => void;
+  className?: string;
+}) {
+  const [prevValue, setPrevValue] = useState(value);
+  const [text, setText] = useState(() => isoToDmy(value));
+  if (value !== prevValue) {
+    setPrevValue(value);
+    setText(isoToDmy(value));
+  }
+
+  return (
+    <div className={className}>
+      <label className={fieldLabelClass}>{label}</label>
+      <input
+        type="text"
+        inputMode="numeric"
+        placeholder="dd/mm/yyyy"
+        value={text}
+        onChange={(e) => {
+          const formatted = autoFormatDmy(e.target.value);
+          setText(formatted);
+          const iso = dmyToIso(formatted);
+          if (iso) onChange(iso);
+        }}
+        onBlur={() => {
+          const iso = dmyToIso(text);
+          if (iso) setText(isoToDmy(iso));
+          else {
+            setText("");
+            onChange("");
+          }
+        }}
+        className={fieldInputClass}
+      />
     </div>
   );
 }

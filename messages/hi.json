@@ -423,5 +423,10 @@
     "installButton": "इंस्टॉल करें",
     "iosBody": "शेयर आइकन पर टैप करें, फिर \"होम स्क्रीन पर जोड़ें\"।",
     "dismissLabel": "बंद करें"
+  },
+  "newContentBanner": {
+    "message": "नई लिस्टिंग पोस्ट की गई हैं।",
+    "refreshButton": "रीफ्रेश करें",
+    "dismiss": "बंद करें"
   }
 }

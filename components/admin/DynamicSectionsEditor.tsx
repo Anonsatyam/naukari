@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { AdditionalSection, AdditionalSectionKind, TableCellValue } from "@/lib/types";
 import { buildPipeTable } from "@/lib/pipeTables";
 import { Button } from "@/components/Button";
-import { TextField, TextAreaField, SelectField } from "@/components/FormField";
+import { TextField, TextAreaField, SelectField, DateField } from "@/components/FormField";
 import { IconButton } from "@/components/admin/IconButton";
 import { ChipInput } from "@/components/admin/ChipInput";
 import { ListItemsEditor } from "@/components/admin/ListItemsEditor";
@@ -216,13 +216,11 @@ export function DynamicSectionsEditor({
                       />
                     </div>
                     <div className="flex-1">
-                      <TextField
+                      <DateField
                         label="Date"
-                        type="date"
-                        lang="en-GB"
                         value={row.date}
-                        onChange={(e) => {
-                          const dates = section.dates.map((d, idx) => (idx === r ? { ...d, date: e.target.value } : d));
+                        onChange={(iso) => {
+                          const dates = section.dates.map((d, idx) => (idx === r ? { ...d, date: iso } : d));
                           update(section.id, { dates });
                         }}
                       />
