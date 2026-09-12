@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { useRef, useState } from "react";
+import { Calendar, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fieldInputClass, fieldLabelClass, selectFieldClass } from "@/lib/ui";
 import { autoFormatDmy, dmyToIso, isoToDmy } from "@/lib/dateFormat";
@@ -89,35 +89,62 @@ export function DateField({
 }) {
   const [prevValue, setPrevValue] = useState(value);
   const [text, setText] = useState(() => isoToDmy(value));
+  const pickerRef = useRef<HTMLInputElement>(null);
   if (value !== prevValue) {
     setPrevValue(value);
     setText(isoToDmy(value));
   }
 
+  const openPicker = () => {
+    const el = pickerRef.current;
+    if (!el) return;
+    if (typeof el.showPicker === "function") el.showPicker();
+    else el.focus();
+  };
+
   return (
     <div className={className}>
       <label className={fieldLabelClass}>{label}</label>
-      <input
-        type="text"
-        inputMode="numeric"
-        placeholder="dd/mm/yyyy"
-        value={text}
-        onChange={(e) => {
-          const formatted = autoFormatDmy(e.target.value);
-          setText(formatted);
-          const iso = dmyToIso(formatted);
-          if (iso) onChange(iso);
-        }}
-        onBlur={() => {
-          const iso = dmyToIso(text);
-          if (iso) setText(isoToDmy(iso));
-          else {
-            setText("");
-            onChange("");
-          }
-        }}
-        className={fieldInputClass}
-      />
+      <div className="relative">
+        <input
+          type="text"
+          inputMode="numeric"
+          placeholder="dd/mm/yyyy"
+          value={text}
+          onChange={(e) => {
+            const formatted = autoFormatDmy(e.target.value);
+            setText(formatted);
+            const iso = dmyToIso(formatted);
+            if (iso) onChange(iso);
+          }}
+          onBlur={() => {
+            const iso = dmyToIso(text);
+            if (iso) setText(isoToDmy(iso));
+            else {
+              setText("");
+              onChange("");
+            }
+          }}
+          className={cn(fieldInputClass, "pr-10")}
+        />
+        <button
+          type="button"
+          onClick={openPicker}
+          aria-label="Open calendar"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)] hover:text-[var(--color-primary)]"
+        >
+          <Calendar size={16} />
+        </button>
+        <input
+          ref={pickerRef}
+          type="date"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          tabIndex={-1}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
+        />
+      </div>
     </div>
   );
 }

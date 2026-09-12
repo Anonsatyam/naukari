@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { Calendar, Plus, Trash2 } from "lucide-react";
 import { TableCellValue } from "@/lib/types";
 import { Button } from "@/components/Button";
 import { RichTable } from "@/components/DetailSections";
@@ -22,33 +22,60 @@ function DateCellInput({
 }) {
   const [prevValue, setPrevValue] = useState(value);
   const [text, setText] = useState(() => isoToDmy(value));
+  const pickerRef = useRef<HTMLInputElement>(null);
   if (value !== prevValue) {
     setPrevValue(value);
     setText(isoToDmy(value));
   }
 
+  const openPicker = () => {
+    const el = pickerRef.current;
+    if (!el) return;
+    if (typeof el.showPicker === "function") el.showPicker();
+    else el.focus();
+  };
+
   return (
-    <input
-      type="text"
-      inputMode="numeric"
-      placeholder="dd/mm/yyyy"
-      value={text}
-      onChange={(e) => {
-        const formatted = autoFormatDmy(e.target.value);
-        setText(formatted);
-        const iso = dmyToIso(formatted);
-        if (iso) onChange(iso);
-      }}
-      onBlur={() => {
-        const iso = dmyToIso(text);
-        if (iso) setText(isoToDmy(iso));
-        else {
-          setText("");
-          onChange("");
-        }
-      }}
-      className={className}
-    />
+    <div className="relative">
+      <input
+        type="text"
+        inputMode="numeric"
+        placeholder="dd/mm/yyyy"
+        value={text}
+        onChange={(e) => {
+          const formatted = autoFormatDmy(e.target.value);
+          setText(formatted);
+          const iso = dmyToIso(formatted);
+          if (iso) onChange(iso);
+        }}
+        onBlur={() => {
+          const iso = dmyToIso(text);
+          if (iso) setText(isoToDmy(iso));
+          else {
+            setText("");
+            onChange("");
+          }
+        }}
+        className={`${className} pr-8`}
+      />
+      <button
+        type="button"
+        onClick={openPicker}
+        aria-label="Open calendar"
+        className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)] hover:text-[var(--color-primary)]"
+      >
+        <Calendar size={14} />
+      </button>
+      <input
+        ref={pickerRef}
+        type="date"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        tabIndex={-1}
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
+      />
+    </div>
   );
 }
 
