@@ -4,6 +4,7 @@ import { insertWithMissingColumnRetry } from "@/lib/server/data";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MOBILE_PATTERN = /^[6-9]\d{9}$/;
+const NAME_PATTERN = /^[a-zA-Zऀ-ॿ][a-zA-Zऀ-ॿ\s.'-]*$/;
 const MIN_NAME_LENGTH = 3;
 
 export async function POST(request: NextRequest) {
@@ -20,6 +21,9 @@ export async function POST(request: NextRequest) {
 
   if (!name || name.length < MIN_NAME_LENGTH) {
     return NextResponse.json({ error: "Name must be at least 3 characters." }, { status: 400 });
+  }
+  if (!NAME_PATTERN.test(name)) {
+    return NextResponse.json({ error: "Name can only contain letters, spaces, and - ' ." }, { status: 400 });
   }
   if (!email || !EMAIL_PATTERN.test(email)) {
     return NextResponse.json({ error: "A valid email is required." }, { status: 400 });

@@ -3,10 +3,10 @@ import { cn } from "@/lib/utils";
 type BadgeTone = "primary" | "success" | "warning" | "danger" | "neutral";
 
 const toneClasses: Record<BadgeTone, string> = {
-  primary: "bg-[var(--color-primary-tint)] text-[var(--color-primary)]",
-  success: "bg-[var(--color-success-tint)] text-[var(--color-success)]",
-  warning: "bg-[var(--color-warning-tint)] text-[var(--color-warning)]",
-  danger: "bg-[var(--color-danger-tint)] text-[var(--color-danger)]",
+  primary: "bg-[var(--color-primary-tint)] text-[var(--color-primary)] dark:text-[var(--color-text-primary)]",
+  success: "bg-[var(--color-success-tint)] text-[var(--color-success)] dark:text-[var(--color-text-primary)]",
+  warning: "bg-[var(--color-warning-tint)] text-[var(--color-warning)] dark:text-[var(--color-text-primary)]",
+  danger: "bg-[var(--color-danger-tint)] text-[var(--color-danger)] dark:text-[var(--color-text-primary)]",
   neutral: "bg-[var(--color-border)] text-[var(--color-text-secondary)]",
 };
 

@@ -322,6 +322,7 @@
     "successMessage": "You're subscribed — we'll email you about new listings.",
     "errorNameRequired": "Please enter your name.",
     "errorNameTooShort": "Name must be at least 3 characters.",
+    "errorNameInvalid": "Name can only contain letters, spaces, and - ' .",
     "errorEmailRequired": "Please enter a valid email address.",
     "errorMobileInvalid": "Please enter a valid 10-digit mobile number.",
     "whatsappSameLabel": "This number is also on WhatsApp",
