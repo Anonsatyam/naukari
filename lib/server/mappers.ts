@@ -1,4 +1,4 @@
-import { Job, ResultItem, AdmitCardItem, BotDraft } from "@/lib/types";
+import { Job, ResultItem, AdmitCardItem, Draft } from "@/lib/types";
 
 
 export function rowToJob(row: any): Job {
@@ -259,7 +259,7 @@ export function admitCardToRow(card: Partial<AdmitCardItem>): Record<string, unk
 }
 
 
-export function rowToDraft(row: any): BotDraft {
+export function rowToDraft(row: any): Draft {
   return {
     id: row.id,
     jobTitle: row.job_title,
@@ -275,7 +275,7 @@ export function rowToDraft(row: any): BotDraft {
   };
 }
 
-export function draftToRow(draft: Partial<BotDraft>): Record<string, unknown> {
+export function draftToRow(draft: Partial<Draft>): Record<string, unknown> {
   const row: Record<string, unknown> = {};
   if (draft.jobTitle !== undefined) row.job_title = draft.jobTitle;
   if (draft.organization !== undefined) row.organization = draft.organization;

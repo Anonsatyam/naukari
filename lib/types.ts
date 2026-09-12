@@ -188,7 +188,7 @@ export interface AdmitCardItem {
 
 export type DraftType = "job" | "result" | "admit_card";
 
-export interface BotDraft {
+export interface Draft {
   id: string;
   jobTitle: string;
   organization: string;

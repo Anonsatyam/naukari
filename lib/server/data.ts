@@ -13,7 +13,7 @@ import {
   Job,
   ResultItem,
   AdmitCardItem,
-  BotDraft,
+  Draft,
   DraftType,
   HotUpdateItem,
   VacancyBreakdown,
@@ -313,10 +313,10 @@ export async function setJobStatus(id: string, status: Job["status"]): Promise<J
   return data ? rowToJob(data) : undefined;
 }
 
-export async function getPendingDrafts(): Promise<BotDraft[]> {
+export async function getPendingDrafts(): Promise<Draft[]> {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
-    .from("bot_drafts")
+    .from("drafts")
     .select("*")
     .eq("status", "pending")
     .order("detected_at", { ascending: false });
@@ -324,24 +324,24 @@ export async function getPendingDrafts(): Promise<BotDraft[]> {
   return (data ?? []).map(rowToDraft);
 }
 
-export async function getAllDrafts(): Promise<BotDraft[]> {
+export async function getAllDrafts(): Promise<Draft[]> {
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase.from("bot_drafts").select("*").order("detected_at", { ascending: false });
+  const { data, error } = await supabase.from("drafts").select("*").order("detected_at", { ascending: false });
   if (error) throw error;
   return (data ?? []).map(rowToDraft);
 }
 
-export async function getDraftById(id: string): Promise<BotDraft | undefined> {
+export async function getDraftById(id: string): Promise<Draft | undefined> {
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase.from("bot_drafts").select("*").eq("id", id).maybeSingle();
+  const { data, error } = await supabase.from("drafts").select("*").eq("id", id).maybeSingle();
   if (error) throw error;
   return data ? rowToDraft(data) : undefined;
 }
 
-export async function rejectDraft(id: string): Promise<BotDraft | undefined> {
+export async function rejectDraft(id: string): Promise<Draft | undefined> {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
-    .from("bot_drafts")
+    .from("drafts")
     .update({ status: "rejected" })
     .eq("id", id)
     .select()
@@ -352,7 +352,7 @@ export async function rejectDraft(id: string): Promise<BotDraft | undefined> {
 
 export async function deleteDraft(id: string): Promise<void> {
   const supabase = getSupabaseAdmin();
-  const { error } = await supabase.from("bot_drafts").delete().eq("id", id);
+  const { error } = await supabase.from("drafts").delete().eq("id", id);
   if (error) throw error;
 }
 
@@ -655,7 +655,7 @@ export async function previewDraft(
   edits: Record<string, unknown>
 ): Promise<ApprovedEntity | undefined> {
   const supabase = getSupabaseAdmin();
-  const { data: draftRow, error } = await supabase.from("bot_drafts").select("*").eq("id", id).maybeSingle();
+  const { data: draftRow, error } = await supabase.from("drafts").select("*").eq("id", id).maybeSingle();
   if (error) throw error;
   if (!draftRow) return undefined;
   const draft = rowToDraft(draftRow);
@@ -669,7 +669,7 @@ export async function approveDraft(
   const supabase = getSupabaseAdmin();
 
   const { data: draftRow, error: fetchError } = await supabase
-    .from("bot_drafts")
+    .from("drafts")
     .select("*")
     .eq("id", id)
     .maybeSingle();
@@ -678,14 +678,14 @@ export async function approveDraft(
   const draft = rowToDraft(draftRow);
 
   if (draft.status === "pending" && (await isSourceAlreadyPublished(draft.sourceUrl))) {
-    await supabase.from("bot_drafts").update({ status: "rejected" }).eq("id", id);
+    await supabase.from("drafts").update({ status: "rejected" }).eq("id", id);
     throw new Error(
       "A job/result/admit card for this exact source is already published — this draft was a stale duplicate and has been marked rejected instead."
     );
   }
 
   const markApproved = async () => {
-    const { error } = await supabase.from("bot_drafts").update({ status: "approved" }).eq("id", id);
+    const { error } = await supabase.from("drafts").update({ status: "approved" }).eq("id", id);
     if (error) throw error;
   };
 
@@ -742,7 +742,7 @@ export async function draftExistsForSource(sourceUrl: string): Promise<boolean> 
   const supabase = getSupabaseAdmin();
 
   const { count: draftCount, error: draftError } = await supabase
-    .from("bot_drafts")
+    .from("drafts")
     .select("id", { count: "exact", head: true })
     .eq("source_url", sourceUrl);
   if (draftError) throw draftError;
@@ -755,12 +755,12 @@ export async function createDraft(input: {
   jobTitle: string;
   organization: string;
   sourceUrl: string;
-  confidence: BotDraft["confidence"];
+  confidence: Draft["confidence"];
   draftType?: DraftType;
-  origin?: BotDraft["origin"];
+  origin?: Draft["origin"];
   sourceOrderKey?: number;
   extractedFields: Record<string, unknown>;
-}): Promise<BotDraft> {
+}): Promise<Draft> {
   const supabase = getSupabaseAdmin();
   const row = draftToRow({
     jobTitle: input.jobTitle,
@@ -775,7 +775,7 @@ export async function createDraft(input: {
     extractedFields: input.extractedFields,
   });
   const { data, error } = await insertWithMissingColumnRetry(
-    (attemptRow) => supabase.from("bot_drafts").insert(attemptRow).select().single(),
+    (attemptRow) => supabase.from("drafts").insert(attemptRow).select().single(),
     row
   );
   if (error) throw error;
@@ -786,9 +786,9 @@ export async function getAdminStats() {
   const supabase = getSupabaseAdmin();
 
   const [{ count: pendingDrafts }, { count: publishedJobs }, { count: totalDrafts }] = await Promise.all([
-    supabase.from("bot_drafts").select("id", { count: "exact", head: true }).eq("status", "pending"),
+    supabase.from("drafts").select("id", { count: "exact", head: true }).eq("status", "pending"),
     supabase.from("jobs").select("id", { count: "exact", head: true }).eq("status", "published"),
-    supabase.from("bot_drafts").select("id", { count: "exact", head: true }),
+    supabase.from("drafts").select("id", { count: "exact", head: true }),
   ]);
 
   return {

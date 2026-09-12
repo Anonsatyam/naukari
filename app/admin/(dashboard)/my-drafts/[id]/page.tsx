@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ExternalLink, CheckCircle2, XCircle, Eye, FileText, TriangleAlert } from "lucide-react";
-import { BotDraft, AdditionalSection } from "@/lib/types";
+import { Draft, AdditionalSection } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { deepDecodeEntities } from "@/lib/entities";
 import { openPreviewWindow } from "@/lib/adminPreview";
@@ -72,7 +72,7 @@ export default function ManualDraftReviewPage({
   const router = useRouter();
   const { showToast } = useToast();
 
-  const [draft, setDraft] = useState<BotDraft | null>(null);
+  const [draft, setDraft] = useState<Draft | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFoundState, setNotFoundState] = useState(false);
 
@@ -101,10 +101,10 @@ export default function ManualDraftReviewPage({
         if (!res.ok) throw new Error("not found");
         return res.json();
       })
-      .then((data: { draft: BotDraft }) => {
-        const cleanedDraft: BotDraft = {
+      .then((data: { draft: Draft }) => {
+        const cleanedDraft: Draft = {
           ...data.draft,
-          extractedFields: deepDecodeEntities(data.draft.extractedFields) as BotDraft["extractedFields"],
+          extractedFields: deepDecodeEntities(data.draft.extractedFields) as Draft["extractedFields"],
         };
         setDraft(cleanedDraft);
         const ex = cleanedDraft.extractedFields as Record<string, unknown>;

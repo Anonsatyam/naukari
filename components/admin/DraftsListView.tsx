@@ -13,7 +13,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
-import { BotDraft } from "@/lib/types";
+import { Draft } from "@/lib/types";
 import { openPreviewWindow } from "@/lib/adminPreview";
 import { Button } from "@/components/Button";
 import { IconButton } from "@/components/admin/IconButton";
@@ -22,33 +22,33 @@ import Badge from "@/components/Badge";
 import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
 
-const TYPE_LABELS: Record<BotDraft["draftType"], string> = {
+const TYPE_LABELS: Record<Draft["draftType"], string> = {
   job: "Job",
   result: "Result",
   admit_card: "Admit Card",
 };
 
-const TYPE_TONES: Record<BotDraft["draftType"], "primary" | "success" | "warning"> = {
+const TYPE_TONES: Record<Draft["draftType"], "primary" | "success" | "warning"> = {
   job: "primary",
   result: "success",
   admit_card: "warning",
 };
 
-const CONFIDENCE_TONES: Record<BotDraft["confidence"], "success" | "warning" | "danger"> = {
+const CONFIDENCE_TONES: Record<Draft["confidence"], "success" | "warning" | "danger"> = {
   high: "success",
   medium: "warning",
   low: "danger",
 };
 
-const STATUS_TONES: Record<BotDraft["status"], "warning" | "success" | "danger"> = {
+const STATUS_TONES: Record<Draft["status"], "warning" | "success" | "danger"> = {
   pending: "warning",
   approved: "success",
   rejected: "danger",
 };
 
-const CONFIDENCE_RANK: Record<BotDraft["confidence"], number> = { low: 0, medium: 1, high: 2 };
-const TYPE_RANK: Record<BotDraft["draftType"], number> = { job: 0, result: 1, admit_card: 2 };
-const STATUS_RANK: Record<BotDraft["status"], number> = { pending: 0, approved: 1, rejected: 2 };
+const CONFIDENCE_RANK: Record<Draft["confidence"], number> = { low: 0, medium: 1, high: 2 };
+const TYPE_RANK: Record<Draft["draftType"], number> = { job: 0, result: 1, admit_card: 2 };
+const STATUS_RANK: Record<Draft["status"], number> = { pending: 0, approved: 1, rejected: 2 };
 
 type SortColumn = "type" | "confidence" | "status";
 type SortDirection = "asc" | "desc";
@@ -93,7 +93,7 @@ export function DraftsListView() {
   const breadcrumbLabel = "Drafts";
   const { showToast } = useToast();
 
-  const [drafts, setDrafts] = useState<BotDraft[]>([]);
+  const [drafts, setDrafts] = useState<Draft[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
@@ -105,7 +105,7 @@ export function DraftsListView() {
   const loadDrafts = useCallback(() => {
     fetch("/api/admin/drafts")
       .then((res) => res.json())
-      .then((data: { drafts: BotDraft[] }) => setDrafts(data.drafts))
+      .then((data: { drafts: Draft[] }) => setDrafts(data.drafts))
       .finally(() => setLoading(false));
   }, []);
 
@@ -122,7 +122,7 @@ export function DraftsListView() {
     }
   };
 
-  const sortRank = useCallback((draft: BotDraft, column: SortColumn): number => {
+  const sortRank = useCallback((draft: Draft, column: SortColumn): number => {
     if (column === "type") return TYPE_RANK[draft.draftType];
     if (column === "confidence") return CONFIDENCE_RANK[draft.confidence];
     return STATUS_RANK[draft.status];
