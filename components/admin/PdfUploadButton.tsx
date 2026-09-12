@@ -39,6 +39,14 @@ export function PdfUploadButton({ onUploaded }: { onUploaded: (url: string) => v
         .uploadToSignedUrl(signData.path, signData.token, file);
       if (uploadError) throw uploadError;
 
+      const watermarkRes = await fetch("/api/admin/uploads/pdf/watermark", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: signData.path }),
+      });
+      const watermarkData = await watermarkRes.json().catch(() => ({}));
+      if (!watermarkRes.ok) throw new Error(watermarkData.error || "Could not add the watermark.");
+
       onUploaded(signData.publicUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed. Please try again.");
@@ -62,7 +70,7 @@ export function PdfUploadButton({ onUploaded }: { onUploaded: (url: string) => v
       />
       <IconButton
         icon={<Upload size={15} />}
-        label={uploading ? "Uploading…" : "Upload a PDF instead of pasting a link"}
+        label={uploading ? "Uploading & watermarking…" : "Upload a PDF instead of pasting a link"}
         tone="primary"
         disabled={uploading}
         onClick={() => inputRef.current?.click()}
