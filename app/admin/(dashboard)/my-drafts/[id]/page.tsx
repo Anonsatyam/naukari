@@ -13,8 +13,9 @@ import { Button } from "@/components/Button";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
-import { TextField, TextAreaField } from "@/components/FormField";
+import { TextField, TextAreaField, SelectField, DateField } from "@/components/FormField";
 import { ChipInput } from "@/components/admin/ChipInput";
+import { states } from "@/lib/taxonomy";
 import { toast } from "sonner";
 import {
   AgeLimitRowDraft,
@@ -490,7 +491,7 @@ export default function ManualDraftReviewPage({
           {draft.draftType === "job" && (
             <>
               <div className="grid grid-cols-2 gap-4">
-                <TextField label="State" {...register("fields.state")} />
+                <SelectField label="State" options={states.filter((s) => s !== "All")} {...register("fields.state")} />
                 <TextField label="Department" {...register("fields.department")} />
               </div>
               <TextAreaField
@@ -523,7 +524,12 @@ export default function ManualDraftReviewPage({
                 <SectionDivider label="Important Dates" />
                 <div className="grid grid-cols-2 gap-4">
                   {JOB_DATE_FIELDS.map(({ key, label }) => (
-                    <TextField key={key} label={label} type="date" {...register(`fields.${key}`)} />
+                    <Controller
+                      key={key}
+                      control={control}
+                      name={`fields.${key}`}
+                      render={({ field }) => <DateField label={label} value={field.value} onChange={field.onChange} />}
+                    />
                   ))}
                 </div>
               </div>
@@ -532,7 +538,11 @@ export default function ManualDraftReviewPage({
 
           {draft.draftType === "result" && (
             <div className="grid grid-cols-2 gap-4">
-              <TextField label="Result Date" type="date" {...register("fields.resultDate")} />
+              <Controller
+                control={control}
+                name="fields.resultDate"
+                render={({ field }) => <DateField label="Result Date" value={field.value} onChange={field.onChange} />}
+              />
               <TextField label="Official Link" {...register("fields.officialLink")} />
               <div className="col-span-2">
                 <TextAreaField
@@ -546,8 +556,16 @@ export default function ManualDraftReviewPage({
 
           {draft.draftType === "admit_card" && (
             <div className="grid grid-cols-2 gap-4">
-              <TextField label="Release Date" type="date" {...register("fields.releaseDate")} />
-              <TextField label="Exam Date" type="date" {...register("fields.examDate")} />
+              <Controller
+                control={control}
+                name="fields.releaseDate"
+                render={({ field }) => <DateField label="Release Date" value={field.value} onChange={field.onChange} />}
+              />
+              <Controller
+                control={control}
+                name="fields.examDate"
+                render={({ field }) => <DateField label="Exam Date" value={field.value} onChange={field.onChange} />}
+              />
               <div className="col-span-2">
                 <TextField label="Official Link" {...register("fields.officialLink")} />
               </div>
@@ -598,7 +616,11 @@ export default function ManualDraftReviewPage({
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <SectionDivider label="Age Limit" />
             {draft.draftType === "job" && (
-              <TextField label="Age Reckoned As On" type="date" {...register("ageAsOnDate")} />
+              <Controller
+                control={control}
+                name="ageAsOnDate"
+                render={({ field }) => <DateField label="Age Reckoned As On" value={field.value} onChange={field.onChange} />}
+              />
             )}
 
             <div className="mt-4 space-y-3">

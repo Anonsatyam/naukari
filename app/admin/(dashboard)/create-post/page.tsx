@@ -11,9 +11,10 @@ import { DraftType } from "@/lib/types";
 import { Button } from "@/components/Button";
 import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
-import { TextField, TextAreaField, SelectField } from "@/components/FormField";
+import { TextField, TextAreaField, SelectField, DateField } from "@/components/FormField";
 import { TYPE_LABELS, RowsEditor, SectionDivider } from "@/components/admin/DraftFormShared";
 import { ChipInput } from "@/components/admin/ChipInput";
+import { states } from "@/lib/taxonomy";
 import { IconButton } from "@/components/admin/IconButton";
 import { openPreviewWindow } from "@/lib/adminPreview";
 import {
@@ -320,17 +321,35 @@ export default function CreatePostPage() {
 
         {draftType === "job" && (
           <div className="grid grid-cols-2 gap-4">
-            <TextField label="State" {...register("state")} />
+            <SelectField
+              label="State"
+              options={states.filter((s) => s !== "All")}
+              {...register("state")}
+            />
             <TextField label="Department" {...register("department")} />
           </div>
         )}
 
-        {draftType === "result" && <TextField label="Result Date" type="date" {...register("resultDate")} />}
+        {draftType === "result" && (
+          <Controller
+            control={control}
+            name="resultDate"
+            render={({ field }) => <DateField label="Result Date" value={field.value} onChange={field.onChange} />}
+          />
+        )}
 
         {draftType === "admit_card" && (
           <div className="grid grid-cols-2 gap-4">
-            <TextField label="Release Date" type="date" {...register("releaseDate")} />
-            <TextField label="Exam Date" type="date" {...register("examDate")} />
+            <Controller
+              control={control}
+              name="releaseDate"
+              render={({ field }) => <DateField label="Release Date" value={field.value} onChange={field.onChange} />}
+            />
+            <Controller
+              control={control}
+              name="examDate"
+              render={({ field }) => <DateField label="Exam Date" value={field.value} onChange={field.onChange} />}
+            />
           </div>
         )}
 
@@ -343,19 +362,24 @@ export default function CreatePostPage() {
             </p>
             <div className="space-y-3">
               {keyDateFields.map((field, i) => (
-                <div key={field.id} className="flex items-start gap-2 rounded-lg bg-[var(--color-border)] p-3">
+                <div key={field.id} className="flex items-center gap-2 rounded-lg bg-[var(--color-border)] p-3">
                   <div className="flex-1">
                     <TextField label="Label" {...register(`keyDates.${i}.label`)} />
                   </div>
                   <div className="flex-1">
-                    <TextField label="Date" type="date" {...register(`keyDates.${i}.date`)} />
+                    <Controller
+                      control={control}
+                      name={`keyDates.${i}.date`}
+                      render={({ field: dateField }) => (
+                        <DateField label="Date" value={dateField.value} onChange={dateField.onChange} />
+                      )}
+                    />
                   </div>
                   <IconButton
                     icon={<Trash2 size={15} />}
                     label="Remove date"
                     tone="danger"
                     onClick={() => removeKeyDate(i)}
-                    className="mt-5"
                   />
                 </div>
               ))}

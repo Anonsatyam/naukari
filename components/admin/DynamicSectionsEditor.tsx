@@ -150,7 +150,7 @@ export function DynamicSectionsEditor({
     <div className="space-y-4">
       {sections.map((section, i) => (
         <div key={section.id} className="rounded-lg bg-[var(--color-border)] p-3">
-          <div className="flex flex-wrap items-start gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="min-w-0 flex-1">
               <TextField
                 label="Section Name"
@@ -170,7 +170,7 @@ export function DynamicSectionsEditor({
                 }))}
               />
             </div>
-            <div className="flex shrink-0 items-center gap-1 sm:mt-5">
+            <div className="flex shrink-0 items-center gap-1">
               <IconButton icon={<ArrowUp size={15} />} label="Move section up" onClick={() => move(section.id, -1)} disabled={i === 0} />
               <IconButton
                 icon={<ArrowDown size={15} />}
@@ -204,7 +204,7 @@ export function DynamicSectionsEditor({
             {section.kind === "dates" && (
               <div className="space-y-3">
                 {section.dates.map((row, r) => (
-                  <div key={r} className="flex items-start gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+                  <div key={r} className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
                     <div className="flex-1">
                       <TextField
                         label="Label"
@@ -230,7 +230,6 @@ export function DynamicSectionsEditor({
                       label="Remove date"
                       tone="danger"
                       onClick={() => update(section.id, { dates: section.dates.filter((_, idx) => idx !== r) })}
-                      className="mt-5"
                     />
                   </div>
                 ))}
