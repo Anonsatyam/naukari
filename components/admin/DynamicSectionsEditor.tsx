@@ -219,6 +219,7 @@ export function DynamicSectionsEditor({
                       <TextField
                         label="Date"
                         type="date"
+                        lang="en-GB"
                         value={row.date}
                         onChange={(e) => {
                           const dates = section.dates.map((d, idx) => (idx === r ? { ...d, date: e.target.value } : d));

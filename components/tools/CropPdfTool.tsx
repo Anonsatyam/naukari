@@ -10,29 +10,32 @@ import { Button } from "@/components/Button";
 import { loadPdfDocument, renderPageToCanvas, pdfBytesToBlob } from "@/lib/pdfRender";
 import { clamp, downloadBlob } from "@/lib/image-tools";
 
-interface Rect {
+interface Margins {
   left: number;
   top: number;
-  width: number;
-  height: number;
+  right: number;
+  bottom: number;
 }
 
-const DEFAULT_RECT: Rect = { left: 0.1, top: 0.1, width: 0.8, height: 0.8 };
+const DEFAULT_MARGINS: Margins = { left: 0.1, top: 0.1, right: 0.1, bottom: 0.1 };
+const MIN_SIZE = 0.05;
+
+type Corner = "nw" | "ne" | "se" | "sw";
 
 export default function CropPdfTool() {
   const t = useTranslations("cropPdfPage");
   const tShared = useTranslations("toolsShared");
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [rect, setRect] = useState<Rect>(DEFAULT_RECT);
+  const [margins, setMargins] = useState<Margins>(DEFAULT_MARGINS);
   const [processing, setProcessing] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
-  const dragState = useRef<{ startX: number; startY: number; startRect: Rect } | null>(null);
+  const dragState = useRef<{ startX: number; startY: number; startMargins: Margins } | null>(null);
 
   const handleFiles = async ([f]: File[]) => {
     if (!f) return;
     setFile(f);
-    setRect(DEFAULT_RECT);
+    setMargins(DEFAULT_MARGINS);
     setProcessing(true);
     try {
       const bytes = await f.arrayBuffer();
@@ -51,7 +54,7 @@ export default function CropPdfTool() {
 
   const onPointerDown = (e: React.PointerEvent) => {
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    dragState.current = { startX: e.clientX, startY: e.clientY, startRect: rect };
+    dragState.current = { startX: e.clientX, startY: e.clientY, startMargins: margins };
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
@@ -59,12 +62,14 @@ export default function CropPdfTool() {
     const box = previewRef.current.getBoundingClientRect();
     const dx = (e.clientX - dragState.current.startX) / box.width;
     const dy = (e.clientY - dragState.current.startY) / box.height;
-    const { startRect } = dragState.current;
-    setRect({
-      left: clamp(startRect.left + dx, 0, 1 - startRect.width),
-      top: clamp(startRect.top + dy, 0, 1 - startRect.height),
-      width: startRect.width,
-      height: startRect.height,
+    const { startMargins } = dragState.current;
+    const clampedDx = clamp(dx, -startMargins.left, startMargins.right);
+    const clampedDy = clamp(dy, -startMargins.top, startMargins.bottom);
+    setMargins({
+      left: startMargins.left + clampedDx,
+      right: startMargins.right - clampedDx,
+      top: startMargins.top + clampedDy,
+      bottom: startMargins.bottom - clampedDy,
     });
   };
 
@@ -72,10 +77,10 @@ export default function CropPdfTool() {
     dragState.current = null;
   };
 
-  const onResizePointerDown = (e: React.PointerEvent) => {
+  const onHandlePointerDown = (corner: Corner) => (e: React.PointerEvent) => {
     e.stopPropagation();
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    const startRect = rect;
+    const startMargins = margins;
     const startX = e.clientX;
     const startY = e.clientY;
     const box = previewRef.current?.getBoundingClientRect();
@@ -84,12 +89,18 @@ export default function CropPdfTool() {
     const handleMove = (ev: PointerEvent) => {
       const dx = (ev.clientX - startX) / box.width;
       const dy = (ev.clientY - startY) / box.height;
-      setRect({
-        left: startRect.left,
-        top: startRect.top,
-        width: clamp(startRect.width + dx, 0.1, 1 - startRect.left),
-        height: clamp(startRect.height + dy, 0.1, 1 - startRect.top),
-      });
+      const next = { ...startMargins };
+      if (corner === "nw" || corner === "sw") {
+        next.left = clamp(startMargins.left + dx, 0, 1 - startMargins.right - MIN_SIZE);
+      } else {
+        next.right = clamp(startMargins.right - dx, 0, 1 - startMargins.left - MIN_SIZE);
+      }
+      if (corner === "nw" || corner === "ne") {
+        next.top = clamp(startMargins.top + dy, 0, 1 - startMargins.bottom - MIN_SIZE);
+      } else {
+        next.bottom = clamp(startMargins.bottom - dy, 0, 1 - startMargins.top - MIN_SIZE);
+      }
+      setMargins(next);
     };
     const handleUp = () => {
       window.removeEventListener("pointermove", handleMove);
@@ -97,6 +108,16 @@ export default function CropPdfTool() {
     };
     window.addEventListener("pointermove", handleMove);
     window.addEventListener("pointerup", handleUp);
+  };
+
+  const setMarginPercent = (side: keyof Margins, percent: number) => {
+    const value = clamp(percent / 100, 0, 1);
+    setMargins((prev) => {
+      if (side === "left") return { ...prev, left: clamp(value, 0, 1 - prev.right - MIN_SIZE) };
+      if (side === "right") return { ...prev, right: clamp(value, 0, 1 - prev.left - MIN_SIZE) };
+      if (side === "top") return { ...prev, top: clamp(value, 0, 1 - prev.bottom - MIN_SIZE) };
+      return { ...prev, bottom: clamp(value, 0, 1 - prev.top - MIN_SIZE) };
+    });
   };
 
   const handleCrop = async () => {
@@ -107,10 +128,10 @@ export default function CropPdfTool() {
       const pdfDoc = await PDFDocument.load(bytes);
       for (const page of pdfDoc.getPages()) {
         const { width, height } = page.getSize();
-        const cropX = rect.left * width;
-        const cropY = (1 - rect.top - rect.height) * height;
-        const cropWidth = rect.width * width;
-        const cropHeight = rect.height * height;
+        const cropX = margins.left * width;
+        const cropY = margins.bottom * height;
+        const cropWidth = (1 - margins.left - margins.right) * width;
+        const cropHeight = (1 - margins.top - margins.bottom) * height;
         page.setCropBox(cropX, cropY, cropWidth, cropHeight);
       }
       const outBytes = await pdfDoc.save();
@@ -122,6 +143,16 @@ export default function CropPdfTool() {
       setProcessing(false);
     }
   };
+
+  const boxWidthPct = (1 - margins.left - margins.right) * 100;
+  const boxHeightPct = (1 - margins.top - margins.bottom) * 100;
+
+  const marginFields: { key: keyof Margins; label: string }[] = [
+    { key: "left", label: t("sideLeft") },
+    { key: "top", label: t("sideTop") },
+    { key: "right", label: t("sideRight") },
+    { key: "bottom", label: t("sideBottom") },
+  ];
 
   return (
     <div className="space-y-4">
@@ -152,17 +183,47 @@ export default function CropPdfTool() {
               onPointerUp={onPointerUp}
               className="absolute cursor-move border-2 border-[var(--color-brand)] bg-[var(--color-brand)]/10"
               style={{
-                left: `${rect.left * 100}%`,
-                top: `${rect.top * 100}%`,
-                width: `${rect.width * 100}%`,
-                height: `${rect.height * 100}%`,
+                left: `${margins.left * 100}%`,
+                top: `${margins.top * 100}%`,
+                width: `${boxWidthPct}%`,
+                height: `${boxHeightPct}%`,
               }}
             >
-              <div
-                onPointerDown={onResizePointerDown}
-                className="absolute bottom-0 right-0 h-4 w-4 -translate-x-1 -translate-y-1 cursor-se-resize rounded-full border-2 border-white bg-[var(--color-brand)]"
-              />
+              {(["nw", "ne", "se", "sw"] as Corner[]).map((corner) => (
+                <div
+                  key={corner}
+                  onPointerDown={onHandlePointerDown(corner)}
+                  className={`absolute h-4 w-4 rounded-full border-2 border-white bg-[var(--color-brand)] ${
+                    corner === "nw"
+                      ? "left-0 top-0 -translate-x-1 -translate-y-1 cursor-nw-resize"
+                      : corner === "ne"
+                        ? "right-0 top-0 translate-x-1 -translate-y-1 cursor-ne-resize"
+                        : corner === "se"
+                          ? "bottom-0 right-0 translate-x-1 translate-y-1 cursor-se-resize"
+                          : "bottom-0 left-0 -translate-x-1 translate-y-1 cursor-sw-resize"
+                  }`}
+                />
+              ))}
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {marginFields.map((f) => (
+              <label key={f.key} className="block">
+                <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-[var(--color-text-primary)]">
+                  {f.label}
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={Math.round(margins[f.key] * 100)}
+                  onChange={(e) => setMarginPercent(f.key, Number(e.target.value))}
+                  className="w-full rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]"
+                />
+              </label>
+            ))}
           </div>
 
           <Button onClick={handleCrop} disabled={processing} className="w-full">

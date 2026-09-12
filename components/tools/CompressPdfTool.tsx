@@ -11,18 +11,18 @@ import { loadPdfDocument, renderPageToCanvas, pdfBytesToBlob } from "@/lib/pdfRe
 import { canvasToBlob, downloadBlob, formatBytes } from "@/lib/image-tools";
 
 const QUALITY_OPTIONS = [
-  { value: 0.4, labelKey: "qualityHigh" as const },
-  { value: 0.25, labelKey: "qualityMedium" as const },
-  { value: 0.12, labelKey: "qualityLow" as const },
+  { value: 0.5, scale: 1.5, labelKey: "qualityHigh" as const },
+  { value: 0.3, scale: 1.15, labelKey: "qualityMedium" as const },
+  { value: 0.15, scale: 0.9, labelKey: "qualityLow" as const },
 ];
 
 export default function CompressPdfTool() {
   const t = useTranslations("compressPdfPage");
   const tShared = useTranslations("toolsShared");
   const [file, setFile] = useState<File | null>(null);
-  const [quality, setQuality] = useState(0.25);
+  const [qualityIndex, setQualityIndex] = useState(1);
   const [processing, setProcessing] = useState(false);
-  const [result, setResult] = useState<{ originalSize: number; newSize: number } | null>(null);
+  const [result, setResult] = useState<{ originalSize: number; newSize: number; kept: boolean } | null>(null);
 
   const handleFiles = ([f]: File[]) => {
     if (!f) return;
@@ -35,13 +35,14 @@ export default function CompressPdfTool() {
     setProcessing(true);
     setResult(null);
     try {
+      const opt = QUALITY_OPTIONS[qualityIndex];
       const bytes = await file.arrayBuffer();
       const pdfDoc = await loadPdfDocument(bytes.slice(0));
       const outDoc = await PDFDocument.create();
 
       for (let i = 1; i <= pdfDoc.numPages; i++) {
-        const canvas = await renderPageToCanvas(pdfDoc, i, 1.5);
-        const blob = await canvasToBlob(canvas, "image/jpeg", quality);
+        const canvas = await renderPageToCanvas(pdfDoc, i, opt.scale);
+        const blob = await canvasToBlob(canvas, "image/jpeg", opt.value);
         const imgBytes = await blob.arrayBuffer();
         const embedded = await outDoc.embedJpg(imgBytes);
         const page = outDoc.addPage([canvas.width, canvas.height]);
@@ -50,9 +51,16 @@ export default function CompressPdfTool() {
 
       const outBytes = await outDoc.save();
       const outBlob = pdfBytesToBlob(outBytes);
-      downloadBlob(outBlob, `compressed-${file.name}`);
-      setResult({ originalSize: file.size, newSize: outBlob.size });
-      toast.success(t("successMessage"));
+
+      if (outBlob.size >= file.size) {
+        downloadBlob(file, file.name);
+        setResult({ originalSize: file.size, newSize: file.size, kept: true });
+        toast.success(t("alreadyOptimizedMessage"));
+      } else {
+        downloadBlob(outBlob, `compressed-${file.name}`);
+        setResult({ originalSize: file.size, newSize: outBlob.size, kept: false });
+        toast.success(t("successMessage"));
+      }
     } catch {
       toast.error(t("errorMessage"));
     } finally {
@@ -80,13 +88,13 @@ export default function CompressPdfTool() {
             {t("qualityLabel")}
           </p>
           <div className="flex flex-wrap gap-2">
-            {QUALITY_OPTIONS.map((opt) => (
+            {QUALITY_OPTIONS.map((opt, i) => (
               <button
-                key={opt.value}
+                key={opt.labelKey}
                 type="button"
-                onClick={() => setQuality(opt.value)}
+                onClick={() => setQualityIndex(i)}
                 className={`rounded-lg border px-3 py-2 text-sm transition-colors ${
-                  quality === opt.value
+                  qualityIndex === i
                     ? "border-[var(--color-primary)] bg-[var(--color-primary-tint)] text-[var(--color-primary)]"
                     : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]"
                 }`}
@@ -104,10 +112,13 @@ export default function CompressPdfTool() {
         </div>
       )}
 
-      {result && (
+      {result && !result.kept && (
         <p className="text-center text-xs text-[var(--color-text-secondary)]">
           {t("resultSummary", { before: formatBytes(result.originalSize), after: formatBytes(result.newSize) })}
         </p>
+      )}
+      {result && result.kept && (
+        <p className="text-center text-xs text-[var(--color-text-secondary)]">{t("alreadyOptimizedNote")}</p>
       )}
     </div>
   );

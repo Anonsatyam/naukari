@@ -15,12 +15,19 @@ interface RenderedPage {
   blob: Blob;
 }
 
+const SCALE_OPTIONS = [
+  { value: 3, labelKey: "scaleStandard" as const },
+  { value: 4, labelKey: "scaleHigh" as const },
+  { value: 5, labelKey: "scaleVeryHigh" as const },
+];
+
 export default function PdfToImageTool() {
   const t = useTranslations("pdfToImagePage");
   const tShared = useTranslations("toolsShared");
   const [fileName, setFileName] = useState<string | null>(null);
   const [pages, setPages] = useState<RenderedPage[]>([]);
   const [processing, setProcessing] = useState(false);
+  const [scaleIndex, setScaleIndex] = useState(1);
 
   const handleFiles = async ([file]: File[]) => {
     if (!file) return;
@@ -32,7 +39,7 @@ export default function PdfToImageTool() {
       const pdfDoc = await loadPdfDocument(bytes);
       const rendered: RenderedPage[] = [];
       for (let i = 1; i <= pdfDoc.numPages; i++) {
-        const canvas = await renderPageToCanvas(pdfDoc, i, 2);
+        const canvas = await renderPageToCanvas(pdfDoc, i, SCALE_OPTIONS[scaleIndex].value);
         const blob = await canvasToBlob(canvas, "image/png");
         rendered.push({ pageNumber: i, previewUrl: URL.createObjectURL(blob), blob });
       }
@@ -50,6 +57,30 @@ export default function PdfToImageTool() {
 
   return (
     <div className="space-y-4">
+      {pages.length === 0 && (
+        <>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+            {t("qualityLabel")}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {SCALE_OPTIONS.map((opt, i) => (
+              <button
+                key={opt.labelKey}
+                type="button"
+                onClick={() => setScaleIndex(i)}
+                className={`rounded-lg border px-3 py-2 text-sm transition-colors ${
+                  scaleIndex === i
+                    ? "border-[var(--color-primary)] bg-[var(--color-primary-tint)] text-[var(--color-primary)]"
+                    : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)]"
+                }`}
+              >
+                {t(opt.labelKey)}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
       <FileDropzone
         label={t("uploadLabel")}
         onFiles={handleFiles}

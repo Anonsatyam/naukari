@@ -78,6 +78,7 @@ function TableCellEditor({ cell, onChange }: { cell: TableCellValue; onChange: (
       {cell.type === "date" && (
         <input
           type="date"
+          lang="en-GB"
           value={cell.value}
           onChange={(e) => onChange({ type: "date", value: e.target.value })}
           className={inputClass}
@@ -158,7 +159,7 @@ export function TableBuilder({
     <div className="space-y-3">
       {hint && <p className="text-xs text-[var(--color-text-secondary)]">{hint}</p>}
 
-      <div className="overflow-x-auto rounded-lg border border-[var(--color-border)]">
+      <div className="hidden overflow-x-auto rounded-lg border border-[var(--color-border)] sm:block">
         <table className="w-full text-xs">
           <thead>
             <tr className="bg-[var(--color-background)]">
@@ -209,6 +210,55 @@ export function TableBuilder({
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="space-y-3 sm:hidden">
+        <div className="space-y-2 rounded-lg border border-[var(--color-border)] p-2.5">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Columns</p>
+          {value.columns.map((col, i) => (
+            <div key={i} className="flex items-center gap-1.5">
+              <input
+                value={col}
+                onChange={(e) => setColumn(i, e.target.value)}
+                placeholder={`Column ${i + 1}`}
+                className="w-full min-w-0 rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-semibold text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]"
+              />
+              <IconButton
+                icon={<Trash2 size={14} />}
+                label="Remove column"
+                tone="danger"
+                size="sm"
+                onClick={() => removeColumn(i)}
+                disabled={value.columns.length <= 1}
+              />
+            </div>
+          ))}
+          <Button type="button" size="sm" variant="secondary" onClick={addColumn}>
+            <Plus size={14} /> Add Column
+          </Button>
+        </div>
+
+        {value.rows.map((row, r) => (
+          <div key={r} className="space-y-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Row {r + 1}</p>
+              <IconButton
+                icon={<Trash2 size={14} />}
+                label="Remove row"
+                tone="danger"
+                size="sm"
+                onClick={() => removeRow(r)}
+                disabled={value.rows.length <= 1}
+              />
+            </div>
+            {value.columns.map((col, c) => (
+              <div key={c}>
+                <p className="mb-1 text-xs font-medium text-[var(--color-text-secondary)]">{col || `Column ${c + 1}`}</p>
+                <TableCellEditor cell={row[c] ?? emptyTextCell()} onChange={(cell) => setCell(r, c, cell)} />
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
 
       <Button type="button" size="sm" onClick={addRow}>
