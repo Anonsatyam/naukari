@@ -45,8 +45,8 @@
 :root.dark {
   --color-primary: #6a72e8;
   --color-primary-hover: #8a90ee;
-  --color-primary-tint: color-mix(in srgb, var(--color-primary) 20%, var(--color-background));
-  --color-primary-tint-2: color-mix(in srgb, var(--color-primary) 32%, var(--color-background));
+  --color-primary-tint: color-mix(in srgb, var(--color-primary) 8%, var(--color-background));
+  --color-primary-tint-2: color-mix(in srgb, var(--color-primary) 16%, var(--color-background));
 
   --color-text-primary: #eef0f4;
   --color-text-secondary: #aab0bf;
@@ -57,20 +57,20 @@
   --color-border: #2b2f3a;
 
   --color-success: #3ddc93;
-  --color-success-tint: color-mix(in srgb, var(--color-success) 18%, var(--color-background));
+  --color-success-tint: color-mix(in srgb, var(--color-success) 8%, var(--color-background));
   --color-warning: #f2a93c;
-  --color-warning-tint: color-mix(in srgb, var(--color-warning) 18%, var(--color-background));
+  --color-warning-tint: color-mix(in srgb, var(--color-warning) 8%, var(--color-background));
   --color-danger: #f2596b;
-  --color-danger-tint: color-mix(in srgb, var(--color-danger) 18%, var(--color-background));
+  --color-danger-tint: color-mix(in srgb, var(--color-danger) 8%, var(--color-background));
 
   --color-accent-purple: #af8bfa;
-  --color-accent-purple-tint: color-mix(in srgb, var(--color-accent-purple) 18%, var(--color-background));
+  --color-accent-purple-tint: color-mix(in srgb, var(--color-accent-purple) 8%, var(--color-background));
   --color-accent-orange: #f3925a;
-  --color-accent-orange-tint: color-mix(in srgb, var(--color-accent-orange) 18%, var(--color-background));
+  --color-accent-orange-tint: color-mix(in srgb, var(--color-accent-orange) 8%, var(--color-background));
   --color-accent-teal: #35d6c4;
-  --color-accent-teal-tint: color-mix(in srgb, var(--color-accent-teal) 18%, var(--color-background));
+  --color-accent-teal-tint: color-mix(in srgb, var(--color-accent-teal) 8%, var(--color-background));
   --color-accent-pink: #f57fc0;
-  --color-accent-pink-tint: color-mix(in srgb, var(--color-accent-pink) 18%, var(--color-background));
+  --color-accent-pink-tint: color-mix(in srgb, var(--color-accent-pink) 8%, var(--color-background));
 }
 
 @theme inline {

@@ -186,9 +186,8 @@ export default async function Home() {
           </div>
           <ButtonLink
             href={localePath("/eligibility-checker")}
-            variant="secondary"
+            variant="inverse"
             size="lg"
-            className="border-0 bg-white text-[var(--color-brand)] hover:bg-white/90"
           >
             {t("ctaButton")}
           </ButtonLink>

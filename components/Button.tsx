@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-type Variant = "primary" | "secondary" | "ghost";
+type Variant = "primary" | "secondary" | "ghost" | "inverse" | "dangerOutline";
 type Size = "sm" | "md" | "lg";
 
 const variantClasses: Record<Variant, string> = {
@@ -11,6 +11,10 @@ const variantClasses: Record<Variant, string> = {
     "bg-[var(--color-surface)] text-[var(--color-text-primary)] border border-[var(--color-border)] hover:border-[var(--color-primary)]",
   ghost:
     "bg-transparent text-[var(--color-primary)] hover:bg-[var(--color-primary-tint)]",
+  inverse:
+    "bg-white text-[var(--color-brand)] hover:bg-white/90",
+  dangerOutline:
+    "bg-[var(--color-surface)] text-[var(--color-danger)] border border-[var(--color-danger)]/30 hover:border-[var(--color-danger)]",
 };
 
 const sizeClasses: Record<Size, string> = {

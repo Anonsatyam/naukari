@@ -836,10 +836,10 @@ export default function ManualDraftReviewPage({
               <CheckCircle2 size={15} /> {submitting ? "Publishing…" : "Publish"}
             </Button>
             <Button
-              variant="secondary"
+              variant="dangerOutline"
               onClick={handleReject}
               disabled={submitting}
-              className="flex-1 border-[var(--color-danger)]/30 text-[var(--color-danger)] hover:border-[var(--color-danger)]"
+              className="flex-1"
             >
               <XCircle size={15} /> Discard
             </Button>
