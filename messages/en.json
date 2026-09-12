@@ -138,7 +138,7 @@
     "heading": "Photo & Signature Resizer",
     "body": "Upload a photo, choose a preset or set your own size, then drag the box to crop. We'll resize to the exact dimensions and compress to fit the target file size.",
     "uploadLabel": "Upload a photo to crop and resize",
-    "dragHint": "Drag inside the box to move it, drag the corner handle to resize.",
+    "dragHint": "Drag the photo to reposition it, scroll or pinch to zoom.",
     "resetCrop": "Reset Crop",
     "outputSize": "Output Size",
     "presetPassport": "Passport Photo (200×230, 20–50 KB)",

@@ -1,20 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useState } from "react";
+import Cropper, { Area, Point } from "react-easy-crop";
 import { useTranslations } from "next-intl";
 import { Download, RotateCcw, CheckCircle2, AlertTriangle } from "lucide-react";
 import ImageDropzone from "./ImageDropzone";
 import Card from "@/components/Card";
 import { Button } from "@/components/Button";
 import { TextField } from "@/components/FormField";
-import {
-  loadImageFromFile,
-  compressToTargetSize,
-  downloadBlob,
-  formatBytes,
-  clamp,
-  LoadedImage,
-} from "@/lib/image-tools";
+import { loadImageFromFile, compressToTargetSize, downloadBlob, formatBytes, LoadedImage } from "@/lib/image-tools";
 
 interface Preset {
   labelKey: "presetPassport" | "presetSignature" | "presetSmallPhoto";
@@ -30,15 +24,7 @@ const PRESETS: Preset[] = [
   { labelKey: "presetSmallPhoto", width: 100, height: 120, minKB: 20, maxKB: 50 },
 ];
 
-interface CropBox {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-const PREVIEW_MAX_WIDTH = 440;
-const HANDLE_SIZE = 16;
+const INITIAL_CROP: Point = { x: 0, y: 0 };
 
 export default function PhotoResizerTool() {
   const t = useTranslations("photoResizerPage");
@@ -54,186 +40,50 @@ export default function PhotoResizerTool() {
     presetIndex >= 0
       ? PRESETS[presetIndex]
       : { width: customWidth, height: customHeight, minKB: customMinKB, maxKB: customMaxKB };
+  const aspectRatio = target.width / target.height;
 
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [previewSize, setPreviewSize] = useState({ width: 0, height: 0 });
-  const [cropBox, setCropBox] = useState<CropBox | null>(null);
-  const dragRef = useRef<{ mode: "move" | "resize"; startX: number; startY: number; box: CropBox } | null>(null);
+  const [crop, setCrop] = useState<Point>(INITIAL_CROP);
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
 
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<{ blob: Blob; url: string; quality: number } | null>(null);
 
-  const aspectRatio = target.width / target.height;
-
-  const fitCropBox = (previewW: number, previewH: number, ratio: number): CropBox => {
-    let w = previewW;
-    let h = w / ratio;
-    if (h > previewH) {
-      h = previewH;
-      w = h * ratio;
-    }
-    return { x: (previewW - w) / 2, y: (previewH - h) / 2, width: w, height: h };
-  };
-
   const handleFile = async (file: File) => {
     const img = await loadImageFromFile(file);
-    const scale = Math.min(1, PREVIEW_MAX_WIDTH / img.width);
-    const previewW = Math.round(img.width * scale);
-    const previewH = Math.round(img.height * scale);
     setLoaded(img);
-    setPreviewSize({ width: previewW, height: previewH });
-    setCropBox(fitCropBox(previewW, previewH, aspectRatio));
+    setCrop(INITIAL_CROP);
+    setZoom(1);
+    setCroppedAreaPixels(null);
     setResult(null);
   };
 
-  const refitForRatio = (ratio: number) => {
-    setPreviewSize((size) => {
-      if (!size.width) return size;
-      setCropBox((prev) => {
-        if (!prev) return fitCropBox(size.width, size.height, ratio);
-        const cx = prev.x + prev.width / 2;
-        const cy = prev.y + prev.height / 2;
-        let w = size.width;
-        let h = w / ratio;
-        if (h > size.height) {
-          h = size.height;
-          w = h * ratio;
-        }
-        const x = clamp(cx - w / 2, 0, size.width - w);
-        const y = clamp(cy - h / 2, 0, size.height - h);
-        return { x, y, width: w, height: h };
-      });
-      return size;
-    });
+  const resetCropPosition = () => {
+    setCrop(INITIAL_CROP);
+    setZoom(1);
     setResult(null);
   };
 
   const selectPreset = (index: number) => {
     setPresetIndex(index);
-    refitForRatio(PRESETS[index].width / PRESETS[index].height);
+    resetCropPosition();
   };
 
   const setCustomAndRefit = (updates: Partial<{ width: number; height: number }>) => {
-    const w = updates.width ?? customWidth;
-    const h = updates.height ?? customHeight;
     if (updates.width !== undefined) setCustomWidth(updates.width);
     if (updates.height !== undefined) setCustomHeight(updates.height);
     setPresetIndex(-1);
-    refitForRatio(w / h);
+    resetCropPosition();
   };
 
-  const draw = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !loaded || !cropBox) return;
-    canvas.width = previewSize.width;
-    canvas.height = previewSize.height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(loaded.image, 0, 0, previewSize.width, previewSize.height);
-
-    ctx.fillStyle = "rgba(24, 27, 37, 0.55)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(cropBox.x, cropBox.y, cropBox.width, cropBox.height);
-    ctx.clip();
-    ctx.drawImage(loaded.image, 0, 0, previewSize.width, previewSize.height);
-    ctx.restore();
-
-    ctx.strokeStyle = "#3C44C2";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(cropBox.x, cropBox.y, cropBox.width, cropBox.height);
-
-    ctx.fillStyle = "#3C44C2";
-    ctx.fillRect(
-      cropBox.x + cropBox.width - HANDLE_SIZE / 2,
-      cropBox.y + cropBox.height - HANDLE_SIZE / 2,
-      HANDLE_SIZE,
-      HANDLE_SIZE
-    );
-  }, [loaded, cropBox, previewSize]);
-
-  useEffect(() => {
-    draw();
-  }, [draw]);
-
-  const getPointerPos = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-  };
-
-  const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!cropBox) return;
-    const pos = getPointerPos(e);
-    const handleX = cropBox.x + cropBox.width;
-    const handleY = cropBox.y + cropBox.height;
-    const nearHandle =
-      Math.abs(pos.x - handleX) < HANDLE_SIZE && Math.abs(pos.y - handleY) < HANDLE_SIZE;
-
-    if (nearHandle) {
-      dragRef.current = { mode: "resize", startX: pos.x, startY: pos.y, box: cropBox };
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } else if (
-      pos.x >= cropBox.x &&
-      pos.x <= cropBox.x + cropBox.width &&
-      pos.y >= cropBox.y &&
-      pos.y <= cropBox.y + cropBox.height
-    ) {
-      dragRef.current = { mode: "move", startX: pos.x, startY: pos.y, box: cropBox };
-      e.currentTarget.setPointerCapture(e.pointerId);
-    }
-  };
-
-  const onPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const drag = dragRef.current;
-    if (!drag) return;
-    const pos = getPointerPos(e);
-    const dx = pos.x - drag.startX;
-    const dy = pos.y - drag.startY;
-
-    if (drag.mode === "move") {
-      const x = clamp(drag.box.x + dx, 0, previewSize.width - drag.box.width);
-      const y = clamp(drag.box.y + dy, 0, previewSize.height - drag.box.height);
-      setCropBox({ ...drag.box, x, y });
-    } else {
-      let newWidth = clamp(drag.box.width + dx, 40, previewSize.width - drag.box.x);
-      let newHeight = newWidth / aspectRatio;
-      if (drag.box.y + newHeight > previewSize.height) {
-        newHeight = previewSize.height - drag.box.y;
-        newWidth = newHeight * aspectRatio;
-      }
-      setCropBox({ ...drag.box, width: newWidth, height: newHeight });
-    }
-  };
-
-  const onPointerUp = () => {
-    dragRef.current = null;
-  };
-
-  const resetCrop = () => {
-    if (!previewSize.width) return;
-    let w = previewSize.width;
-    let h = w / aspectRatio;
-    if (h > previewSize.height) {
-      h = previewSize.height;
-      w = h * aspectRatio;
-    }
-    setCropBox({ x: (previewSize.width - w) / 2, y: (previewSize.height - h) / 2, width: w, height: h });
-    setResult(null);
-  };
+  const onCropComplete = useCallback((_croppedArea: Area, pixels: Area) => {
+    setCroppedAreaPixels(pixels);
+  }, []);
 
   const handleApply = async () => {
-    if (!loaded || !cropBox) return;
+    if (!loaded || !croppedAreaPixels) return;
     setProcessing(true);
     setResult(null);
-
-    const scale = loaded.width / previewSize.width;
-    const sx = cropBox.x * scale;
-    const sy = cropBox.y * scale;
-    const sWidth = cropBox.width * scale;
-    const sHeight = cropBox.height * scale;
 
     const outCanvas = document.createElement("canvas");
     outCanvas.width = target.width;
@@ -243,7 +93,17 @@ export default function PhotoResizerTool() {
       setProcessing(false);
       return;
     }
-    ctx.drawImage(loaded.image, sx, sy, sWidth, sHeight, 0, 0, target.width, target.height);
+    ctx.drawImage(
+      loaded.image,
+      croppedAreaPixels.x,
+      croppedAreaPixels.y,
+      croppedAreaPixels.width,
+      croppedAreaPixels.height,
+      0,
+      0,
+      target.width,
+      target.height
+    );
 
     const { blob, quality } = await compressToTargetSize(outCanvas, target.maxKB);
     setResult({ blob, url: URL.createObjectURL(blob), quality });
@@ -263,19 +123,22 @@ export default function PhotoResizerTool() {
           />
         ) : (
           <div>
-            <canvas
-              ref={canvasRef}
-              onPointerDown={onPointerDown}
-              onPointerMove={onPointerMove}
-              onPointerUp={onPointerUp}
-              onPointerLeave={onPointerUp}
-              className="mx-auto cursor-move touch-none rounded-lg border border-[var(--color-border)]"
-            />
+            <div className="relative mx-auto h-[360px] w-full max-w-[440px] overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-text-primary)]">
+              <Cropper
+                image={loaded.image.src}
+                crop={crop}
+                zoom={zoom}
+                aspect={aspectRatio}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+              />
+            </div>
             <p className="mt-3 text-center text-xs text-[var(--color-text-secondary)]">
               {t("dragHint")}
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
-              <Button variant="secondary" size="sm" onClick={resetCrop}>
+              <Button variant="secondary" size="sm" onClick={resetCropPosition}>
                 <RotateCcw size={14} /> {t("resetCrop")}
               </Button>
               <Button
