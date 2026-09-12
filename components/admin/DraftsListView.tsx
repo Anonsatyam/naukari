@@ -9,7 +9,6 @@ import {
   ArrowDown,
   CheckCircle2,
   XCircle,
-  TriangleAlert,
   Eye,
   Trash2,
 } from "lucide-react";
@@ -45,11 +44,6 @@ const STATUS_TONES: Record<BotDraft["status"], "warning" | "success" | "danger">
   approved: "success",
   rejected: "danger",
 };
-
-function possibleGap(draft: BotDraft): boolean {
-  const v = (draft.extractedFields as { verification?: { possibleGap?: boolean } } | undefined)?.verification;
-  return v?.possibleGap === true;
-}
 
 const CONFIDENCE_RANK: Record<BotDraft["confidence"], number> = { low: 0, medium: 1, high: 2 };
 const TYPE_RANK: Record<BotDraft["draftType"], number> = { job: 0, result: 1, admit_card: 2 };
@@ -92,17 +86,11 @@ function SortableHeader({
   );
 }
 
-export function DraftsListView({
-  origin,
-  title,
-  description,
-  breadcrumbLabel,
-}: {
-  origin: BotDraft["origin"];
-  title: string;
-  description: string;
-  breadcrumbLabel: string;
-}) {
+export function DraftsListView() {
+  const title = "Drafts";
+  const description = "Posts you created from scratch — edit, preview, publish, or delete them here.";
+  const breadcrumbLabel = "Drafts";
+
   const [drafts, setDrafts] = useState<BotDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -113,11 +101,11 @@ export function DraftsListView({
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadDrafts = useCallback(() => {
-    fetch(`/api/admin/drafts?origin=${origin}`)
+    fetch("/api/admin/drafts")
       .then((res) => res.json())
       .then((data: { drafts: BotDraft[] }) => setDrafts(data.drafts))
       .finally(() => setLoading(false));
-  }, [origin]);
+  }, []);
 
   useEffect(() => {
     loadDrafts();
@@ -251,13 +239,7 @@ export function DraftsListView({
       </div>
 
       <Card padding="p-0" className="mt-5 overflow-hidden">
-        <div
-          className={`hidden items-center gap-4 border-b border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)] md:grid ${
-            origin === "manual"
-              ? "grid-cols-[28px_1fr_90px_120px_120px_100px_90px]"
-              : "grid-cols-[28px_1fr_90px_120px_120px_100px]"
-          }`}
-        >
+        <div className="hidden items-center gap-4 border-b border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)] md:grid md:grid-cols-[28px_1fr_90px_120px_120px_100px_90px]">
           <input
             type="checkbox"
             checked={allSelected}
@@ -274,7 +256,7 @@ export function DraftsListView({
             direction={sortDirection}
             onSort={handleSort}
           />
-          <span>Detected</span>
+          <span>Created</span>
           <SortableHeader
             label="Confidence"
             column="confidence"
@@ -289,7 +271,7 @@ export function DraftsListView({
             direction={sortDirection}
             onSort={handleSort}
           />
-          {origin === "manual" && <span className="text-right">Actions</span>}
+          <span className="text-right">Actions</span>
         </div>
 
         {loading ? (
@@ -301,11 +283,7 @@ export function DraftsListView({
             {sortedDrafts.map((draft) => (
               <div
                 key={draft.id}
-                className={`grid grid-cols-[28px_1fr] gap-2 px-4 py-4 md:items-center md:gap-4 ${
-                  origin === "manual"
-                    ? "md:grid-cols-[28px_1fr_90px_120px_120px_100px_90px]"
-                    : "md:grid-cols-[28px_1fr_90px_120px_120px_100px]"
-                }`}
+                className="grid grid-cols-[28px_1fr] gap-2 px-4 py-4 md:grid-cols-[28px_1fr_90px_120px_120px_100px_90px] md:items-center md:gap-4"
               >
                 <input
                   type="checkbox"
@@ -315,27 +293,12 @@ export function DraftsListView({
                   aria-label={`Select ${draft.jobTitle}`}
                   className="h-4 w-4 cursor-pointer accent-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-40"
                 />
-                <Link
-                  href={origin === "manual" ? `/admin/my-drafts/${draft.id}` : `/admin/drafts/${draft.id}`}
-                  className="min-w-0 hover:opacity-80"
-                >
+                <Link href={`/admin/my-drafts/${draft.id}`} className="min-w-0 hover:opacity-80">
                   <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--color-text-primary)]">
                     {draft.jobTitle}
-                    {possibleGap(draft) && (
-                      <TriangleAlert
-                        size={14}
-                        className="shrink-0 text-[var(--color-warning)]"
-                        aria-label="Extraction might be missing a section — check before approving"
-                      />
-                    )}
                     <ArrowUpRight size={13} className="shrink-0 text-[var(--color-text-muted)]" />
                   </p>
                   <p className="text-xs text-[var(--color-text-secondary)]">{draft.organization}</p>
-                  {possibleGap(draft) && (
-                    <p className="mt-0.5 text-xs font-medium text-[var(--color-warning)]">
-                      ⚠ Might be missing a section — please check
-                    </p>
-                  )}
                 </Link>
                 <span className="col-start-2 md:col-start-auto">
                   <Badge tone={TYPE_TONES[draft.draftType]}>{TYPE_LABELS[draft.draftType]}</Badge>
@@ -349,23 +312,21 @@ export function DraftsListView({
                 <span className="col-start-2 md:col-start-auto">
                   <Badge tone={STATUS_TONES[draft.status]}>{draft.status}</Badge>
                 </span>
-                {origin === "manual" && (
-                  <span className="col-start-2 flex items-center gap-1 md:col-start-auto md:justify-end">
-                    <IconButton
-                      icon={<Eye size={15} />}
-                      label="Preview this post"
-                      onClick={() => handlePreview(draft.id)}
-                      disabled={previewingId === draft.id}
-                    />
-                    <IconButton
-                      icon={<Trash2 size={15} />}
-                      label="Delete this draft"
-                      tone="danger"
-                      onClick={() => handleDelete(draft.id)}
-                      disabled={deletingId === draft.id}
-                    />
-                  </span>
-                )}
+                <span className="col-start-2 flex items-center gap-1 md:col-start-auto md:justify-end">
+                  <IconButton
+                    icon={<Eye size={15} />}
+                    label="Preview this post"
+                    onClick={() => handlePreview(draft.id)}
+                    disabled={previewingId === draft.id}
+                  />
+                  <IconButton
+                    icon={<Trash2 size={15} />}
+                    label="Delete this draft"
+                    tone="danger"
+                    onClick={() => handleDelete(draft.id)}
+                    disabled={deletingId === draft.id}
+                  />
+                </span>
               </div>
             ))}
           </div>

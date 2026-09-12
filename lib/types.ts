@@ -211,10 +211,3 @@ export interface HotUpdateItem {
   date: string;
   isNew: boolean;
 }
-
-export interface BotLogEntry {
-  id: string;
-  timestamp: string;
-  status: "success" | "warning" | "error";
-  message: string;
-}

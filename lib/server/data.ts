@@ -8,14 +8,12 @@ import {
   admitCardToRow,
   rowToDraft,
   draftToRow,
-  rowToLogEntry,
 } from "./mappers";
 import {
   Job,
   ResultItem,
   AdmitCardItem,
   BotDraft,
-  BotLogEntry,
   DraftType,
   HotUpdateItem,
   VacancyBreakdown,
@@ -28,7 +26,6 @@ import { deepDecodeEntities, decodeHtmlEntities } from "@/lib/entities";
 import { parsePipeTables, PipeTable, firstNumber, deriveAgeRange, deriveSalaryRange, TOTAL_ROW_LABEL, parseFaqLines } from "@/lib/pipeTables";
 import { classifyQualification } from "@/lib/taxonomy";
 import { isSourceSiteUrl } from "@/lib/utils";
-import { titleSimilarity } from "@/lib/dedup";
 
 export { deriveAgeRange, deriveSalaryRange };
 
@@ -327,36 +324,15 @@ export async function getPendingDrafts(): Promise<BotDraft[]> {
     .from("bot_drafts")
     .select("*")
     .eq("status", "pending")
-    .eq("origin", "bot")
     .order("detected_at", { ascending: false });
-  if (error) {
-    if (isMissingColumnError(error)) {
-      const fallback = await supabase
-        .from("bot_drafts")
-        .select("*")
-        .eq("status", "pending")
-        .order("detected_at", { ascending: false });
-      if (fallback.error) throw fallback.error;
-      return (fallback.data ?? []).map(rowToDraft).filter((d) => d.origin === "bot");
-    }
-    throw error;
-  }
+  if (error) throw error;
   return (data ?? []).map(rowToDraft);
 }
 
-export async function getAllDrafts(origin?: BotDraft["origin"]): Promise<BotDraft[]> {
+export async function getAllDrafts(): Promise<BotDraft[]> {
   const supabase = getSupabaseAdmin();
-  let query = supabase.from("bot_drafts").select("*").order("detected_at", { ascending: false });
-  if (origin) query = query.eq("origin", origin);
-  const { data, error } = await query;
-  if (error) {
-    if (isMissingColumnError(error) && origin) {
-      const fallback = await supabase.from("bot_drafts").select("*").order("detected_at", { ascending: false });
-      if (fallback.error) throw fallback.error;
-      return (fallback.data ?? []).map(rowToDraft).filter((d) => d.origin === origin);
-    }
-    throw error;
-  }
+  const { data, error } = await supabase.from("bot_drafts").select("*").order("detected_at", { ascending: false });
+  if (error) throw error;
   return (data ?? []).map(rowToDraft);
 }
 
@@ -780,48 +756,6 @@ export async function draftExistsForSource(sourceUrl: string): Promise<boolean> 
   return isSourceAlreadyPublished(sourceUrl);
 }
 
-const TITLE_DEDUP_THRESHOLD = 0.65;
-const TITLE_DEDUP_CANDIDATE_LIMIT = 500;
-
-const DRAFT_TYPE_TO_TABLE: Record<DraftType, "jobs" | "results" | "admit_cards"> = {
-  job: "jobs",
-  result: "results",
-  admit_card: "admit_cards",
-};
-
-export async function findSimilarTitleAcrossSources(
-  jobTitle: string,
-  draftType: DraftType
-): Promise<string | undefined> {
-  const supabase = getSupabaseAdmin();
-
-  const [pendingDrafts, publishedEntries] = await Promise.all([
-    supabase
-      .from("bot_drafts")
-      .select("job_title")
-      .eq("status", "pending")
-      .eq("draft_type", draftType)
-      .order("detected_at", { ascending: false })
-      .limit(TITLE_DEDUP_CANDIDATE_LIMIT),
-    supabase
-      .from(DRAFT_TYPE_TO_TABLE[draftType])
-      .select("title")
-      .order("updated_at", { ascending: false })
-      .limit(TITLE_DEDUP_CANDIDATE_LIMIT),
-  ]);
-  if (pendingDrafts.error) throw pendingDrafts.error;
-  if (publishedEntries.error) throw publishedEntries.error;
-
-  const candidateTitles = [
-    ...(pendingDrafts.data ?? []).map((row) => row.job_title as string),
-    ...(publishedEntries.data ?? []).map((row) => row.title as string),
-  ];
-
-  return candidateTitles.find(
-    (candidateTitle) => titleSimilarity(jobTitle, candidateTitle) >= TITLE_DEDUP_THRESHOLD
-  );
-}
-
 export async function createDraft(input: {
   jobTitle: string;
   organization: string;
@@ -841,7 +775,7 @@ export async function createDraft(input: {
     status: "pending",
     confidence: input.confidence,
     draftType: input.draftType ?? "job",
-    origin: input.origin ?? "bot",
+    origin: input.origin ?? "manual",
     sourceOrderKey: input.sourceOrderKey,
     extractedFields: input.extractedFields,
   });
@@ -852,68 +786,6 @@ export async function createDraft(input: {
   if (error) throw error;
   return rowToDraft(data);
 }
-
-
-export async function addBotLogEntry(
-  status: BotLogEntry["status"],
-  message: string
-): Promise<BotLogEntry> {
-  const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("bot_log")
-    .insert({ status, message })
-    .select()
-    .single();
-  if (error) throw error;
-  return rowToLogEntry(data);
-}
-
-export async function getBotLog(limit: number = 10): Promise<BotLogEntry[]> {
-  const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("bot_log")
-    .select("*")
-    .order("timestamp", { ascending: false })
-    .limit(limit);
-  if (error) throw error;
-  return (data ?? []).map(rowToLogEntry);
-}
-
-export interface BotRunSummary {
-  ranAt: string;
-  newCount: number;
-  duplicateCount: number;
-  expiredCount: number;
-  errorCount: number;
-}
-
-const RUN_SUMMARY_PATTERN =
-  /^Bot run summary: (\d+) new draft\(s\), (\d+) duplicate\(s\) skipped, (\d+) expired skipped, (\d+) error\(s\)/;
-
-export async function getLastBotRunSummary(): Promise<BotRunSummary | undefined> {
-  const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("bot_log")
-    .select("*")
-    .ilike("message", "Bot run summary:%")
-    .order("timestamp", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw error;
-  if (!data) return undefined;
-
-  const match = (data.message as string).match(RUN_SUMMARY_PATTERN);
-  if (!match) return undefined;
-
-  return {
-    ranAt: data.timestamp,
-    newCount: Number(match[1]),
-    duplicateCount: Number(match[2]),
-    expiredCount: Number(match[3]),
-    errorCount: Number(match[4]),
-  };
-}
-
 
 export async function getAdminStats() {
   const supabase = getSupabaseAdmin();

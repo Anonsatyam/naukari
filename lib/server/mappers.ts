@@ -1,4 +1,4 @@
-import { Job, ResultItem, AdmitCardItem, BotDraft, BotLogEntry } from "@/lib/types";
+import { Job, ResultItem, AdmitCardItem, BotDraft } from "@/lib/types";
 
 
 export function rowToJob(row: any): Job {
@@ -288,14 +288,4 @@ export function draftToRow(draft: Partial<BotDraft>): Record<string, unknown> {
   if (draft.sourceOrderKey !== undefined) row.source_order_key = draft.sourceOrderKey;
   if (draft.extractedFields !== undefined) row.extracted_fields = draft.extractedFields;
   return row;
-}
-
-
-export function rowToLogEntry(row: any): BotLogEntry {
-  return {
-    id: row.id,
-    timestamp: row.timestamp,
-    status: row.status,
-    message: row.message,
-  };
 }
