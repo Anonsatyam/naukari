@@ -48,7 +48,7 @@ function emptyCellOfType(type: TableCellValue["type"]): TableCellValue {
 
 function TableCellEditor({ cell, onChange }: { cell: TableCellValue; onChange: (cell: TableCellValue) => void }) {
   const inputClass =
-    "mt-1 w-full min-w-[100px] rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-xs text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]";
+    "mt-1 w-full min-w-[100px] rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]";
 
   return (
     <div className="min-w-[130px]">
@@ -169,16 +169,15 @@ export function TableBuilder({
                       value={col}
                       onChange={(e) => setColumn(i, e.target.value)}
                       placeholder={`Column ${i + 1}`}
-                      className="w-full min-w-[110px] rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]"
+                      className="w-full min-w-[110px] rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-semibold text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]"
                     />
                     <IconButton
-                      icon={<Trash2 size={12} />}
+                      icon={<Trash2 size={14} />}
                       label="Remove column"
                       tone="danger"
                       size="sm"
                       onClick={() => removeColumn(i)}
                       disabled={value.columns.length <= 1}
-                      className="h-6 w-6"
                     />
                   </div>
                 </th>
@@ -196,9 +195,9 @@ export function TableBuilder({
                     <TableCellEditor cell={row[c] ?? emptyTextCell()} onChange={(cell) => setCell(r, c, cell)} />
                   </td>
                 ))}
-                <td className="p-1.5 text-center align-top">
+                <td className="p-1.5 text-center align-middle">
                   <IconButton
-                    icon={<Trash2 size={13} />}
+                    icon={<Trash2 size={14} />}
                     label="Remove row"
                     tone="danger"
                     size="sm"
