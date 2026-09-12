@@ -313,17 +313,6 @@ export async function setJobStatus(id: string, status: Job["status"]): Promise<J
   return data ? rowToJob(data) : undefined;
 }
 
-export async function getPendingDrafts(): Promise<Draft[]> {
-  const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from("drafts")
-    .select("*")
-    .eq("status", "pending")
-    .order("detected_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []).map(rowToDraft);
-}
-
 export async function getAllDrafts(): Promise<Draft[]> {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase.from("drafts").select("*").order("detected_at", { ascending: false });
@@ -781,23 +770,6 @@ export async function createDraft(input: {
   if (error) throw error;
   return rowToDraft(data);
 }
-
-export async function getAdminStats() {
-  const supabase = getSupabaseAdmin();
-
-  const [{ count: pendingDrafts }, { count: publishedJobs }, { count: totalDrafts }] = await Promise.all([
-    supabase.from("drafts").select("id", { count: "exact", head: true }).eq("status", "pending"),
-    supabase.from("jobs").select("id", { count: "exact", head: true }).eq("status", "published"),
-    supabase.from("drafts").select("id", { count: "exact", head: true }),
-  ]);
-
-  return {
-    pendingDrafts: pendingDrafts ?? 0,
-    publishedJobs: publishedJobs ?? 0,
-    totalDrafts: totalDrafts ?? 0,
-  };
-}
-
 
 export async function getHotUpdates(limit: number = 8): Promise<HotUpdateItem[]> {
   const [jobs, results, admitCards] = await Promise.all([

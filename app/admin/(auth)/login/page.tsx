@@ -33,7 +33,8 @@ function LoginForm() {
         return;
       }
 
-      const redirectTo = searchParams.get("from") || "/admin/dashboard";
+      const from = searchParams.get("from");
+      const redirectTo = from && from !== "/admin/dashboard" ? from : "/admin/my-drafts";
       router.push(redirectTo);
       router.refresh();
     } catch {

@@ -205,7 +205,7 @@ export function DraftsListView() {
 
   return (
     <div>
-      <Breadcrumb items={[{ label: "Dashboard", href: "/admin/dashboard" }, { label: breadcrumbLabel }]} />
+      <Breadcrumb items={[{ label: breadcrumbLabel }]} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>

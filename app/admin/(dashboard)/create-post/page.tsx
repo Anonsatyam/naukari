@@ -248,7 +248,7 @@ export default function CreatePostPage() {
 
   return (
     <div>
-      <Breadcrumb items={[{ label: "Dashboard", href: "/admin/dashboard" }, { label: "Create Post" }]} />
+      <Breadcrumb items={[{ label: "Drafts", href: "/admin/my-drafts" }, { label: "Create Post" }]} />
 
       <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
         <div>

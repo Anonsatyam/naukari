@@ -45,7 +45,7 @@ export default function AdminJobsPage() {
 
   return (
     <div>
-      <Breadcrumb items={[{ label: "Dashboard", href: "/admin/dashboard" }, { label: "Manage Jobs" }]} />
+      <Breadcrumb items={[{ label: "Drafts", href: "/admin/my-drafts" }, { label: "Manage Jobs" }]} />
 
       <h1 className="font-display text-xl font-bold text-[var(--color-text-primary)]">Manage Jobs</h1>
       <p className="mt-1 text-sm text-[var(--color-text-secondary)]">

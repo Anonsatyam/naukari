@@ -419,7 +419,6 @@ export default function ManualDraftReviewPage({
     <div>
       <Breadcrumb
         items={[
-          { label: "Dashboard", href: "/admin/dashboard" },
           { label: LIST_LABEL, href: LIST_HREF },
           { label: draft.jobTitle },
         ]}
