@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Calendar, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fieldInputClass, fieldLabelClass, selectFieldClass } from "@/lib/ui";
@@ -67,30 +67,131 @@ export function SelectField({
   className,
   options,
   hideLabel,
+  trailing,
   ...rest
 }: BaseProps & {
   options: (string | SelectFieldOption)[];
   hideLabel?: boolean;
+  trailing?: React.ReactNode;
 } & React.SelectHTMLAttributes<HTMLSelectElement>) {
+  const select = (
+    <div className={cn("relative", Boolean(trailing) && "flex-1")}>
+      <select aria-label={hideLabel ? label : undefined} className={cn(selectFieldClass, className)} {...rest}>
+        {options.map((opt) => {
+          const value = typeof opt === "string" ? opt : opt.value;
+          const text = typeof opt === "string" ? opt : opt.label;
+          return (
+            <option key={value} value={value}>
+              {text}
+            </option>
+          );
+        })}
+      </select>
+      <ChevronDown
+        size={15}
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]"
+      />
+    </div>
+  );
   return (
     <div>
       {!hideLabel && <label className={fieldLabelClass}>{label}</label>}
+      {trailing ? (
+        <div className="flex items-center gap-1.5">
+          {select}
+          {trailing}
+        </div>
+      ) : (
+        select
+      )}
+    </div>
+  );
+}
+
+export function SearchableSelectField({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder = "Search and select…",
+  className,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+  placeholder?: string;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setQuery("");
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  const filtered = options.filter((opt) => opt.toLowerCase().includes(query.toLowerCase()));
+
+  return (
+    <div className={className} ref={containerRef}>
+      <label className={fieldLabelClass}>{label}</label>
       <div className="relative">
-        <select aria-label={hideLabel ? label : undefined} className={cn(selectFieldClass, className)} {...rest}>
-          {options.map((opt) => {
-            const value = typeof opt === "string" ? opt : opt.value;
-            const text = typeof opt === "string" ? opt : opt.label;
-            return (
-              <option key={value} value={value}>
-                {text}
-              </option>
-            );
-          })}
-        </select>
+        <input
+          type="text"
+          value={open ? query : value}
+          placeholder={placeholder}
+          onFocus={() => {
+            setOpen(true);
+            setQuery("");
+          }}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              setOpen(false);
+              setQuery("");
+              e.currentTarget.blur();
+            }
+          }}
+          className={cn(fieldInputClass, "pr-9")}
+        />
         <ChevronDown
           size={15}
           className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]"
         />
+        {open && (
+          <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-lg">
+            {filtered.length === 0 && (
+              <li className="px-3 py-2 text-sm text-[var(--color-text-muted)]">No matches</li>
+            )}
+            {filtered.map((opt) => (
+              <li key={opt}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    onChange(opt);
+                    setOpen(false);
+                    setQuery("");
+                  }}
+                  className={cn(
+                    "block w-full px-3 py-2 text-left text-sm hover:bg-[var(--color-primary-tint)]",
+                    opt === value ? "font-semibold text-[var(--color-primary)]" : "text-[var(--color-text-primary)]"
+                  )}
+                >
+                  {opt}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

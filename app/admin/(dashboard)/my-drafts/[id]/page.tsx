@@ -13,7 +13,7 @@ import { Button } from "@/components/Button";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
-import { TextField, TextAreaField, SelectField, DateField } from "@/components/FormField";
+import { TextField, TextAreaField, DateField, SearchableSelectField } from "@/components/FormField";
 import { ChipInput } from "@/components/admin/ChipInput";
 import { states } from "@/lib/taxonomy";
 import { toast } from "sonner";
@@ -491,7 +491,18 @@ export default function ManualDraftReviewPage({
           {draft.draftType === "job" && (
             <>
               <div className="grid grid-cols-2 gap-4">
-                <SelectField label="State" options={states.filter((s) => s !== "All")} {...register("fields.state")} />
+                <Controller
+                  control={control}
+                  name="fields.state"
+                  render={({ field }) => (
+                    <SearchableSelectField
+                      label="State"
+                      value={field.value}
+                      onChange={field.onChange}
+                      options={states.filter((s) => s !== "All")}
+                    />
+                  )}
+                />
                 <TextField label="Department" {...register("fields.department")} />
               </div>
               <TextAreaField

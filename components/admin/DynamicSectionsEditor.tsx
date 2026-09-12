@@ -1,10 +1,11 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, Plus, Trash2 } from "lucide-react";
 import { AdditionalSection, AdditionalSectionKind, TableCellValue } from "@/lib/types";
 import { buildPipeTable } from "@/lib/pipeTables";
 import { Button } from "@/components/Button";
-import { TextField, TextAreaField, SelectField, DateField } from "@/components/FormField";
+import { TextField, TextAreaField, DateField } from "@/components/FormField";
+import { fieldLabelClass, selectFieldClass } from "@/lib/ui";
 import { IconButton } from "@/components/admin/IconButton";
 import { ChipInput } from "@/components/admin/ChipInput";
 import { ListItemsEditor } from "@/components/admin/ListItemsEditor";
@@ -159,27 +160,39 @@ export function DynamicSectionsEditor({
                 placeholder="e.g. Important Dates, Age Limit, Physical Test..."
               />
             </div>
-            <div className="w-full sm:w-40">
-              <SelectField
-                label="Content Type"
-                value={section.kind}
-                onChange={(e) => update(section.id, { kind: e.target.value as AdditionalSectionKind })}
-                options={(Object.keys(KIND_LABELS) as AdditionalSectionKind[]).map((k) => ({
-                  value: k,
-                  label: KIND_LABELS[k],
-                }))}
-              />
-            </div>
-            <div className="flex shrink-0 items-center gap-1">
-              <IconButton icon={<ArrowUp size={13} />} label="Move section up" size="sm" onClick={() => move(section.id, -1)} disabled={i === 0} />
-              <IconButton
-                icon={<ArrowDown size={13} />}
-                label="Move section down"
-                size="sm"
-                onClick={() => move(section.id, 1)}
-                disabled={i === sections.length - 1}
-              />
-              <IconButton icon={<Trash2 size={13} />} label="Remove section" tone="danger" size="sm" onClick={() => remove(section.id)} />
+            <div className="w-full sm:w-auto">
+              <label className={fieldLabelClass}>Content Type</label>
+              <div className="flex items-center gap-1.5">
+                <div className="relative w-full sm:w-40">
+                  <select
+                    aria-label="Content Type"
+                    value={section.kind}
+                    onChange={(e) => update(section.id, { kind: e.target.value as AdditionalSectionKind })}
+                    className={selectFieldClass}
+                  >
+                    {(Object.keys(KIND_LABELS) as AdditionalSectionKind[]).map((k) => (
+                      <option key={k} value={k}>
+                        {KIND_LABELS[k]}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    size={15}
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]"
+                  />
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <IconButton icon={<ArrowUp size={13} />} label="Move section up" size="sm" onClick={() => move(section.id, -1)} disabled={i === 0} />
+                  <IconButton
+                    icon={<ArrowDown size={13} />}
+                    label="Move section down"
+                    size="sm"
+                    onClick={() => move(section.id, 1)}
+                    disabled={i === sections.length - 1}
+                  />
+                  <IconButton icon={<Trash2 size={13} />} label="Remove section" tone="danger" size="sm" onClick={() => remove(section.id)} />
+                </div>
+              </div>
             </div>
           </div>
 

@@ -11,7 +11,7 @@ import { DraftType } from "@/lib/types";
 import { Button } from "@/components/Button";
 import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
-import { TextField, TextAreaField, SelectField, DateField } from "@/components/FormField";
+import { TextField, TextAreaField, SelectField, DateField, SearchableSelectField } from "@/components/FormField";
 import { TYPE_LABELS, RowsEditor, SectionDivider } from "@/components/admin/DraftFormShared";
 import { ChipInput } from "@/components/admin/ChipInput";
 import { states } from "@/lib/taxonomy";
@@ -321,10 +321,17 @@ export default function CreatePostPage() {
 
         {draftType === "job" && (
           <div className="grid grid-cols-2 gap-4">
-            <SelectField
-              label="State"
-              options={states.filter((s) => s !== "All")}
-              {...register("state")}
+            <Controller
+              control={control}
+              name="state"
+              render={({ field }) => (
+                <SearchableSelectField
+                  label="State"
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={states.filter((s) => s !== "All")}
+                />
+              )}
             />
             <TextField label="Department" {...register("department")} />
           </div>
