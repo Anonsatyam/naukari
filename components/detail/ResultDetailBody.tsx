@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { getLocale, getTranslations } from "next-intl/server";
+import { useLocale, useTranslations } from "next-intl";
 import { Calendar, ExternalLink, FileText, ListChecks } from "lucide-react";
 import { ResultItem } from "@/lib/types";
 import { formatDate, isSourceSiteUrl, documentViewerHref } from "@/lib/utils";
@@ -36,11 +36,11 @@ const RESULT_DEFAULT_ORDER = [
   "eligibilityRaw",
 ];
 
-export async function ResultDetailBody({ result }: { result: ResultItem }) {
-  const t = (await getTranslations("detail")) as SectionTranslator;
-  const tResults = await getTranslations("resultsPage");
-  const tCommon = await getTranslations("common");
-  const locale = await getLocale();
+export function ResultDetailBody({ result }: { result: ResultItem }) {
+  const t = useTranslations("detail") as SectionTranslator;
+  const tResults = useTranslations("resultsPage");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
   const localePath = (path: string) => (locale === "en" ? path : `/${locale}${path}`);
   const sourceLinks = (result.importantLinks ?? []).filter((link) => !isSourceSiteUrl(link.url));
   const hasRealOfficialLink = !isSourceSiteUrl(result.officialLink);

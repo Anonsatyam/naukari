@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import Link from "next/link";
-import { getLocale, getTranslations } from "next-intl/server";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Calendar,
   ExternalLink,
@@ -45,11 +45,11 @@ const JOB_DEFAULT_ORDER = [
   "howToApplyRaw",
 ];
 
-export async function JobDetailBody({ job, relatedJobs = [] }: { job: Job; relatedJobs?: Job[] }) {
-  const t = (await getTranslations("detail")) as SectionTranslator;
-  const tJobs = await getTranslations("jobsPage");
-  const tCommon = await getTranslations("common");
-  const locale = await getLocale();
+export function JobDetailBody({ job, relatedJobs = [] }: { job: Job; relatedJobs?: Job[] }) {
+  const t = useTranslations("detail") as SectionTranslator;
+  const tJobs = useTranslations("jobsPage");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
   const localePath = (path: string) => (locale === "en" ? path : `/${locale}${path}`);
   const endDate = getApplicationEndDate(job);
   const closingSoon = isClosingSoon(job);

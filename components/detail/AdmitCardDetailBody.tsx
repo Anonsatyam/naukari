@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { getLocale, getTranslations } from "next-intl/server";
+import { useLocale, useTranslations } from "next-intl";
 import { Calendar, ExternalLink, ClipboardList, FileText, ListChecks } from "lucide-react";
 import { AdmitCardItem } from "@/lib/types";
 import { formatDate, isSourceSiteUrl, documentViewerHref } from "@/lib/utils";
@@ -33,11 +33,11 @@ const ADMIT_CARD_DEFAULT_ORDER = [
   "eligibilityRaw",
 ];
 
-export async function AdmitCardDetailBody({ card }: { card: AdmitCardItem }) {
-  const t = (await getTranslations("detail")) as SectionTranslator;
-  const tAdmitCards = await getTranslations("admitCardsPage");
-  const tCommon = await getTranslations("common");
-  const locale = await getLocale();
+export function AdmitCardDetailBody({ card }: { card: AdmitCardItem }) {
+  const t = useTranslations("detail") as SectionTranslator;
+  const tAdmitCards = useTranslations("admitCardsPage");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
   const localePath = (path: string) => (locale === "en" ? path : `/${locale}${path}`);
   const sourceLinks = (card.importantLinks ?? []).filter((link) => !isSourceSiteUrl(link.url));
   const hasRealOfficialLink = !isSourceSiteUrl(card.officialLink);
