@@ -22,9 +22,9 @@ export default function HotUpdates({ items }: { items: HotUpdateItem[] }) {
   if (items.length === 0) return null;
 
   return (
-    <section className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
+    <section>
       <div className="container-page py-8">
-        <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-background)] p-5 shadow-sm sm:p-6">
+        <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-panel)] p-5 shadow-sm sm:p-6">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-orange-600">

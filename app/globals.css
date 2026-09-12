@@ -17,6 +17,7 @@
 
   --color-background: #f7f8fa;
   --color-surface: #ffffff;
+  --color-panel: #eef0f4;
   --color-border: #e6e8ee;
 
   --color-success: #157a45;
@@ -54,6 +55,7 @@
 
   --color-background: #101218;
   --color-surface: #191c24;
+  --color-panel: #15181f;
   --color-border: #2b2f3a;
 
   --color-success: #3ddc93;
@@ -88,6 +90,7 @@
 
   --color-background: var(--color-background);
   --color-surface: var(--color-surface);
+  --color-panel: var(--color-panel);
   --color-border: var(--color-border);
 
   --color-success: var(--color-success);
