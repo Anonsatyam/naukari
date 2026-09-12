@@ -95,7 +95,7 @@ export default function JobsExplorer() {
         />
         <button
           onClick={() => setFiltersOpen((v) => !v)}
-          className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[var(--color-border)] bg-white px-4 py-2.5 text-sm font-medium text-[var(--color-text-primary)] lg:hidden"
+          className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm font-medium text-[var(--color-text-primary)] lg:hidden"
         >
           <SlidersHorizontal size={16} />
           {t("filtersButton")}
@@ -112,7 +112,7 @@ export default function JobsExplorer() {
           className={cn(
             "lg:block",
             filtersOpen
-              ? "fixed inset-0 z-50 overflow-y-auto bg-white p-5 lg:static lg:p-0"
+              ? "fixed inset-0 z-50 overflow-y-auto bg-[var(--color-surface)] p-5 lg:static lg:p-0"
               : "hidden"
           )}
         >

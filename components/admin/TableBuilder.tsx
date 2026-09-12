@@ -48,7 +48,7 @@ function emptyCellOfType(type: TableCellValue["type"]): TableCellValue {
 
 function TableCellEditor({ cell, onChange }: { cell: TableCellValue; onChange: (cell: TableCellValue) => void }) {
   const inputClass =
-    "mt-1 w-full min-w-[100px] rounded-[var(--radius-control)] border border-[var(--color-border)] bg-white px-2 py-1.5 text-xs text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]";
+    "mt-1 w-full min-w-[100px] rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-xs text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]";
 
   return (
     <div className="min-w-[130px]">
@@ -169,7 +169,7 @@ export function TableBuilder({
                       value={col}
                       onChange={(e) => setColumn(i, e.target.value)}
                       placeholder={`Column ${i + 1}`}
-                      className="w-full min-w-[110px] rounded-[var(--radius-control)] border border-[var(--color-border)] bg-white px-2 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]"
+                      className="w-full min-w-[110px] rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-xs font-semibold text-[var(--color-text-primary)] outline-none focus:border-[var(--color-primary)]"
                     />
                     <IconButton
                       icon={<Trash2 size={12} />}

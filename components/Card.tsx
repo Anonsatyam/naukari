@@ -12,7 +12,7 @@ export default function Card({
   return (
     <div
       className={cn(
-        "rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white text-[var(--color-text-primary)] shadow-sm",
+        "rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-sm",
         padding,
         className
       )}

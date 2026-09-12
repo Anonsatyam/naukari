@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Bell, Menu, X, LogOut, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ADMIN_NAV_LINKS } from "@/lib/adminNav";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function AdminTopbar() {
   const pathname = usePathname();
@@ -19,7 +20,7 @@ export default function AdminTopbar() {
   };
 
   return (
-    <header className="sticky top-0 z-30 border-b border-[var(--color-border)] bg-white">
+    <header className="sticky top-0 z-30 border-b border-[var(--color-border)] bg-[var(--color-surface)]">
       <div className="flex h-16 items-center justify-between px-4 md:px-6">
         <button
           type="button"
@@ -34,6 +35,7 @@ export default function AdminTopbar() {
         <div className="hidden lg:block" />
 
         <div className="flex items-center gap-4">
+          <ThemeToggle className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--color-text-secondary)] hover:bg-[var(--color-background)]" />
           <button
             aria-label="Notifications"
             title="Notifications"
@@ -60,7 +62,7 @@ export default function AdminTopbar() {
             onClick={() => setDrawerOpen(false)}
             aria-hidden="true"
           />
-          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[80vw] flex-col bg-white shadow-xl">
+          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[80vw] flex-col bg-[var(--color-surface)] shadow-xl">
             <div className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-[var(--color-border)] px-4">
               <span className="flex items-center gap-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary)] text-white">

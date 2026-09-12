@@ -15,7 +15,7 @@ export default function HotUpdates({ items }: { items: HotUpdateItem[] }) {
   return (
     <section className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
       <div className="container-page py-8">
-        <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 sm:p-6">
+        <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 sm:p-6">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-orange-600">
@@ -57,7 +57,7 @@ function HotUpdateCard({ item }: { item: HotUpdateItem }) {
   return (
     <Link
       href={item.href}
-      className="group block rounded-lg border border-[var(--color-border)] bg-white p-3.5 transition-all hover:border-[var(--color-primary)] hover:shadow-[0_4px_20px_rgba(60,68,194,0.08)]"
+      className="group block rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 transition-all hover:border-[var(--color-primary)] hover:shadow-[0_4px_20px_rgba(60,68,194,0.08)]"
     >
       <div className="flex flex-wrap items-center gap-1.5">
         {item.isNew && <Badge tone="success">New</Badge>}

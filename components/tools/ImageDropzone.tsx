@@ -38,7 +38,7 @@ export default function ImageDropzone({
         "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[var(--radius-card)] border-2 border-dashed p-8 text-center transition-colors",
         isDragActive
           ? "border-[var(--color-primary)] bg-[var(--color-primary-tint)]"
-          : "border-[var(--color-border)] bg-white hover:border-[var(--color-primary)]",
+          : "border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-primary)]",
         className
       )}
     >

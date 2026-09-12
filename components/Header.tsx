@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import { Menu, X, Landmark, Wrench, ChevronDown, Languages } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function Header() {
   const t = useTranslations();
@@ -147,6 +148,7 @@ export default function Header() {
             <Languages size={14} />
             {otherLocale === "hi" ? "हिं" : "EN"}
           </Link>
+          <ThemeToggle className="flex h-9 w-9 items-center justify-center rounded-md border border-white/40 text-white transition-colors hover:border-white hover:bg-white/10" />
         </div>
 
         <div className="flex items-center gap-2 lg:hidden">
@@ -160,6 +162,7 @@ export default function Header() {
             <Languages size={14} />
             {otherLocale === "hi" ? "हिं" : "EN"}
           </Link>
+          <ThemeToggle className="flex h-9 w-9 items-center justify-center rounded-md border border-white/40 text-white" />
           <button
             aria-label={open ? t("nav.closeMenu") : t("nav.openMenu")}
             className="flex h-9 w-9 items-center justify-center rounded-md border border-white/40 text-white"

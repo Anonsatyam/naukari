@@ -213,7 +213,7 @@ export function DraftsListView() {
         </div>
 
         {someSelected && (
-          <div className="flex items-center gap-2 rounded-[var(--radius-control)] border border-[var(--color-border)] bg-white px-3 py-2 shadow-sm">
+          <div className="flex items-center gap-2 rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 shadow-sm">
             <span className="text-sm font-semibold text-[var(--color-text-primary)]">
               {selectedIds.size} selected
             </span>

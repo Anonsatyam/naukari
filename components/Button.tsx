@@ -8,7 +8,7 @@ const variantClasses: Record<Variant, string> = {
   primary:
     "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]",
   secondary:
-    "bg-white text-[var(--color-text-primary)] border border-[var(--color-border)] hover:border-[var(--color-primary)]",
+    "bg-[var(--color-surface)] text-[var(--color-text-primary)] border border-[var(--color-border)] hover:border-[var(--color-primary)]",
   ghost:
     "bg-transparent text-[var(--color-primary)] hover:bg-[var(--color-primary-tint)]",
 };
