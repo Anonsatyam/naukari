@@ -153,7 +153,7 @@ export function PipeTableOrText({ text }: { text: string }) {
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="bg-[var(--color-primary)] text-left text-white">
+                    <tr className="bg-[var(--color-brand)] text-left text-white">
                       {t.header.map((cell, j) => (
                         <th key={j} className="px-3 py-2 align-top font-semibold">
                           {cell}
@@ -240,7 +240,7 @@ export function RichTable({ header, rows }: { header: string[]; rows: TableCellV
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
-            <tr className="bg-[var(--color-primary)] text-left text-white">
+            <tr className="bg-[var(--color-brand)] text-left text-white">
               {header.map((cell, j) => (
                 <th key={j} className="px-3 py-2 align-top font-semibold">
                   {cell}

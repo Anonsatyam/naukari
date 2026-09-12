@@ -57,7 +57,7 @@ export function AgeLimitSection({
             {t("gradeWiseAgeLimit")}
           </p>
           <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
-            <div className="grid grid-cols-3 gap-3 bg-[var(--color-primary)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white">
+            <div className="grid grid-cols-3 gap-3 bg-[var(--color-brand)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white">
               <span>{t("gradeCadre")}</span>
               <span>{t("minAge")}</span>
               <span>{t("maxAge")}</span>
@@ -81,7 +81,7 @@ export function AgeLimitSection({
             {t("ageRelaxation")}
           </p>
           <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
-            <div className="grid grid-cols-2 bg-[var(--color-primary)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white">
+            <div className="grid grid-cols-2 bg-[var(--color-brand)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white">
               <span>{t("category")}</span>
               <span className="text-right">{t("relaxation")}</span>
             </div>
@@ -126,7 +126,7 @@ export function VacancyDetailsSection({
     <Section title={t("postVacancyDetails")} icon={<Users size={16} />} accent="orange">
       {hasTable ? (
         <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
-          <div className={`grid ${cols} gap-3 bg-[var(--color-primary)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white`}>
+          <div className={`grid ${cols} gap-3 bg-[var(--color-brand)] px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-white`}>
             <span>{t("postCategory")}</span>
             {hasGrade && <span>{t("grade")}</span>}
             <span className="text-right">{t("posts")}</span>

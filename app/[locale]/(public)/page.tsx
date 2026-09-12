@@ -31,7 +31,7 @@ export default async function Home() {
 
   return (
     <div>
-      <section className="border-b border-[var(--color-border)] bg-white">
+      <section className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
         <div className="container-page py-14 md:py-20">
           <div className="mx-auto max-w-2xl text-center">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-success-tint)] px-3 py-1 text-xs font-semibold text-[var(--color-success)] animate-breathe">
@@ -48,7 +48,7 @@ export default async function Home() {
 
             <form
               action={localePath("/jobs")}
-              className="mt-8 flex flex-col gap-2 rounded-2xl border border-[var(--color-border)] bg-white p-2 shadow-sm transition-shadow focus-within:border-[var(--color-primary)] focus-within:ring-4 focus-within:ring-[var(--color-primary-tint)] sm:flex-row"
+              className="mt-8 flex flex-col gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2 shadow-sm transition-shadow focus-within:border-[var(--color-primary)] focus-within:ring-4 focus-within:ring-[var(--color-primary-tint)] sm:flex-row"
             >
               <div className="flex flex-1 items-center gap-2 px-3 py-2">
                 <Search size={18} className="text-[var(--color-text-muted)]" />
@@ -61,7 +61,7 @@ export default async function Home() {
               </div>
               <button
                 type="submit"
-                className="rounded-xl bg-[var(--color-primary)] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-hover)]"
+                className="rounded-xl bg-[var(--color-brand)] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-brand-hover)]"
               >
                 {t("searchButton")}
               </button>
@@ -175,7 +175,7 @@ export default async function Home() {
       )}
 
       <section className="container-page pt-10 pb-10">
-        <div className="flex flex-col items-start justify-between gap-6 rounded-2xl bg-[var(--color-primary)] p-8 text-white md:flex-row md:items-center md:p-10">
+        <div className="flex flex-col items-start justify-between gap-6 rounded-2xl bg-[var(--color-brand)] p-8 text-white md:flex-row md:items-center md:p-10">
           <div>
             <h2 className="font-display text-xl font-bold md:text-2xl">
               {t("ctaTitle")}
@@ -188,7 +188,7 @@ export default async function Home() {
             href={localePath("/eligibility-checker")}
             variant="secondary"
             size="lg"
-            className="border-0 bg-white text-[var(--color-primary)] hover:bg-white/90"
+            className="border-0 bg-white text-[var(--color-brand)] hover:bg-white/90"
           >
             {t("ctaButton")}
           </ButtonLink>

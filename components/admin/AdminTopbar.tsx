@@ -65,7 +65,7 @@ export default function AdminTopbar() {
           <div className="absolute inset-y-0 left-0 flex w-72 max-w-[80vw] flex-col bg-[var(--color-surface)] shadow-xl">
             <div className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-[var(--color-border)] px-4">
               <span className="flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary)] text-white">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-brand)] text-white">
                   <Landmark size={16} />
                 </span>
                 <span className="text-sm font-bold text-[var(--color-text-primary)]">Admin Panel</span>

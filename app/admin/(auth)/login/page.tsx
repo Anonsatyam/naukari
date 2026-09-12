@@ -47,7 +47,7 @@ function LoginForm() {
     <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)] px-4">
       <Card padding="p-7" className="w-full max-w-sm">
         <div className="flex flex-col items-center text-center">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--color-primary)] text-white">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--color-brand)] text-white">
             <Landmark size={20} />
           </span>
           <h1 className="font-display mt-3 text-lg font-bold text-[var(--color-text-primary)]">

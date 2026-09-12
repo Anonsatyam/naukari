@@ -100,7 +100,7 @@ export default function JobsExplorer() {
           <SlidersHorizontal size={16} />
           {t("filtersButton")}
           {activeFilterCount > 0 && (
-            <span className="rounded-full bg-[var(--color-primary)] px-1.5 py-0.5 text-[10px] font-bold text-white">
+            <span className="rounded-full bg-[var(--color-brand)] px-1.5 py-0.5 text-[10px] font-bold text-white">
               {activeFilterCount}
             </span>
           )}
@@ -174,7 +174,7 @@ export default function JobsExplorer() {
             {filtersOpen && (
               <button
                 onClick={() => setFiltersOpen(false)}
-                className="w-full rounded-[var(--radius-control)] bg-[var(--color-primary)] py-2.5 text-sm font-semibold text-white lg:hidden"
+                className="w-full rounded-[var(--radius-control)] bg-[var(--color-brand)] py-2.5 text-sm font-semibold text-white lg:hidden"
               >
                 {tFilters("showJobs", { count: filtered.length })}
               </button>
@@ -197,7 +197,7 @@ export default function JobsExplorer() {
               </p>
               <button
                 onClick={resetFilters}
-                className="mt-4 rounded-[var(--radius-control)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white"
+                className="mt-4 rounded-[var(--radius-control)] bg-[var(--color-brand)] px-4 py-2 text-sm font-semibold text-white"
               >
                 {t("clearFilters")}
               </button>

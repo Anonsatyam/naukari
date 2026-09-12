@@ -3,6 +3,9 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
+  --color-brand: #3c44c2;
+  --color-brand-hover: #2f37a3;
+
   --color-primary: #3c44c2;
   --color-primary-hover: #2f37a3;
   --color-primary-tint: #eeeffb;
@@ -71,6 +74,9 @@
 }
 
 @theme inline {
+  --color-brand: var(--color-brand);
+  --color-brand-hover: var(--color-brand-hover);
+
   --color-primary: var(--color-primary);
   --color-primary-hover: var(--color-primary-hover);
   --color-primary-tint: var(--color-primary-tint);

@@ -8,7 +8,7 @@ export default function Footer() {
     "underline decoration-white/40 underline-offset-2 transition-colors hover:text-white hover:decoration-white";
 
   return (
-    <footer className="bg-[var(--color-primary)] text-white">
+    <footer className="bg-[var(--color-brand)] text-white">
       <div className="container-page py-10">
         <div className="grid gap-8 md:grid-cols-3">
           <div>

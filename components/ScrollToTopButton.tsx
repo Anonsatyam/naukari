@@ -29,7 +29,7 @@ export default function ScrollToTopButton() {
       aria-hidden={!visible}
       tabIndex={visible ? 0 : -1}
       className={cn(
-        "fixed bottom-6 right-6 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--color-primary)] text-white shadow-lg transition-all duration-300 hover:bg-[var(--color-primary-hover)] hover:shadow-xl",
+        "fixed bottom-6 right-6 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--color-brand)] text-white shadow-lg transition-all duration-300 hover:bg-[var(--color-brand-hover)] hover:shadow-xl",
         visible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-4 opacity-0"
       )}
     >

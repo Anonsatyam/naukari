@@ -19,7 +19,7 @@ export default function AdminSidebar() {
   return (
     <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col self-start overflow-y-auto border-r border-[var(--color-border)] bg-[var(--color-surface)] lg:flex">
       <div className="flex h-16 shrink-0 items-center gap-2 border-b border-[var(--color-border)] px-5">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary)] text-white">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-brand)] text-white">
           <Landmark size={16} />
         </span>
         <span className="text-sm font-bold text-[var(--color-text-primary)]">Admin Panel</span>

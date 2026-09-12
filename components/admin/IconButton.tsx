@@ -5,9 +5,9 @@ import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
 const TONE_CLASSES = {
-  default: "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]",
+  default: "bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-hover)]",
   danger: "bg-[var(--color-danger)] text-white hover:opacity-90",
-  primary: "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]",
+  primary: "bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-hover)]",
 } as const;
 
 const SIZE_CLASSES = {

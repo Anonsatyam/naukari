@@ -65,10 +65,10 @@ export default function Header() {
     );
 
   return (
-    <header className="sticky top-0 z-40 bg-[var(--color-primary)]">
+    <header className="sticky top-0 z-40 bg-[var(--color-brand)]">
       <div className="container-page flex h-16 items-center justify-between">
         <Link href="/" className="flex items-center gap-2 shrink-0">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-[var(--color-primary)]">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-[var(--color-brand)]">
             <Landmark size={18} />
           </span>
           <span className="flex flex-col leading-tight">
@@ -105,7 +105,7 @@ export default function Header() {
             </button>
 
             {toolsOpen && (
-              <div className="absolute right-0 top-full z-50 mt-1 w-64 rounded-lg border border-[var(--color-border)] bg-white p-1.5 shadow-lg">
+              <div className="absolute right-0 top-full z-50 mt-1 w-64 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-1.5 shadow-lg">
                 <Link
                   href="/tools"
                   onClick={() => setToolsOpen(false)}
@@ -175,7 +175,7 @@ export default function Header() {
 
       <div
         className={cn(
-          "lg:hidden overflow-y-auto border-t border-white/15 bg-[var(--color-primary)] transition-[max-height] duration-200",
+          "lg:hidden overflow-y-auto border-t border-white/15 bg-[var(--color-brand)] transition-[max-height] duration-200",
           open ? "max-h-[80vh] border-t" : "max-h-0 border-t-0"
         )}
       >
