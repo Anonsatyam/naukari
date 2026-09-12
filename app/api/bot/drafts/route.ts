@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createDraft, draftExistsForSource, addBotLogEntry } from "@/lib/server/data";
+import { createDraft, draftExistsForSource, findSimilarTitleAcrossSources, addBotLogEntry } from "@/lib/server/data";
 import { DraftType } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
@@ -44,6 +44,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       skipped: true,
       reason: "A draft or job already exists for this source URL",
+    });
+  }
+
+  const resolvedDraftType = draftType ?? "job";
+  const similarTitle = await findSimilarTitleAcrossSources(jobTitle, resolvedDraftType);
+  if (similarTitle) {
+    await addBotLogEntry(
+      "warning",
+      `Skipped (likely duplicate from another source): "${jobTitle}" looks like "${similarTitle}"`
+    );
+    return NextResponse.json({
+      skipped: true,
+      reason: `A similar ${resolvedDraftType} ("${similarTitle}") already exists from another source`,
     });
   }
 

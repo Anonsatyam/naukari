@@ -28,6 +28,7 @@ import { deepDecodeEntities, decodeHtmlEntities } from "@/lib/entities";
 import { parsePipeTables, PipeTable, firstNumber, deriveAgeRange, deriveSalaryRange, TOTAL_ROW_LABEL, parseFaqLines } from "@/lib/pipeTables";
 import { classifyQualification } from "@/lib/taxonomy";
 import { isSourceSiteUrl } from "@/lib/utils";
+import { titleSimilarity } from "@/lib/dedup";
 
 export { deriveAgeRange, deriveSalaryRange };
 
@@ -777,6 +778,48 @@ export async function draftExistsForSource(sourceUrl: string): Promise<boolean> 
   if ((draftCount ?? 0) > 0) return true;
 
   return isSourceAlreadyPublished(sourceUrl);
+}
+
+const TITLE_DEDUP_THRESHOLD = 0.65;
+const TITLE_DEDUP_CANDIDATE_LIMIT = 500;
+
+const DRAFT_TYPE_TO_TABLE: Record<DraftType, "jobs" | "results" | "admit_cards"> = {
+  job: "jobs",
+  result: "results",
+  admit_card: "admit_cards",
+};
+
+export async function findSimilarTitleAcrossSources(
+  jobTitle: string,
+  draftType: DraftType
+): Promise<string | undefined> {
+  const supabase = getSupabaseAdmin();
+
+  const [pendingDrafts, publishedEntries] = await Promise.all([
+    supabase
+      .from("bot_drafts")
+      .select("job_title")
+      .eq("status", "pending")
+      .eq("draft_type", draftType)
+      .order("detected_at", { ascending: false })
+      .limit(TITLE_DEDUP_CANDIDATE_LIMIT),
+    supabase
+      .from(DRAFT_TYPE_TO_TABLE[draftType])
+      .select("title")
+      .order("updated_at", { ascending: false })
+      .limit(TITLE_DEDUP_CANDIDATE_LIMIT),
+  ]);
+  if (pendingDrafts.error) throw pendingDrafts.error;
+  if (publishedEntries.error) throw publishedEntries.error;
+
+  const candidateTitles = [
+    ...(pendingDrafts.data ?? []).map((row) => row.job_title as string),
+    ...(publishedEntries.data ?? []).map((row) => row.title as string),
+  ];
+
+  return candidateTitles.find(
+    (candidateTitle) => titleSimilarity(jobTitle, candidateTitle) >= TITLE_DEDUP_THRESHOLD
+  );
 }
 
 export async function createDraft(input: {
