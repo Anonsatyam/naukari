@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm, Controller } from "react-hook-form";
 import { ExternalLink, CheckCircle2, XCircle, Eye, FileText, TriangleAlert } from "lucide-react";
 import { Draft, AdditionalSection } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
@@ -14,7 +15,7 @@ import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
 import { TextField, TextAreaField } from "@/components/FormField";
 import { ChipInput } from "@/components/admin/ChipInput";
-import { useToast } from "@/components/admin/Toast";
+import { toast } from "sonner";
 import {
   AgeLimitRowDraft,
   AgeRelaxationRowDraft,
@@ -63,6 +64,36 @@ function firstNonEmptyString(...values: unknown[]): string {
   return "";
 }
 
+interface FormValues {
+  fields: Record<string, string>;
+  ageAsOnDate: string;
+  ageLimitByGrade: AgeLimitRowDraft[];
+  ageRelaxationBreakdown: AgeRelaxationRowDraft[];
+  importantLinksRows: LinkRowDraft[];
+  eligibilityDetails: string;
+  examPatternNotes: string;
+  howToLines: string;
+  faqs: FaqDraft[];
+  additionalSections: DynamicSectionDraft[];
+  conclusion: string;
+  tags: string[];
+}
+
+const EMPTY_DEFAULTS: FormValues = {
+  fields: {},
+  ageAsOnDate: "",
+  ageLimitByGrade: [],
+  ageRelaxationBreakdown: [],
+  importantLinksRows: [],
+  eligibilityDetails: "",
+  examPatternNotes: "",
+  howToLines: "",
+  faqs: [],
+  additionalSections: [],
+  conclusion: "",
+  tags: [],
+};
+
 export default function ManualDraftReviewPage({
   params,
 }: {
@@ -70,26 +101,12 @@ export default function ManualDraftReviewPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const { showToast } = useToast();
 
   const [draft, setDraft] = useState<Draft | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFoundState, setNotFoundState] = useState(false);
 
-  const [fields, setFields] = useState<Record<string, string>>({});
-  const setField = (key: string) => (value: string) => setFields((prev) => ({ ...prev, [key]: value }));
-
-  const [ageAsOnDate, setAgeAsOnDate] = useState("");
-  const [ageLimitByGrade, setAgeLimitByGrade] = useState<AgeLimitRowDraft[]>([]);
-  const [ageRelaxationBreakdown, setAgeRelaxationBreakdown] = useState<AgeRelaxationRowDraft[]>([]);
-  const [importantLinksRows, setImportantLinksRows] = useState<LinkRowDraft[]>([]);
-  const [eligibilityDetails, setEligibilityDetails] = useState("");
-  const [examPatternNotes, setExamPatternNotes] = useState("");
-  const [howToLines, setHowToLines] = useState("");
-  const [faqs, setFaqs] = useState<FaqDraft[]>([]);
-  const [additionalSections, setAdditionalSections] = useState<DynamicSectionDraft[]>([]);
-  const [conclusion, setConclusion] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
+  const { register, control, getValues, reset } = useForm<FormValues>({ defaultValues: EMPTY_DEFAULTS });
 
   const [decision, setDecision] = useState<"approved" | "rejected" | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -131,6 +148,7 @@ export default function ManualDraftReviewPage({
         };
 
         let typeSpecific: Record<string, string> = {};
+        let eligibilityDetailsValue = "";
         if (type === "result") {
           typeSpecific = {
             resultDate: String(ex.resultDate ?? today),
@@ -202,42 +220,44 @@ export default function ManualDraftReviewPage({
           };
 
           if (typeof ex.eligibility === "string" && ex.eligibility) {
-            setEligibilityDetails(pipeRowsToLines(ex.eligibility).join("\n"));
+            eligibilityDetailsValue = pipeRowsToLines(ex.eligibility).join("\n");
           }
         }
 
-        setFields({ ...common, ...typeSpecific });
-
-        if (typeof ex.conclusionText === "string" && ex.conclusionText) {
-          setConclusion(ex.conclusionText);
-        }
-        if (Array.isArray(ex.tags) && ex.tags.length > 0) {
-          setTags(ex.tags as string[]);
-        }
-        if (Array.isArray(ex.faqText) && ex.faqText.length > 0) {
-          setFaqs(parseFaqLines(ex.faqText as string[]));
-        }
-        if (Array.isArray(ex.howToApply) && ex.howToApply.length > 0) {
-          setHowToLines((ex.howToApply as string[]).join("\n"));
-        }
-        if (Array.isArray(ex.importantLinks) && ex.importantLinks.length > 0) {
-          setImportantLinksRows(ex.importantLinks as LinkRowDraft[]);
-        }
-        if (Array.isArray(ex.genericSections) && ex.genericSections.length > 0) {
-          setAdditionalSections((ex.genericSections as AdditionalSection[]).map(sectionToDraft));
-        }
+        reset({
+          fields: { ...common, ...typeSpecific },
+          ageAsOnDate: "",
+          ageLimitByGrade: [],
+          ageRelaxationBreakdown: [],
+          importantLinksRows:
+            Array.isArray(ex.importantLinks) && ex.importantLinks.length > 0
+              ? (ex.importantLinks as LinkRowDraft[])
+              : [],
+          eligibilityDetails: eligibilityDetailsValue,
+          examPatternNotes: "",
+          howToLines:
+            Array.isArray(ex.howToApply) && ex.howToApply.length > 0 ? (ex.howToApply as string[]).join("\n") : "",
+          faqs: Array.isArray(ex.faqText) && ex.faqText.length > 0 ? parseFaqLines(ex.faqText as string[]) : [],
+          additionalSections:
+            Array.isArray(ex.genericSections) && ex.genericSections.length > 0
+              ? (ex.genericSections as AdditionalSection[]).map(sectionToDraft)
+              : [],
+          conclusion: typeof ex.conclusionText === "string" && ex.conclusionText ? ex.conclusionText : "",
+          tags: Array.isArray(ex.tags) && ex.tags.length > 0 ? (ex.tags as string[]) : [],
+        });
       })
       .catch(() => setNotFoundState(true))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, reset]);
 
-  const buildEditsPayload = (): Record<string, unknown> => {
+  const buildEditsPayload = (values: FormValues): Record<string, unknown> => {
+    const { fields } = values;
     const body: Record<string, unknown> = {
       title: fields.title,
       organization: fields.organization,
       category: fields.category,
     };
-    if (tags.length > 0) body.tags = tags;
+    if (values.tags.length > 0) body.tags = values.tags;
 
     const rawTextFields: Record<string, string | undefined> = {
       importantDatesText: fields.importantDatesText,
@@ -259,27 +279,27 @@ export default function ManualDraftReviewPage({
     if (fields.feeNote?.trim()) applicationFee.note = fields.feeNote.trim();
     if (Object.keys(applicationFee).length > 0) body.applicationFee = applicationFee;
 
-    const ageLimitRows = ageLimitByGrade.filter((r) => r.grade || r.minAge || r.maxAge);
+    const ageLimitRows = values.ageLimitByGrade.filter((r) => r.grade || r.minAge || r.maxAge);
     if (ageLimitRows.length > 0) body.ageLimitByGrade = ageLimitRows;
 
-    const ageRelaxationRows = ageRelaxationBreakdown.filter((r) => r.category || r.relaxation);
+    const ageRelaxationRows = values.ageRelaxationBreakdown.filter((r) => r.category || r.relaxation);
     if (ageRelaxationRows.length > 0) body.ageRelaxationBreakdown = ageRelaxationRows;
 
-    const linkRows = importantLinksRows.filter((r) => r.label || r.url);
+    const linkRows = values.importantLinksRows.filter((r) => r.label || r.url);
     if (linkRows.length > 0) body.importantLinks = linkRows;
 
-    const howToList = howToLines.split("\n").map((s) => s.trim()).filter(Boolean);
+    const howToList = values.howToLines.split("\n").map((s) => s.trim()).filter(Boolean);
     if (howToList.length > 0) body.howToApply = howToList;
 
-    const examNotes = examPatternNotes.split("\n").map((s) => s.trim()).filter(Boolean);
+    const examNotes = values.examPatternNotes.split("\n").map((s) => s.trim()).filter(Boolean);
     if (examNotes.length > 0) body.examPatternNotes = examNotes;
 
-    const faqRows = faqs.filter((f) => f.question || f.answer);
+    const faqRows = values.faqs.filter((f) => f.question || f.answer);
     if (faqRows.length > 0) body.faqs = faqRows;
 
-    if (conclusion.trim()) body.conclusion = conclusion.trim();
+    if (values.conclusion.trim()) body.conclusion = values.conclusion.trim();
 
-    const sectionRows = draftsToSections(additionalSections);
+    const sectionRows = draftsToSections(values.additionalSections);
     if (sectionRows.length > 0) body.genericSections = sectionRows;
 
     if (draft?.draftType === "job") {
@@ -302,9 +322,9 @@ export default function ManualDraftReviewPage({
       );
       if (importantDates.length > 0) body.importantDates = importantDates;
 
-      if (ageAsOnDate) body.ageAsOnDate = ageAsOnDate;
+      if (values.ageAsOnDate) body.ageAsOnDate = values.ageAsOnDate;
 
-      const eligibilityLines = eligibilityDetails.split("\n").map((s) => s.trim()).filter(Boolean);
+      const eligibilityLines = values.eligibilityDetails.split("\n").map((s) => s.trim()).filter(Boolean);
       if (eligibilityLines.length > 0) body.eligibilityDetails = eligibilityLines;
     } else if (draft?.draftType === "result") {
       body.resultDate = fields.resultDate;
@@ -325,13 +345,13 @@ export default function ManualDraftReviewPage({
       const res = await fetch(`/api/admin/drafts/${id}/preview`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildEditsPayload()),
+        body: JSON.stringify(buildEditsPayload(getValues())),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Could not build a preview.");
       openPreviewWindow(data);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Could not build a preview. Please try again.");
+      toast.error(err instanceof Error ? err.message : "Could not build a preview. Please try again.");
     } finally {
       setPreviewing(false);
     }
@@ -343,13 +363,13 @@ export default function ManualDraftReviewPage({
       const res = await fetch(`/api/admin/drafts/${id}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildEditsPayload()),
+        body: JSON.stringify(buildEditsPayload(getValues())),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Approve failed");
       setDecision("approved");
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Could not approve this draft. Please try again.");
+      toast.error(err instanceof Error ? err.message : "Could not approve this draft. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -362,7 +382,7 @@ export default function ManualDraftReviewPage({
       if (!res.ok) throw new Error("Reject failed");
       setDecision("rejected");
     } catch {
-      showToast("Could not reject this draft. Please try again.");
+      toast.error("Could not reject this draft. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -450,105 +470,60 @@ export default function ManualDraftReviewPage({
       <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px]">
         <Card className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <TextField label="Title" value={fields.title ?? ""} onChange={(e) => setField("title")(e.target.value)} />
-            <TextField
-              label="Organization"
-              value={fields.organization ?? ""}
-              onChange={(e) => setField("organization")(e.target.value)}
-            />
+            <TextField label="Title" {...register("fields.title")} />
+            <TextField label="Organization" {...register("fields.organization")} />
           </div>
-          <TextField
-            label="Category"
-            value={fields.category ?? ""}
-            onChange={(e) => setField("category")(e.target.value)}
+          <TextField label="Category" {...register("fields.category")} />
+          <Controller
+            control={control}
+            name="tags"
+            render={({ field }) => (
+              <ChipInput
+                label="Tags"
+                value={field.value}
+                onChange={field.onChange}
+                hint="Shown as extra chips alongside Category on the card and detail page."
+              />
+            )}
           />
-          <ChipInput label="Tags" value={tags} onChange={setTags} hint="Shown as extra chips alongside Category on the card and detail page." />
 
           {draft.draftType === "job" && (
             <>
               <div className="grid grid-cols-2 gap-4">
-                <TextField label="State" value={fields.state ?? ""} onChange={(e) => setField("state")(e.target.value)} />
-                <TextField
-                  label="Department"
-                  value={fields.department ?? ""}
-                  onChange={(e) => setField("department")(e.target.value)}
-                />
+                <TextField label="State" {...register("fields.state")} />
+                <TextField label="Department" {...register("fields.department")} />
               </div>
               <TextAreaField
                 label="Short Info"
-                value={fields.shortInfo ?? ""}
-                onChange={(e) => setField("shortInfo")(e.target.value)}
                 hint="One or two sentences shown at the top of the job page, under the title."
+                {...register("fields.shortInfo")}
               />
 
               <div className="grid grid-cols-2 gap-4">
-                <TextField
-                  label="Total Vacancies"
-                  type="number"
-                  value={fields.totalVacancies ?? "0"}
-                  onChange={(e) => setField("totalVacancies")(e.target.value)}
-                />
-                <TextField
-                  label="Qualification"
-                  value={fields.qualification ?? ""}
-                  onChange={(e) => setField("qualification")(e.target.value)}
-                />
+                <TextField label="Total Vacancies" type="number" {...register("fields.totalVacancies")} />
+                <TextField label="Qualification" {...register("fields.qualification")} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <TextField
-                  label="Min. Age"
-                  type="number"
-                  value={fields.minAge ?? ""}
-                  onChange={(e) => setField("minAge")(e.target.value)}
-                />
-                <TextField
-                  label="Max. Age"
-                  type="number"
-                  value={fields.maxAge ?? ""}
-                  onChange={(e) => setField("maxAge")(e.target.value)}
-                />
+                <TextField label="Min. Age" type="number" {...register("fields.minAge")} />
+                <TextField label="Max. Age" type="number" {...register("fields.maxAge")} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <TextField
-                  label="Salary Min (₹)"
-                  type="number"
-                  value={fields.salaryMin ?? ""}
-                  onChange={(e) => setField("salaryMin")(e.target.value)}
-                />
-                <TextField
-                  label="Salary Max (₹)"
-                  type="number"
-                  value={fields.salaryMax ?? ""}
-                  onChange={(e) => setField("salaryMax")(e.target.value)}
-                />
+                <TextField label="Salary Min (₹)" type="number" {...register("fields.salaryMin")} />
+                <TextField label="Salary Max (₹)" type="number" {...register("fields.salaryMax")} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <TextField
-                  label="Official Apply URL"
-                  value={fields.officialApplyUrl ?? ""}
-                  onChange={(e) => setField("officialApplyUrl")(e.target.value)}
-                />
-                <TextField
-                  label="Official Notification URL"
-                  value={fields.officialNotificationUrl ?? ""}
-                  onChange={(e) => setField("officialNotificationUrl")(e.target.value)}
-                />
+                <TextField label="Official Apply URL" {...register("fields.officialApplyUrl")} />
+                <TextField label="Official Notification URL" {...register("fields.officialNotificationUrl")} />
               </div>
 
               <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
                 <SectionDivider label="Important Dates" />
                 <div className="grid grid-cols-2 gap-4">
                   {JOB_DATE_FIELDS.map(({ key, label }) => (
-                    <TextField
-                      key={key}
-                      label={label}
-                      type="date"
-                      value={fields[key] ?? ""}
-                      onChange={(e) => setField(key)(e.target.value)}
-                    />
+                    <TextField key={key} label={label} type="date" {...register(`fields.${key}`)} />
                   ))}
                 </div>
               </div>
@@ -557,23 +532,13 @@ export default function ManualDraftReviewPage({
 
           {draft.draftType === "result" && (
             <div className="grid grid-cols-2 gap-4">
-              <TextField
-                label="Result Date"
-                type="date"
-                value={fields.resultDate ?? ""}
-                onChange={(e) => setField("resultDate")(e.target.value)}
-              />
-              <TextField
-                label="Official Link"
-                value={fields.officialLink ?? ""}
-                onChange={(e) => setField("officialLink")(e.target.value)}
-              />
+              <TextField label="Result Date" type="date" {...register("fields.resultDate")} />
+              <TextField label="Official Link" {...register("fields.officialLink")} />
               <div className="col-span-2">
                 <TextAreaField
                   label="Summary"
-                  value={fields.summary ?? ""}
-                  onChange={(e) => setField("summary")(e.target.value)}
                   hint="One or two sentences shown at the top of the result page, under the title."
+                  {...register("fields.summary")}
                 />
               </div>
             </div>
@@ -581,24 +546,10 @@ export default function ManualDraftReviewPage({
 
           {draft.draftType === "admit_card" && (
             <div className="grid grid-cols-2 gap-4">
-              <TextField
-                label="Release Date"
-                type="date"
-                value={fields.releaseDate ?? ""}
-                onChange={(e) => setField("releaseDate")(e.target.value)}
-              />
-              <TextField
-                label="Exam Date"
-                type="date"
-                value={fields.examDate ?? ""}
-                onChange={(e) => setField("examDate")(e.target.value)}
-              />
+              <TextField label="Release Date" type="date" {...register("fields.releaseDate")} />
+              <TextField label="Exam Date" type="date" {...register("fields.examDate")} />
               <div className="col-span-2">
-                <TextField
-                  label="Official Link"
-                  value={fields.officialLink ?? ""}
-                  onChange={(e) => setField("officialLink")(e.target.value)}
-                />
+                <TextField label="Official Link" {...register("fields.officialLink")} />
               </div>
             </div>
           )}
@@ -606,42 +557,40 @@ export default function ManualDraftReviewPage({
 
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <SectionDivider label="Important Dates (full table)" />
-            <RawTableField
-              label="Raw dates table"
-              value={fields.importantDatesText ?? ""}
-              onChange={setField("importantDatesText")}
-              hint="Pipe-encoded rows — edit to fix a row, or add one."
+            <Controller
+              control={control}
+              name="fields.importantDatesText"
+              render={({ field }) => (
+                <RawTableField
+                  label="Raw dates table"
+                  value={field.value}
+                  onChange={field.onChange}
+                  hint="Pipe-encoded rows — edit to fix a row, or add one."
+                />
+              )}
             />
           </div>
 
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <SectionDivider label="Application Fee" />
             <div className="grid grid-cols-2 gap-4">
-              <TextField
-                label="General / OBC / EWS (₹)"
-                type="number"
-                value={fields.feeGeneral ?? ""}
-                onChange={(e) => setField("feeGeneral")(e.target.value)}
-              />
-              <TextField
-                label="SC / ST / PwD (₹)"
-                type="number"
-                value={fields.feeReserved ?? ""}
-                onChange={(e) => setField("feeReserved")(e.target.value)}
-              />
+              <TextField label="General / OBC / EWS (₹)" type="number" {...register("fields.feeGeneral")} />
+              <TextField label="SC / ST / PwD (₹)" type="number" {...register("fields.feeReserved")} />
             </div>
             <div className="mt-4">
-              <TextField
-                label="Fee Note"
-                value={fields.feeNote ?? ""}
-                onChange={(e) => setField("feeNote")(e.target.value)}
-              />
+              <TextField label="Fee Note" {...register("fields.feeNote")} />
             </div>
             <div className="mt-4">
-              <RawTableField
-                label="Full fee table (if you need more than a general/reserved split)"
-                value={fields.applicationFeeText ?? ""}
-                onChange={setField("applicationFeeText")}
+              <Controller
+                control={control}
+                name="fields.applicationFeeText"
+                render={({ field }) => (
+                  <RawTableField
+                    label="Full fee table (if you need more than a general/reserved split)"
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
               />
             </div>
           </div>
@@ -649,28 +598,29 @@ export default function ManualDraftReviewPage({
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <SectionDivider label="Age Limit" />
             {draft.draftType === "job" && (
-              <TextField
-                label="Age Reckoned As On"
-                type="date"
-                value={ageAsOnDate}
-                onChange={(e) => setAgeAsOnDate(e.target.value)}
-              />
+              <TextField label="Age Reckoned As On" type="date" {...register("ageAsOnDate")} />
             )}
 
             <div className="mt-4 space-y-3">
               <p className="text-xs font-semibold text-[var(--color-text-secondary)]">
                 Grade-wise Age Limit (optional — only for posts where the minimum/maximum age varies by grade)
               </p>
-              <RowsEditor
-                rows={ageLimitByGrade}
-                setRows={setAgeLimitByGrade}
-                fields={[
-                  { key: "grade", label: "Grade / Cadre" },
-                  { key: "minAge", label: "Min. Age" },
-                  { key: "maxAge", label: "Max. Age" },
-                ]}
-                addLabel="Add Grade Row"
-                newRow={{ grade: "", minAge: "", maxAge: "" }}
+              <Controller
+                control={control}
+                name="ageLimitByGrade"
+                render={({ field }) => (
+                  <RowsEditor
+                    rows={field.value}
+                    setRows={(updater) => field.onChange(updater(field.value))}
+                    fields={[
+                      { key: "grade", label: "Grade / Cadre" },
+                      { key: "minAge", label: "Min. Age" },
+                      { key: "maxAge", label: "Max. Age" },
+                    ]}
+                    addLabel="Add Grade Row"
+                    newRow={{ grade: "", minAge: "", maxAge: "" }}
+                  />
+                )}
               />
             </div>
 
@@ -678,44 +628,54 @@ export default function ManualDraftReviewPage({
               <p className="text-xs font-semibold text-[var(--color-text-secondary)]">
                 Age Relaxation (optional — category-wise relaxation on top of the limits above)
               </p>
-              <RowsEditor
-                rows={ageRelaxationBreakdown}
-                setRows={setAgeRelaxationBreakdown}
-                fields={[
-                  { key: "category", label: "Category" },
-                  { key: "relaxation", label: "Relaxation" },
-                ]}
-                addLabel="Add Relaxation Row"
-                newRow={{ category: "", relaxation: "" }}
+              <Controller
+                control={control}
+                name="ageRelaxationBreakdown"
+                render={({ field }) => (
+                  <RowsEditor
+                    rows={field.value}
+                    setRows={(updater) => field.onChange(updater(field.value))}
+                    fields={[
+                      { key: "category", label: "Category" },
+                      { key: "relaxation", label: "Relaxation" },
+                    ]}
+                    addLabel="Add Relaxation Row"
+                    newRow={{ category: "", relaxation: "" }}
+                  />
+                )}
               />
             </div>
 
             {draft.draftType === "job" && (
               <div className="mt-4">
-                <TextField
-                  label="Age Relaxation (general note)"
-                  value={fields.ageRelaxation ?? ""}
-                  onChange={(e) => setField("ageRelaxation")(e.target.value)}
-                />
+                <TextField label="Age Relaxation (general note)" {...register("fields.ageRelaxation")} />
               </div>
             )}
 
             <div className="mt-4">
-              <RawTableField
-                label="Full age limit table"
-                value={fields.ageLimit ?? ""}
-                onChange={setField("ageLimit")}
+              <Controller
+                control={control}
+                name="fields.ageLimit"
+                render={({ field }) => (
+                  <RawTableField label="Full age limit table" value={field.value} onChange={field.onChange} />
+                )}
               />
             </div>
           </div>
 
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <SectionDivider label="Post / Vacancy Details" />
-            <RawTableField
-              label="Raw vacancy / post details table"
-              value={fields.postDetails ?? ""}
-              onChange={setField("postDetails")}
-              hint="Category-wise vacancy counts are derived from this table automatically on publish."
+            <Controller
+              control={control}
+              name="fields.postDetails"
+              render={({ field }) => (
+                <RawTableField
+                  label="Raw vacancy / post details table"
+                  value={field.value}
+                  onChange={field.onChange}
+                  hint="Category-wise vacancy counts are derived from this table automatically on publish."
+                />
+              )}
             />
           </div>
 
@@ -724,90 +684,111 @@ export default function ManualDraftReviewPage({
             {draft.draftType === "job" && (
               <TextAreaField
                 label="Education Eligibility — Details"
-                value={eligibilityDetails}
-                onChange={(e) => setEligibilityDetails(e.target.value)}
                 hint="One bullet point per line — shown as a bulleted list on the job page."
+                {...register("eligibilityDetails")}
               />
             )}
             <div className={draft.draftType === "job" ? "mt-4" : ""}>
-              <RawTableField
-                label="Full eligibility table/list"
-                value={fields.eligibility ?? ""}
-                onChange={setField("eligibility")}
+              <Controller
+                control={control}
+                name="fields.eligibility"
+                render={({ field }) => (
+                  <RawTableField label="Full eligibility table/list" value={field.value} onChange={field.onChange} />
+                )}
               />
             </div>
           </div>
 
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <SectionDivider label="Selection Process" />
-            <RawTableField
-              label="Raw selection process table"
-              value={fields.selectionProcess ?? ""}
-              onChange={setField("selectionProcess")}
-              hint="Falls back to a numbered step list on the public page if this isn't a real table."
+            <Controller
+              control={control}
+              name="fields.selectionProcess"
+              render={({ field }) => (
+                <RawTableField
+                  label="Raw selection process table"
+                  value={field.value}
+                  onChange={field.onChange}
+                  hint="Falls back to a numbered step list on the public page if this isn't a real table."
+                />
+              )}
             />
           </div>
 
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <SectionDivider label="Exam Pattern" />
-            <RawTableField
-              label="Raw exam pattern table"
-              value={fields.examPattern ?? ""}
-              onChange={setField("examPattern")}
+            <Controller
+              control={control}
+              name="fields.examPattern"
+              render={({ field }) => (
+                <RawTableField label="Raw exam pattern table" value={field.value} onChange={field.onChange} />
+              )}
             />
             <div className="mt-4">
               <TextAreaField
                 label="Exam Pattern — Notes"
-                value={examPatternNotes}
-                onChange={(e) => setExamPatternNotes(e.target.value)}
                 hint="One note per line, e.g. negative marking or merit-list rules. Shown below the exam pattern table."
+                {...register("examPatternNotes")}
               />
             </div>
           </div>
 
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <SectionDivider label={documentsLabel} />
-            <RawTableField
-              label="Raw table/list"
-              value={fields.documentsRequired ?? ""}
-              onChange={setField("documentsRequired")}
+            <Controller
+              control={control}
+              name="fields.documentsRequired"
+              render={({ field }) => (
+                <RawTableField label="Raw table/list" value={field.value} onChange={field.onChange} />
+              )}
             />
           </div>
 
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <TextAreaField
               label={howToLabel}
-              value={howToLines}
-              onChange={(e) => setHowToLines(e.target.value)}
               hint="One step per line — shown as a numbered list on the public page."
+              {...register("howToLines")}
             />
           </div>
 
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <SectionDivider label="Important Links" />
-            <RowsEditor
-              rows={importantLinksRows}
-              setRows={setImportantLinksRows}
-              fields={[
-                { key: "label", label: "Label" },
-                { key: "url", label: "URL", kind: "url" },
-              ]}
-              addLabel="Add Link"
-              newRow={{ label: "", url: "" }}
+            <Controller
+              control={control}
+              name="importantLinksRows"
+              render={({ field }) => (
+                <RowsEditor
+                  rows={field.value}
+                  setRows={(updater) => field.onChange(updater(field.value))}
+                  fields={[
+                    { key: "label", label: "Label" },
+                    { key: "url", label: "URL", kind: "url" },
+                  ]}
+                  addLabel="Add Link"
+                  newRow={{ label: "", url: "" }}
+                />
+              )}
             />
           </div>
 
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <SectionDivider label="FAQs" />
-            <RowsEditor
-              rows={faqs}
-              setRows={setFaqs}
-              fields={[
-                { key: "question", label: "Question" },
-                { key: "answer", label: "Answer", multiline: true },
-              ]}
-              addLabel="Add FAQ"
-              newRow={{ question: "", answer: "" }}
+            <Controller
+              control={control}
+              name="faqs"
+              render={({ field }) => (
+                <RowsEditor
+                  rows={field.value}
+                  setRows={(updater) => field.onChange(updater(field.value))}
+                  fields={[
+                    { key: "question", label: "Question" },
+                    { key: "answer", label: "Answer", multiline: true },
+                  ]}
+                  addLabel="Add FAQ"
+                  newRow={{ question: "", answer: "" }}
+                />
+              )}
             />
           </div>
 
@@ -817,25 +798,27 @@ export default function ManualDraftReviewPage({
               Add as many sections as you need, in any order. Retitle, edit, reorder, remove, or add your own
               before publishing.
             </p>
-            <DynamicSectionsEditor sections={additionalSections} setSections={setAdditionalSections} />
+            <Controller
+              control={control}
+              name="additionalSections"
+              render={({ field }) => (
+                <DynamicSectionsEditor
+                  sections={field.value}
+                  setSections={(updater) => field.onChange(updater(field.value))}
+                />
+              )}
+            />
           </div>
 
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
-            {draft.draftType === "job" && (
-              <TextAreaField
-                label="Syllabus"
-                value={fields.syllabusSummary ?? ""}
-                onChange={(e) => setField("syllabusSummary")(e.target.value)}
-              />
-            )}
+            {draft.draftType === "job" && <TextAreaField label="Syllabus" {...register("fields.syllabusSummary")} />}
           </div>
 
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <TextAreaField
               label="Conclusion"
-              value={conclusion}
-              onChange={(e) => setConclusion(e.target.value)}
               hint="Closing summary paragraph shown at the bottom of the page."
+              {...register("conclusion")}
             />
           </div>
 

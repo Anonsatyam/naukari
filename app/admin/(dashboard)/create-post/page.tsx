@@ -2,21 +2,23 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm, useFieldArray, useWatch, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { CheckCircle2, Eye, Plus, Rocket, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { DraftType } from "@/lib/types";
 import { Button } from "@/components/Button";
 import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
 import { TextField, TextAreaField, SelectField } from "@/components/FormField";
-import { LinkRowDraft, FaqDraft, TYPE_LABELS, RowsEditor, SectionDivider } from "@/components/admin/DraftFormShared";
+import { TYPE_LABELS, RowsEditor, SectionDivider } from "@/components/admin/DraftFormShared";
 import { ChipInput } from "@/components/admin/ChipInput";
 import { IconButton } from "@/components/admin/IconButton";
-import { useToast } from "@/components/admin/Toast";
 import { openPreviewWindow } from "@/lib/adminPreview";
 import {
   DynamicSectionsEditor,
   DynamicSectionDraft,
-  DateRowDraft,
   draftsToSections,
 } from "@/components/admin/DynamicSectionsEditor";
 
@@ -26,31 +28,64 @@ const PUBLIC_PATH_PREFIX: Record<DraftType, string> = {
   admit_card: "/admit-cards",
 };
 
+const rowSchema = z.object({ label: z.string(), url: z.string() });
+const faqSchema = z.object({ question: z.string(), answer: z.string() });
+const dateRowSchema = z.object({ label: z.string(), date: z.string() });
+
+const createPostSchema = z.object({
+  draftType: z.enum(["job", "result", "admit_card"]),
+  title: z.string().trim().min(1),
+  organization: z.string().trim().min(1),
+  category: z.string(),
+  tags: z.array(z.string()),
+  subtitle: z.string(),
+  state: z.string(),
+  department: z.string(),
+  keyDates: z.array(dateRowSchema),
+  resultDate: z.string(),
+  releaseDate: z.string(),
+  examDate: z.string(),
+  importantLinksRows: z.array(rowSchema),
+  faqs: z.array(faqSchema),
+  sections: z.array(z.custom<DynamicSectionDraft>()),
+  conclusion: z.string(),
+});
+
+type FormValues = z.infer<typeof createPostSchema>;
+
+const defaultValues: FormValues = {
+  draftType: "job",
+  title: "",
+  organization: "",
+  category: "",
+  tags: [],
+  subtitle: "",
+  state: "Bihar",
+  department: "",
+  keyDates: [],
+  resultDate: "",
+  releaseDate: "",
+  examDate: "",
+  importantLinksRows: [],
+  faqs: [],
+  sections: [],
+  conclusion: "",
+};
+
 export default function CreatePostPage() {
   const router = useRouter();
-  const { showToast } = useToast();
 
-  const [draftType, setDraftType] = useState<DraftType>("job");
+  const { register, control, handleSubmit } = useForm<FormValues>({
+    resolver: zodResolver(createPostSchema),
+    defaultValues,
+  });
+  const draftType = useWatch({ control, name: "draftType" });
 
-  const [title, setTitle] = useState("");
-  const [organization, setOrganization] = useState("");
-  const [category, setCategory] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
-  const [subtitle, setSubtitle] = useState("");
-
-  const [state, setState] = useState("Bihar");
-  const [department, setDepartment] = useState("");
-  const [keyDates, setKeyDates] = useState<DateRowDraft[]>([]);
-
-  const [resultDate, setResultDate] = useState("");
-
-  const [releaseDate, setReleaseDate] = useState("");
-  const [examDate, setExamDate] = useState("");
-
-  const [importantLinksRows, setImportantLinksRows] = useState<LinkRowDraft[]>([]);
-  const [faqs, setFaqs] = useState<FaqDraft[]>([]);
-  const [sections, setSections] = useState<DynamicSectionDraft[]>([]);
-  const [conclusion, setConclusion] = useState("");
+  const {
+    fields: keyDateFields,
+    append: appendKeyDate,
+    remove: removeKeyDate,
+  } = useFieldArray({ control, name: "keyDates" });
 
   const [submitting, setSubmitting] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -58,153 +93,138 @@ export default function CreatePostPage() {
   const [created, setCreated] = useState<{ id: string } | null>(null);
   const [published, setPublished] = useState<{ type: DraftType; slug: string } | null>(null);
 
-  const addKeyDate = () => setKeyDates((prev) => [...prev, { label: "", date: "" }]);
-  const removeKeyDate = (i: number) => setKeyDates((prev) => prev.filter((_, idx) => idx !== i));
-  const updateKeyDate = (i: number, patch: Partial<DateRowDraft>) =>
-    setKeyDates((prev) => prev.map((d, idx) => (idx === i ? { ...d, ...patch } : d)));
-
-  const buildExtractedFields = (): Record<string, unknown> => {
+  const buildExtractedFields = (values: FormValues): Record<string, unknown> => {
     const extractedFields: Record<string, unknown> = {
-      title: title.trim(),
-      organization: organization.trim(),
-      category: category.trim(),
+      title: values.title.trim(),
+      organization: values.organization.trim(),
+      category: values.category.trim(),
     };
-    if (tags.length > 0) extractedFields.tags = tags;
+    if (values.tags.length > 0) extractedFields.tags = values.tags;
 
-    const linkRows = importantLinksRows.filter((r) => r.label.trim() || r.url.trim());
+    const linkRows = values.importantLinksRows.filter((r) => r.label.trim() || r.url.trim());
     if (linkRows.length > 0) extractedFields.importantLinks = linkRows;
 
-    const faqLines = faqs
+    const faqLines = values.faqs
       .filter((f) => f.question.trim() && f.answer.trim())
       .map((f) => `${f.question.trim()} Ans: ${f.answer.trim()}`);
     if (faqLines.length > 0) extractedFields.faqText = faqLines;
 
-    const genericSections = draftsToSections(sections);
+    const genericSections = draftsToSections(values.sections);
     if (genericSections.length > 0) extractedFields.genericSections = genericSections;
 
-    if (conclusion.trim()) extractedFields.conclusionText = conclusion.trim();
+    if (values.conclusion.trim()) extractedFields.conclusionText = values.conclusion.trim();
 
-    if (draftType === "job") {
+    if (values.draftType === "job") {
       Object.assign(extractedFields, {
-        state: state.trim() || "Bihar",
-        department: department.trim() || organization.trim(),
-        shortInfo: subtitle.trim(),
+        state: values.state.trim() || "Bihar",
+        department: values.department.trim() || values.organization.trim(),
+        shortInfo: values.subtitle.trim(),
       });
-      const importantDates = keyDates.filter((d) => d.label.trim() && d.date.trim());
+      const importantDates = values.keyDates.filter((d) => d.label.trim() && d.date.trim());
       if (importantDates.length > 0) extractedFields.importantDates = importantDates;
-    } else if (draftType === "result") {
-      extractedFields.resultDate = resultDate || new Date().toISOString().slice(0, 10);
-      if (subtitle.trim()) extractedFields.summary = subtitle.trim();
+    } else if (values.draftType === "result") {
+      extractedFields.resultDate = values.resultDate || new Date().toISOString().slice(0, 10);
+      if (values.subtitle.trim()) extractedFields.summary = values.subtitle.trim();
     } else {
-      extractedFields.examDate = examDate || new Date().toISOString().slice(0, 10);
-      extractedFields.releaseDate = releaseDate || new Date().toISOString().slice(0, 10);
+      extractedFields.examDate = values.examDate || new Date().toISOString().slice(0, 10);
+      extractedFields.releaseDate = values.releaseDate || new Date().toISOString().slice(0, 10);
     }
 
     return extractedFields;
   };
 
-  const handlePreview = async () => {
-    if (!title.trim() || !organization.trim()) {
-      showToast("Title and Organization are required before you can preview.");
-      return;
-    }
-    setPreviewing(true);
-    try {
-      const primaryLink = importantLinksRows.find((r) => r.url.trim())?.url.trim();
-      const res = await fetch("/api/admin/drafts/preview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jobTitle: title.trim(),
-          organization: organization.trim(),
-          sourceUrl: primaryLink ?? "",
-          draftType,
-          extractedFields: buildExtractedFields(),
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Could not build a preview.");
-      openPreviewWindow(data);
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : "Could not build a preview. Please try again.");
-    } finally {
-      setPreviewing(false);
-    }
-  };
+  const onPreview = handleSubmit(
+    async (values) => {
+      setPreviewing(true);
+      try {
+        const primaryLink = values.importantLinksRows.find((r) => r.url.trim())?.url.trim();
+        const res = await fetch("/api/admin/drafts/preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jobTitle: values.title.trim(),
+            organization: values.organization.trim(),
+            sourceUrl: primaryLink ?? "",
+            draftType: values.draftType,
+            extractedFields: buildExtractedFields(values),
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Could not build a preview.");
+        openPreviewWindow(data);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Could not build a preview. Please try again.");
+      } finally {
+        setPreviewing(false);
+      }
+    },
+    () => toast.error("Title and Organization are required before you can preview.")
+  );
 
-  const validateBeforeSubmit = (): string | undefined => {
-    if (!title.trim() || !organization.trim()) {
-      return "Title and Organization are required.";
-    }
-    const primaryLink = importantLinksRows.find((r) => r.url.trim())?.url.trim();
-    if (!primaryLink) {
-      return "Add at least one Important Link — the first one becomes this post's official reference link.";
-    }
-    return undefined;
-  };
+  const onCreate = handleSubmit(
+    async (values) => {
+      const primaryLink = values.importantLinksRows.find((r) => r.url.trim())?.url.trim();
+      if (!primaryLink) {
+        toast.error("Add at least one Important Link — the first one becomes this post's official reference link.");
+        return;
+      }
+      setSubmitting(true);
+      try {
+        const res = await fetch("/api/admin/drafts/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jobTitle: values.title.trim(),
+            organization: values.organization.trim(),
+            sourceUrl: primaryLink,
+            draftType: values.draftType,
+            extractedFields: buildExtractedFields(values),
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Could not create this post.");
+        setCreated({ id: data.draft.id });
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Could not create this post. Please try again.");
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    () => toast.error("Title and Organization are required.")
+  );
 
-  const handleCreate = async () => {
-    const validationError = validateBeforeSubmit();
-    if (validationError) {
-      showToast(validationError);
-      return;
-    }
-
-    const primaryLink = importantLinksRows.find((r) => r.url.trim())!.url.trim();
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/admin/drafts/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jobTitle: title.trim(),
-          organization: organization.trim(),
-          sourceUrl: primaryLink,
-          draftType,
-          extractedFields: buildExtractedFields(),
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Could not create this post.");
-      setCreated({ id: data.draft.id });
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : "Could not create this post. Please try again.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handlePublish = async () => {
-    const validationError = validateBeforeSubmit();
-    if (validationError) {
-      showToast(validationError);
-      return;
-    }
-
-    const primaryLink = importantLinksRows.find((r) => r.url.trim())!.url.trim();
-    setPublishing(true);
-    try {
-      const res = await fetch("/api/admin/drafts/publish", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jobTitle: title.trim(),
-          organization: organization.trim(),
-          sourceUrl: primaryLink,
-          draftType,
-          extractedFields: buildExtractedFields(),
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Could not publish this post.");
-      showToast("Published — it's live on the site now.", "success");
-      setPublished({ type: data.approved.type, slug: data.approved.entity.slug });
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : "Could not publish this post. Please try again.");
-    } finally {
-      setPublishing(false);
-    }
-  };
+  const onPublish = handleSubmit(
+    async (values) => {
+      const primaryLink = values.importantLinksRows.find((r) => r.url.trim())?.url.trim();
+      if (!primaryLink) {
+        toast.error("Add at least one Important Link — the first one becomes this post's official reference link.");
+        return;
+      }
+      setPublishing(true);
+      try {
+        const res = await fetch("/api/admin/drafts/publish", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jobTitle: values.title.trim(),
+            organization: values.organization.trim(),
+            sourceUrl: primaryLink,
+            draftType: values.draftType,
+            extractedFields: buildExtractedFields(values),
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Could not publish this post.");
+        toast.success("Published — it's live on the site now.");
+        setPublished({ type: data.approved.type, slug: data.approved.entity.slug });
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Could not publish this post. Please try again.");
+      } finally {
+        setPublishing(false);
+      }
+    },
+    () => toast.error("Title and Organization are required.")
+  );
 
   if (published) {
     return (
@@ -260,7 +280,7 @@ export default function CreatePostPage() {
         <Button
           type="button"
           variant="secondary"
-          onClick={handlePreview}
+          onClick={onPreview}
           disabled={previewing || submitting || publishing}
           title="See how this post will look on the public site before creating it"
         >
@@ -271,39 +291,46 @@ export default function CreatePostPage() {
       <Card className="mt-5 space-y-4">
         <SelectField
           label="Post Type"
-          value={draftType}
-          onChange={(e) => setDraftType(e.target.value as DraftType)}
           options={(Object.keys(TYPE_LABELS) as DraftType[]).map((t) => ({ value: t, label: TYPE_LABELS[t] }))}
+          {...register("draftType")}
         />
 
         <div className="grid grid-cols-2 gap-4">
-          <TextField label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
-          <TextField label="Organization" value={organization} onChange={(e) => setOrganization(e.target.value)} />
+          <TextField label="Title" {...register("title")} />
+          <TextField label="Organization" {...register("organization")} />
         </div>
-        <TextField label="Category" value={category} onChange={(e) => setCategory(e.target.value)} />
-        <ChipInput label="Tags" value={tags} onChange={setTags} hint="Shown as extra chips alongside Category on the card and detail page." />
+        <TextField label="Category" {...register("category")} />
+        <Controller
+          control={control}
+          name="tags"
+          render={({ field }) => (
+            <ChipInput
+              label="Tags"
+              value={field.value}
+              onChange={field.onChange}
+              hint="Shown as extra chips alongside Category on the card and detail page."
+            />
+          )}
+        />
         <TextAreaField
           label="Subtitle"
-          value={subtitle}
-          onChange={(e) => setSubtitle(e.target.value)}
           hint="One or two sentences shown at the top of the page, under the title."
+          {...register("subtitle")}
         />
 
         {draftType === "job" && (
           <div className="grid grid-cols-2 gap-4">
-            <TextField label="State" value={state} onChange={(e) => setState(e.target.value)} />
-            <TextField label="Department" value={department} onChange={(e) => setDepartment(e.target.value)} />
+            <TextField label="State" {...register("state")} />
+            <TextField label="Department" {...register("department")} />
           </div>
         )}
 
-        {draftType === "result" && (
-          <TextField label="Result Date" type="date" value={resultDate} onChange={(e) => setResultDate(e.target.value)} />
-        )}
+        {draftType === "result" && <TextField label="Result Date" type="date" {...register("resultDate")} />}
 
         {draftType === "admit_card" && (
           <div className="grid grid-cols-2 gap-4">
-            <TextField label="Release Date" type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} />
-            <TextField label="Exam Date" type="date" value={examDate} onChange={(e) => setExamDate(e.target.value)} />
+            <TextField label="Release Date" type="date" {...register("releaseDate")} />
+            <TextField label="Exam Date" type="date" {...register("examDate")} />
           </div>
         )}
 
@@ -315,18 +342,18 @@ export default function CreatePostPage() {
               A date labeled exactly &quot;Application End&quot; powers the closing-soon badge on the card.
             </p>
             <div className="space-y-3">
-              {keyDates.map((row, i) => (
-                <div key={i} className="flex items-end gap-2 rounded-lg bg-[var(--color-border)] p-3">
+              {keyDateFields.map((field, i) => (
+                <div key={field.id} className="flex items-end gap-2 rounded-lg bg-[var(--color-border)] p-3">
                   <div className="flex-1">
-                    <TextField label="Label" value={row.label} onChange={(e) => updateKeyDate(i, { label: e.target.value })} />
+                    <TextField label="Label" {...register(`keyDates.${i}.label`)} />
                   </div>
                   <div className="flex-1">
-                    <TextField label="Date" type="date" value={row.date} onChange={(e) => updateKeyDate(i, { date: e.target.value })} />
+                    <TextField label="Date" type="date" {...register(`keyDates.${i}.date`)} />
                   </div>
                   <IconButton icon={<Trash2 size={15} />} label="Remove date" tone="danger" onClick={() => removeKeyDate(i)} />
                 </div>
               ))}
-              <Button type="button" size="sm" onClick={addKeyDate}>
+              <Button type="button" size="sm" onClick={() => appendKeyDate({ label: "", date: "" })}>
                 <Plus size={14} /> Add Date
               </Button>
             </div>
@@ -339,15 +366,21 @@ export default function CreatePostPage() {
             Add every action link here — Apply Online, Download Notification, Official Website, Check Result,
             Download Admit Card. The first link doubles as this post&apos;s official reference link.
           </p>
-          <RowsEditor
-            rows={importantLinksRows}
-            setRows={setImportantLinksRows}
-            fields={[
-              { key: "label", label: "Label" },
-              { key: "url", label: "URL", kind: "url" },
-            ]}
-            addLabel="Add Link"
-            newRow={{ label: "", url: "" }}
+          <Controller
+            control={control}
+            name="importantLinksRows"
+            render={({ field }) => (
+              <RowsEditor
+                rows={field.value}
+                setRows={(updater) => field.onChange(updater(field.value))}
+                fields={[
+                  { key: "label", label: "Label" },
+                  { key: "url", label: "URL", kind: "url" },
+                ]}
+                addLabel="Add Link"
+                newRow={{ label: "", url: "" }}
+              />
+            )}
           />
         </div>
 
@@ -358,30 +391,43 @@ export default function CreatePostPage() {
             Selection Process, How to Apply, or anything else. Name each one yourself and pick how it holds its
             content.
           </p>
-          <DynamicSectionsEditor sections={sections} setSections={setSections} />
-        </div>
-
-        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
-          <SectionDivider label="FAQ Section" />
-          <RowsEditor
-            rows={faqs}
-            setRows={setFaqs}
-            fields={[
-              { key: "question", label: "Question" },
-              { key: "answer", label: "Answer", multiline: true },
-            ]}
-            addLabel="Add FAQ"
-            newRow={{ question: "", answer: "" }}
+          <Controller
+            control={control}
+            name="sections"
+            render={({ field }) => (
+              <DynamicSectionsEditor
+                sections={field.value}
+                setSections={(updater) => field.onChange(updater(field.value))}
+              />
+            )}
           />
         </div>
 
         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
-          {/* <SectionDivider label="Conclusion Section" /> */}
+          <SectionDivider label="FAQ Section" />
+          <Controller
+            control={control}
+            name="faqs"
+            render={({ field }) => (
+              <RowsEditor
+                rows={field.value}
+                setRows={(updater) => field.onChange(updater(field.value))}
+                fields={[
+                  { key: "question", label: "Question" },
+                  { key: "answer", label: "Answer", multiline: true },
+                ]}
+                addLabel="Add FAQ"
+                newRow={{ question: "", answer: "" }}
+              />
+            )}
+          />
+        </div>
+
+        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4">
           <TextAreaField
             label="Conclusion"
-            value={conclusion}
-            onChange={(e) => setConclusion(e.target.value)}
             hint="Closing summary paragraph shown at the bottom of the page."
+            {...register("conclusion")}
           />
         </div>
 
@@ -389,22 +435,24 @@ export default function CreatePostPage() {
           <Button
             type="button"
             variant="secondary"
-            onClick={handlePreview}
+            onClick={onPreview}
             disabled={previewing || submitting || publishing}
             className="flex-1"
           >
             <Eye size={15} /> {previewing ? "Building preview…" : "Preview Post"}
           </Button>
           <Button
+            type="button"
             variant="secondary"
-            onClick={handleCreate}
+            onClick={onCreate}
             disabled={submitting || previewing || publishing}
             className="flex-1"
           >
             {submitting ? "Creating…" : "Create Draft"}
           </Button>
           <Button
-            onClick={handlePublish}
+            type="button"
+            onClick={onPublish}
             disabled={publishing || previewing || submitting}
             className="flex-1"
           >

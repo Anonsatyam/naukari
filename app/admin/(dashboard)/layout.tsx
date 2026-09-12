@@ -1,6 +1,6 @@
+import { Toaster } from "sonner";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminTopbar from "@/components/admin/AdminTopbar";
-import { ToastProvider } from "@/components/admin/Toast";
 
 export const dynamic = "force-dynamic";
 
@@ -10,14 +10,13 @@ export default function AdminDashboardLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ToastProvider>
-      <div className="flex min-h-screen bg-[var(--color-background)]">
-        <AdminSidebar />
-        <div className="flex min-h-screen flex-1 flex-col">
-          <AdminTopbar />
-          <main className="flex-1 p-4 md:p-6">{children}</main>
-        </div>
+    <div className="flex min-h-screen bg-[var(--color-background)]">
+      <AdminSidebar />
+      <div className="flex min-h-screen flex-1 flex-col">
+        <AdminTopbar />
+        <main className="flex-1 p-4 md:p-6">{children}</main>
       </div>
-    </ToastProvider>
+      <Toaster position="top-right" duration={3000} richColors closeButton />
+    </div>
   );
 }
