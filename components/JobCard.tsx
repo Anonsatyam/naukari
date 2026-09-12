@@ -24,9 +24,9 @@ export default function JobCard({ job }: { job: Job }) {
           <p className="truncate text-xs font-medium text-[var(--color-text-secondary)]">
             {job.organization}
           </p>
-          <h3 className="mt-1 text-[15px] font-semibold leading-snug text-[var(--color-text-primary)] group-hover:text-[var(--color-primary)]">
+          <h2 className="mt-1 text-[15px] font-semibold leading-snug text-[var(--color-text-primary)] group-hover:text-[var(--color-primary)]">
             {job.title}
-          </h3>
+          </h2>
         </div>
         <ArrowUpRight
           size={18}

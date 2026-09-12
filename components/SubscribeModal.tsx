@@ -6,6 +6,7 @@ import { Mail, X, CheckCircle2 } from "lucide-react";
 
 const DISMISSED_KEY = "subscribeModalDismissed";
 const SCROLL_TRIGGER_RATIO = 0.5;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SubscribeModal() {
   const t = useTranslations("subscribeModal");
@@ -60,7 +61,7 @@ export default function SubscribeModal() {
       setError(t("errorNameRequired"));
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    if (!EMAIL_PATTERN.test(email.trim())) {
       setError(t("errorEmailRequired"));
       return;
     }
@@ -88,6 +89,8 @@ export default function SubscribeModal() {
       setSubmitting(false);
     }
   };
+
+  const canSubmit = name.trim().length > 0 && EMAIL_PATTERN.test(email.trim());
 
   if (!open) return null;
 
@@ -157,7 +160,7 @@ export default function SubscribeModal() {
 
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || !canSubmit}
                 className="w-full rounded-[var(--radius-control)] bg-[var(--color-brand)] py-2.5 text-sm font-semibold text-white hover:bg-[var(--color-brand-hover)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting ? t("submitting") : t("submitButton")}
