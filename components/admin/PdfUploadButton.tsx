@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 import { Upload } from "lucide-react";
 import { IconButton } from "@/components/admin/IconButton";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
@@ -10,20 +11,19 @@ const MAX_FILE_SIZE = 20 * 1024 * 1024;
 export function PdfUploadButton({ onUploaded }: { onUploaded: (url: string) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleFile = async (file: File) => {
-    setError(null);
     if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
-      setError("Please choose a PDF file.");
+      toast.error("Please choose a PDF file.");
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
-      setError("PDF must be under 20MB.");
+      toast.error("PDF must be under 20MB.");
       return;
     }
 
     setUploading(true);
+    const toastId = toast.loading(`Uploading “${file.name}”…`);
     try {
       const signRes = await fetch("/api/admin/uploads/pdf/sign", {
         method: "POST",
@@ -39,6 +39,7 @@ export function PdfUploadButton({ onUploaded }: { onUploaded: (url: string) => v
         .uploadToSignedUrl(signData.path, signData.token, file);
       if (uploadError) throw uploadError;
 
+      toast.loading("Adding watermark…", { id: toastId });
       const watermarkRes = await fetch("/api/admin/uploads/pdf/watermark", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -47,9 +48,10 @@ export function PdfUploadButton({ onUploaded }: { onUploaded: (url: string) => v
       const watermarkData = await watermarkRes.json().catch(() => ({}));
       if (!watermarkRes.ok) throw new Error(watermarkData.error || "Could not add the watermark.");
 
+      toast.success(`"${file.name}" uploaded and watermarked.`, { id: toastId });
       onUploaded(signData.publicUrl);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed. Please try again.");
+      toast.error(err instanceof Error ? err.message : "Upload failed. Please try again.", { id: toastId });
     } finally {
       setUploading(false);
     }
@@ -75,7 +77,6 @@ export function PdfUploadButton({ onUploaded }: { onUploaded: (url: string) => v
         disabled={uploading}
         onClick={() => inputRef.current?.click()}
       />
-      {error && <span className="max-w-[140px] text-[11px] leading-tight text-[var(--color-danger)]">{error}</span>}
     </div>
   );
 }
