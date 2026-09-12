@@ -204,7 +204,7 @@ export function DynamicSectionsEditor({
             {section.kind === "dates" && (
               <div className="space-y-3">
                 {section.dates.map((row, r) => (
-                  <div key={r} className="flex items-end gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+                  <div key={r} className="flex items-start gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
                     <div className="flex-1">
                       <TextField
                         label="Label"
@@ -231,6 +231,7 @@ export function DynamicSectionsEditor({
                       label="Remove date"
                       tone="danger"
                       onClick={() => update(section.id, { dates: section.dates.filter((_, idx) => idx !== r) })}
+                      className="mt-5"
                     />
                   </div>
                 ))}
