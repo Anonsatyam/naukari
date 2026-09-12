@@ -13,7 +13,7 @@ export default function SectionPanel({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-background)] p-5 sm:p-6">
+    <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-background)] p-5 shadow-sm sm:p-6">
       <div className="flex items-center justify-between">
         <h2 className="font-display text-xl font-bold text-[var(--color-text-primary)]">{title}</h2>
         <Link
