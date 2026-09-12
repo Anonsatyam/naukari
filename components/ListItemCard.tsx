@@ -62,7 +62,7 @@ export default function ListItemCard({
             </Badge>
           ))}
         </div>
-        <WhatsAppShareButton path={href} text={title} />
+        <WhatsAppShareButton path={href} text={title} variant="labeled" />
       </div>
     </Link>
   );

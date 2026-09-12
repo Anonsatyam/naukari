@@ -68,7 +68,7 @@ export default function JobCard({ job }: { job: Job }) {
             </Badge>
           )}
         </div>
-        <WhatsAppShareButton path={`/jobs/${job.slug}`} text={job.title} />
+        <WhatsAppShareButton path={`/jobs/${job.slug}`} text={job.title} variant="labeled" />
       </div>
     </Link>
   );
