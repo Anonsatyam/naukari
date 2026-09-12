@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
-import { Crop, PenTool, Wrench, Type } from "lucide-react";
+import { Crop, PenTool, Wrench, Type, Images, FileImage, FilePen, Minimize2, Scissors } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import Breadcrumb from "@/components/Breadcrumb";
 import Card from "@/components/Card";
@@ -35,6 +35,36 @@ export default async function ToolsPage() {
       icon: PenTool,
       title: t("signatureMergeTitle"),
       description: t("signatureMergeDesc"),
+    },
+    {
+      href: "/tools/image-to-pdf",
+      icon: Images,
+      title: t("imageToPdfTitle"),
+      description: t("imageToPdfDesc"),
+    },
+    {
+      href: "/tools/pdf-to-image",
+      icon: FileImage,
+      title: t("pdfToImageTitle"),
+      description: t("pdfToImageDesc"),
+    },
+    {
+      href: "/tools/edit-pdf",
+      icon: FilePen,
+      title: t("editPdfTitle"),
+      description: t("editPdfDesc"),
+    },
+    {
+      href: "/tools/compress-pdf",
+      icon: Minimize2,
+      title: t("compressPdfTitle"),
+      description: t("compressPdfDesc"),
+    },
+    {
+      href: "/tools/crop-pdf",
+      icon: Scissors,
+      title: t("cropPdfTitle"),
+      description: t("cropPdfDesc"),
     },
   ];
 

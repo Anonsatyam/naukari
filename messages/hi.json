@@ -138,10 +138,21 @@
     "nameDatePhotoTitle": "फोटो पर नाम और तारीख़",
     "nameDatePhotoDesc": "अपना नाम और आज की तारीख़ फोटो पर जोड़ें, ठीक वहीं जहाँ आप चाहें।",
     "signatureMergeTitle": "फोटो पर हस्ताक्षर मर्ज करें",
-    "signatureMergeDesc": "अपने हस्ताक्षर को फोटो पर ओवरले करें — सफ़ेद पृष्ठभूमि हटाने के विकल्प के साथ ताकि यह साफ़ तरीके से मिल जाए।"
+    "signatureMergeDesc": "अपने हस्ताक्षर को फोटो पर ओवरले करें — सफ़ेद पृष्ठभूमि हटाने के विकल्प के साथ ताकि यह साफ़ तरीके से मिल जाए।",
+    "imageToPdfTitle": "इमेज से PDF",
+    "imageToPdfDesc": "एक या अधिक इमेज को एक ही PDF फ़ाइल में मिलाएं।",
+    "pdfToImageTitle": "PDF से इमेज",
+    "pdfToImageDesc": "PDF के हर पेज को डाउनलोड करने योग्य इमेज में बदलें।",
+    "editPdfTitle": "PDF संपादित करें",
+    "editPdfDesc": "PDF में पेजों को पुनः क्रमबद्ध करें, घुमाएं या हटाएं।",
+    "compressPdfTitle": "PDF कंप्रेस करें",
+    "compressPdfDesc": "आसान शेयरिंग के लिए PDF का फ़ाइल आकार घटाएं।",
+    "cropPdfTitle": "PDF क्रॉप करें",
+    "cropPdfDesc": "PDF के हर पेज का दिखने वाला हिस्सा क्रॉप करें।"
   },
   "toolsShared": {
     "dropHint": "ब्राउज़ करने के लिए क्लिक करें, या यहाँ JPG या PNG खींचकर छोड़ें",
+    "dropHintPdf": "ब्राउज़ करने के लिए क्लिक करें, या यहाँ PDF खींचकर छोड़ें",
     "changePhoto": "फोटो बदलें"
   },
   "photoResizerPage": {
@@ -190,6 +201,64 @@
     "removeWhiteLabel": "सफ़ेद पृष्ठभूमि को पारदर्शी बनाएं",
     "signatureSizeLabel": "हस्ताक्षर आकार",
     "downloadPhoto": "फोटो डाउनलोड करें"
+  },
+  "imageToPdfPage": {
+    "breadcrumb": "इमेज से PDF",
+    "heading": "इमेज से PDF",
+    "body": "एक या अधिक इमेज अपलोड करें — सब कुछ आपके ब्राउज़र में होता है, कहीं भेजा नहीं जाता। PDF बनाने से पहले उन्हें पुनः क्रमबद्ध करें।",
+    "uploadLabel": "इमेज अपलोड करें",
+    "processing": "बना रहे हैं…",
+    "generateButton": "PDF बनाएं",
+    "successMessage": "PDF डाउनलोड हो गई।",
+    "errorMessage": "PDF नहीं बनाई जा सकी। कृपया फिर से कोशिश करें।",
+    "resultSize": "फ़ाइल आकार: {size}"
+  },
+  "pdfToImagePage": {
+    "breadcrumb": "PDF से इमेज",
+    "heading": "PDF से इमेज",
+    "body": "एक PDF अपलोड करें और हर पेज को अलग PNG इमेज के रूप में डाउनलोड करें।",
+    "uploadLabel": "PDF अपलोड करें",
+    "processing": "पेज रेंडर हो रहे हैं…",
+    "errorMessage": "यह PDF नहीं पढ़ी जा सकी। कृपया कोई और फ़ाइल आज़माएं।",
+    "downloadPage": "पेज {page} डाउनलोड करें"
+  },
+  "editPdfPage": {
+    "breadcrumb": "PDF संपादित करें",
+    "heading": "PDF संपादित करें",
+    "body": "पेजों को पुनः क्रमबद्ध करें, घुमाएं या हटाएं, फिर नई PDF सेव करें।",
+    "uploadLabel": "PDF अपलोड करें",
+    "processing": "काम हो रहा है…",
+    "hint": "पेजों को पुनः क्रमबद्ध करने के लिए तीरों का, किसी पेज को घुमाने के लिए रोटेट आइकन का, और हटाने के लिए X का उपयोग करें।",
+    "saveButton": "PDF सेव करें",
+    "successMessage": "PDF डाउनलोड हो गई।",
+    "errorMessage": "यह PDF प्रोसेस नहीं की जा सकी। कृपया कोई और फ़ाइल आज़माएं।"
+  },
+  "compressPdfPage": {
+    "breadcrumb": "PDF कंप्रेस करें",
+    "heading": "PDF कंप्रेस करें",
+    "body": "आसान शेयरिंग या अपलोडिंग के लिए PDF का फ़ाइल आकार घटाएं।",
+    "uploadLabel": "PDF अपलोड करें",
+    "qualityLabel": "कंप्रेशन स्तर",
+    "qualityHigh": "हल्का",
+    "qualityMedium": "मध्यम",
+    "qualityLow": "अधिक",
+    "noteText": "आकार घटाने के लिए हर पेज को कंप्रेस्ड इमेज में बदला जाता है — परिणाम में टेक्स्ट अब खोजने/चुनने योग्य नहीं रहेगा।",
+    "compressButton": "कंप्रेस करें और डाउनलोड करें",
+    "processing": "कंप्रेस हो रहा है…",
+    "successMessage": "कंप्रेस्ड PDF डाउनलोड हो गई।",
+    "errorMessage": "यह PDF कंप्रेस नहीं की जा सकी। कृपया कोई और फ़ाइल आज़माएं।",
+    "resultSummary": "{before} → {after}"
+  },
+  "cropPdfPage": {
+    "breadcrumb": "PDF क्रॉप करें",
+    "heading": "PDF क्रॉप करें",
+    "body": "रखने के लिए क्षेत्र चुनने हेतु बॉक्स खींचें — यही क्रॉप हर पेज पर लागू होता है।",
+    "uploadLabel": "PDF अपलोड करें",
+    "hint": "बॉक्स को हिलाने के लिए खींचें, या आकार बदलने के लिए नीचे-दाएं हैंडल खींचें।",
+    "cropButton": "क्रॉप करें और डाउनलोड करें",
+    "processing": "काम हो रहा है…",
+    "successMessage": "क्रॉप्ड PDF डाउनलोड हो गई।",
+    "errorMessage": "यह PDF प्रोसेस नहीं की जा सकी। कृपया कोई और फ़ाइल आज़माएं।"
   },
   "eligibilityCheckerPage": {
     "breadcrumb": "पात्रता जांचें",

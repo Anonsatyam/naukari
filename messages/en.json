@@ -138,10 +138,21 @@
     "nameDatePhotoTitle": "Name & Date on Photo",
     "nameDatePhotoDesc": "Add your name and today's date onto a photo, positioned exactly where you want it.",
     "signatureMergeTitle": "Merge Signature on Photo",
-    "signatureMergeDesc": "Overlay your signature onto a photo — with optional white-background removal so it blends in cleanly."
+    "signatureMergeDesc": "Overlay your signature onto a photo — with optional white-background removal so it blends in cleanly.",
+    "imageToPdfTitle": "Image to PDF",
+    "imageToPdfDesc": "Combine one or more images into a single PDF file.",
+    "pdfToImageTitle": "PDF to Image",
+    "pdfToImageDesc": "Convert each page of a PDF into a downloadable image.",
+    "editPdfTitle": "Edit PDF",
+    "editPdfDesc": "Reorder, rotate, or delete pages in a PDF.",
+    "compressPdfTitle": "Compress PDF",
+    "compressPdfDesc": "Reduce a PDF's file size for easier sharing.",
+    "cropPdfTitle": "Crop PDF",
+    "cropPdfDesc": "Crop the visible area of every page in a PDF."
   },
   "toolsShared": {
     "dropHint": "Click to browse, or drag and drop a JPG or PNG here",
+    "dropHintPdf": "Click to browse, or drag and drop a PDF here",
     "changePhoto": "Change Photo"
   },
   "photoResizerPage": {
@@ -190,6 +201,64 @@
     "removeWhiteLabel": "Make white background transparent",
     "signatureSizeLabel": "Signature Size",
     "downloadPhoto": "Download Photo"
+  },
+  "imageToPdfPage": {
+    "breadcrumb": "Image to PDF",
+    "heading": "Image to PDF",
+    "body": "Upload one or more images — everything runs in your browser, nothing is sent anywhere. Reorder them before generating the PDF.",
+    "uploadLabel": "Upload images",
+    "processing": "Generating…",
+    "generateButton": "Generate PDF",
+    "successMessage": "PDF downloaded.",
+    "errorMessage": "Could not generate the PDF. Please try again.",
+    "resultSize": "File size: {size}"
+  },
+  "pdfToImagePage": {
+    "breadcrumb": "PDF to Image",
+    "heading": "PDF to Image",
+    "body": "Upload a PDF and download each page as a separate PNG image.",
+    "uploadLabel": "Upload a PDF",
+    "processing": "Rendering pages…",
+    "errorMessage": "Could not read this PDF. Please try a different file.",
+    "downloadPage": "Download page {page}"
+  },
+  "editPdfPage": {
+    "breadcrumb": "Edit PDF",
+    "heading": "Edit PDF",
+    "body": "Reorder, rotate, or delete pages, then save a new PDF.",
+    "uploadLabel": "Upload a PDF",
+    "processing": "Working…",
+    "hint": "Use the arrows to reorder pages, the rotate icon to rotate a page, and the X to remove it.",
+    "saveButton": "Save PDF",
+    "successMessage": "PDF downloaded.",
+    "errorMessage": "Could not process this PDF. Please try a different file."
+  },
+  "compressPdfPage": {
+    "breadcrumb": "Compress PDF",
+    "heading": "Compress PDF",
+    "body": "Reduce a PDF's file size for easier sharing or uploading.",
+    "uploadLabel": "Upload a PDF",
+    "qualityLabel": "Compression level",
+    "qualityHigh": "Light",
+    "qualityMedium": "Medium",
+    "qualityLow": "Strong",
+    "noteText": "Each page is flattened to a compressed image to reduce size — the result is no longer searchable/selectable text.",
+    "compressButton": "Compress & Download",
+    "processing": "Compressing…",
+    "successMessage": "Compressed PDF downloaded.",
+    "errorMessage": "Could not compress this PDF. Please try a different file.",
+    "resultSummary": "{before} → {after}"
+  },
+  "cropPdfPage": {
+    "breadcrumb": "Crop PDF",
+    "heading": "Crop PDF",
+    "body": "Drag the box to select the area to keep — the same crop is applied to every page.",
+    "uploadLabel": "Upload a PDF",
+    "hint": "Drag the box to move it, or drag the bottom-right handle to resize it.",
+    "cropButton": "Crop & Download",
+    "processing": "Working…",
+    "successMessage": "Cropped PDF downloaded.",
+    "errorMessage": "Could not process this PDF. Please try a different file."
   },
   "eligibilityCheckerPage": {
     "breadcrumb": "Eligibility Checker",
