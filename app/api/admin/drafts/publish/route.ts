@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createDraft, draftExistsForSource, approveDraft } from "@/lib/server/data";
+import { notifySubscribersOfNewListing } from "@/lib/server/notifySubscribers";
 import { DraftType } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
@@ -47,6 +48,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Could not publish this post." }, { status: 500 });
     }
 
+    await notifySubscribersOfNewListing(approved);
     return NextResponse.json({ draft, approved });
   } catch (err) {
     console.error("[PUBLISH DIRECTLY FAILED]", err);

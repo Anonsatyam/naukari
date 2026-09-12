@@ -302,5 +302,34 @@
     "defaultHeading": "Document",
     "download": "Download",
     "openInNewTab": "Open in new tab"
+  },
+  "notFoundPage": {
+    "heading": "Page not found",
+    "body": "The page you're looking for doesn't exist, or may have moved.",
+    "homeButton": "Go to Homepage",
+    "jobsButton": "Browse Jobs"
+  },
+  "subscribeModal": {
+    "title": "Never miss a new listing",
+    "body": "Get an email the moment a new job, result, or admit card is published.",
+    "nameLabel": "Name",
+    "namePlaceholder": "Your name",
+    "emailLabel": "Email",
+    "emailPlaceholder": "you@example.com",
+    "mobileLabel": "Mobile number (optional)",
+    "mobilePlaceholder": "10-digit mobile number",
+    "submitButton": "Notify me",
+    "submitting": "Submitting…",
+    "successMessage": "You're subscribed — we'll email you about new listings.",
+    "errorNameRequired": "Please enter your name.",
+    "errorEmailRequired": "Please enter a valid email address.",
+    "closeLabel": "Close"
+  },
+  "pwaInstall": {
+    "title": "Install Sarkari Naukri",
+    "body": "Add this app to your home screen for quick access.",
+    "installButton": "Install",
+    "iosBody": "Tap the Share icon, then \"Add to Home Screen\".",
+    "dismissLabel": "Dismiss"
   }
 }

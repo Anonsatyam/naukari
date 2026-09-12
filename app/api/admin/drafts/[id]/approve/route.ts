@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { approveDraft } from "@/lib/server/data";
+import { notifySubscribersOfNewListing } from "@/lib/server/notifySubscribers";
 
 export async function POST(
   request: NextRequest,
@@ -18,6 +19,7 @@ export async function POST(
     if (!approved) {
       return NextResponse.json({ error: "Draft not found" }, { status: 404 });
     }
+    await notifySubscribersOfNewListing(approved);
     return NextResponse.json({
       approved,
       job: approved.type === "job" ? approved.entity : undefined,

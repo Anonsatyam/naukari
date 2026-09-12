@@ -302,5 +302,34 @@
     "defaultHeading": "दस्तावेज़",
     "download": "डाउनलोड करें",
     "openInNewTab": "नए टैब में खोलें"
+  },
+  "notFoundPage": {
+    "heading": "पेज नहीं मिला",
+    "body": "जो पेज आप खोज रहे हैं वह मौजूद नहीं है, या स्थानांतरित हो गया हो सकता है।",
+    "homeButton": "होमपेज पर जाएं",
+    "jobsButton": "नौकरियां देखें"
+  },
+  "subscribeModal": {
+    "title": "कोई नई लिस्टिंग न चूकें",
+    "body": "नई नौकरी, परिणाम या एडमिट कार्ड प्रकाशित होते ही ईमेल पाएं।",
+    "nameLabel": "नाम",
+    "namePlaceholder": "आपका नाम",
+    "emailLabel": "ईमेल",
+    "emailPlaceholder": "you@example.com",
+    "mobileLabel": "मोबाइल नंबर (वैकल्पिक)",
+    "mobilePlaceholder": "10-अंकों का मोबाइल नंबर",
+    "submitButton": "मुझे सूचित करें",
+    "submitting": "सबमिट हो रहा है…",
+    "successMessage": "आप सब्सक्राइब हो गए हैं — हम आपको नई लिस्टिंग के बारे में ईमेल करेंगे।",
+    "errorNameRequired": "कृपया अपना नाम दर्ज करें।",
+    "errorEmailRequired": "कृपया एक मान्य ईमेल पता दर्ज करें।",
+    "closeLabel": "बंद करें"
+  },
+  "pwaInstall": {
+    "title": "सरकारी नौकरी इंस्टॉल करें",
+    "body": "त्वरित एक्सेस के लिए इस ऐप को अपनी होम स्क्रीन पर जोड़ें।",
+    "installButton": "इंस्टॉल करें",
+    "iosBody": "शेयर आइकन पर टैप करें, फिर \"होम स्क्रीन पर जोड़ें\"।",
+    "dismissLabel": "बंद करें"
   }
 }

@@ -1,6 +1,8 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ScrollToTopButton from "@/components/ScrollToTopButton";
+import PwaInstallPrompt from "@/components/PwaInstallPrompt";
+import SubscribeModal from "@/components/SubscribeModal";
 
 export default function PublicLayout({
   children,
@@ -13,6 +15,8 @@ export default function PublicLayout({
       <main className="flex-1">{children}</main>
       <Footer />
       <ScrollToTopButton />
+      <PwaInstallPrompt />
+      <SubscribeModal />
     </div>
   );
 }
