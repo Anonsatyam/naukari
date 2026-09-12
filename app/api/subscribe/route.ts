@@ -4,6 +4,7 @@ import { insertWithMissingColumnRetry } from "@/lib/server/data";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MOBILE_PATTERN = /^[6-9]\d{9}$/;
+const MIN_NAME_LENGTH = 3;
 
 export async function POST(request: NextRequest) {
   let body: { name?: string; email?: string; mobile?: string; sameOnWhatsapp?: boolean };
@@ -17,8 +18,8 @@ export async function POST(request: NextRequest) {
   const email = body.email?.trim().toLowerCase();
   const mobile = body.mobile?.trim() || null;
 
-  if (!name) {
-    return NextResponse.json({ error: "Name is required." }, { status: 400 });
+  if (!name || name.length < MIN_NAME_LENGTH) {
+    return NextResponse.json({ error: "Name must be at least 3 characters." }, { status: 400 });
   }
   if (!email || !EMAIL_PATTERN.test(email)) {
     return NextResponse.json({ error: "A valid email is required." }, { status: 400 });

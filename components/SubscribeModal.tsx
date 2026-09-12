@@ -8,6 +8,7 @@ const DISMISSED_KEY = "subscribeModalDismissed";
 const SCROLL_TRIGGER_RATIO = 0.5;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MOBILE_PATTERN = /^[6-9]\d{9}$/;
+const MIN_NAME_LENGTH = 3;
 
 export default function SubscribeModal() {
   const t = useTranslations("subscribeModal");
@@ -60,13 +61,19 @@ export default function SubscribeModal() {
   const trimmedEmail = email.trim();
   const trimmedMobile = mobile.trim();
 
-  const nameError = nameTouched && !trimmedName ? t("errorNameRequired") : null;
+  const nameError = !nameTouched
+    ? null
+    : !trimmedName
+    ? t("errorNameRequired")
+    : trimmedName.length < MIN_NAME_LENGTH
+    ? t("errorNameTooShort")
+    : null;
   const emailError = trimmedEmail.length > 0 && !EMAIL_PATTERN.test(trimmedEmail) ? t("errorEmailRequired") : null;
   const mobileError =
     trimmedMobile.length > 0 && !MOBILE_PATTERN.test(trimmedMobile) ? t("errorMobileInvalid") : null;
 
   const canSubmit =
-    trimmedName.length > 0 &&
+    trimmedName.length >= MIN_NAME_LENGTH &&
     EMAIL_PATTERN.test(trimmedEmail) &&
     (trimmedMobile.length === 0 || MOBILE_PATTERN.test(trimmedMobile));
 

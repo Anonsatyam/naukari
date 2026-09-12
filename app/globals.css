@@ -45,8 +45,8 @@
 }
 
 :root.dark {
-  --color-primary: #6a72e8;
-  --color-primary-hover: #8a90ee;
+  --color-primary: #7b82ec;
+  --color-primary-hover: #969cef;
   --color-primary-tint: color-mix(in srgb, var(--color-primary) 8%, var(--color-background));
   --color-primary-tint-2: color-mix(in srgb, var(--color-primary) 16%, var(--color-background));
 
