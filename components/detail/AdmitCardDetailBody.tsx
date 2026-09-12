@@ -1,24 +1,25 @@
 import { Fragment } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
-import { Calendar, ExternalLink, ClipboardList, FileText, HelpCircle, Link2, ListChecks, CheckCircle2 } from "lucide-react";
+import { Calendar, ExternalLink, ClipboardList, FileText, ListChecks } from "lucide-react";
 import { AdmitCardItem } from "@/lib/types";
 import { formatDate, isSourceSiteUrl, documentViewerHref } from "@/lib/utils";
 import { resolveSectionOrder, parseGenericKey } from "@/lib/sectionOrder";
 import { Section, StepList, PipeTableOrText, GenericSection } from "@/components/DetailSections";
+import { ImportantLinksCard, AtAGlanceCard } from "@/components/detail/DetailSidebar";
 import {
   ApplicationFeeSection,
   AgeLimitSection,
   VacancyDetailsSection,
   EligibilitySection,
   SelectionProcessSection,
+  FaqsSection,
+  ConclusionSection,
   SectionTranslator,
 } from "@/components/RichSections";
-import { ButtonLink } from "@/components/Button";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
 import { KeyValueRow } from "@/components/KeyValueRow";
-import SourceVerified from "@/components/SourceVerified";
 
 const ADMIT_CARD_DEFAULT_ORDER = [
   "importantDatesRaw",
@@ -148,70 +149,38 @@ export async function AdmitCardDetailBody({ card }: { card: AdmitCardItem }) {
             });
           })()}
 
-          {Array.isArray(card.faqs) && card.faqs.length > 0 && (
-            <Section title={t("faqs")} icon={<HelpCircle size={16} />} accent="pink">
-              <div className="divide-y divide-[var(--color-border)]">
-                {card.faqs.map((faq, i) => (
-                  <div key={i} className={i === 0 ? "pb-4" : "py-4"}>
-                    <p className="text-sm font-semibold text-[var(--color-text-primary)]">{faq.question}</p>
-                    <p className="mt-1.5 border-l-2 border-[var(--color-accent-pink-tint)] pl-3 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                      {faq.answer}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </Section>
-          )}
-
-          {card.conclusion && (
-            <Section title={t("conclusion")} icon={<CheckCircle2 size={16} />} accent="green">
-              <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{card.conclusion}</p>
-            </Section>
-          )}
+          <FaqsSection faqs={card.faqs} t={t} />
+          <ConclusionSection conclusion={card.conclusion} t={t} />
         </div>
 
         <aside className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-24 lg:h-fit">
-          <Card>
-            <p className="mb-3 flex items-center gap-2 text-base font-bold text-[var(--color-text-primary)]">
-              <Link2 size={17} /> {t("importantLinks")}
-            </p>
-            {sourceLinks.length > 0 ? (
-              sourceLinks.map((link, i) => (
-                <ButtonLink
-                  key={`${link.label}-${i}`}
-                  href={documentViewerHref(link.url, link.label)}
-                  target="_blank"
-                  variant="secondary"
-                  className={i === 0 ? "w-full" : "mt-2 w-full"}
-                >
-                  {link.label} <ExternalLink size={14} />
-                </ButtonLink>
-              ))
-            ) : hasRealOfficialLink ? (
-              <ButtonLink href={documentViewerHref(card.officialLink, t("downloadAdmitCard"))} target="_blank" className="w-full">
-                {t("downloadAdmitCard")} <ExternalLink size={14} />
-              </ButtonLink>
-            ) : (
-              <p className="text-sm text-[var(--color-text-secondary)]">
-                {t("noOfficialLinkAdmitCard")}
-              </p>
-            )}
-            <div className="mt-3">
-              <SourceVerified sourceUrl={card.sourceUrl} />
-            </div>
-          </Card>
+          <ImportantLinksCard
+            title={t("importantLinks")}
+            sourceLinks={sourceLinks}
+            noLinkMessage={t("noOfficialLinkAdmitCard")}
+            sourceUrl={card.sourceUrl}
+            officialButtons={
+              hasRealOfficialLink
+                ? [
+                    {
+                      href: documentViewerHref(card.officialLink, t("downloadAdmitCard")),
+                      label: t("downloadAdmitCard"),
+                      trailingIcon: <ExternalLink size={14} />,
+                    },
+                  ]
+                : []
+            }
+          />
 
-          <Card>
-            <p className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
-              {t("atAGlance")}
-            </p>
-            <div className="mt-3 space-y-2.5">
-              <KeyValueRow label={t("organization")} value={card.organization} />
-              <KeyValueRow label={t("category")} value={card.category} />
-              <KeyValueRow label={t("examDate")} value={formatDate(card.examDate)} />
-              <KeyValueRow label={t("released")} value={formatDate(card.releaseDate)} />
-            </div>
-          </Card>
+          <AtAGlanceCard
+            title={t("atAGlance")}
+            rows={[
+              { label: t("organization"), value: card.organization },
+              { label: t("category"), value: card.category },
+              { label: t("examDate"), value: formatDate(card.examDate) },
+              { label: t("released"), value: formatDate(card.releaseDate) },
+            ]}
+          />
         </aside>
       </div>
     </div>

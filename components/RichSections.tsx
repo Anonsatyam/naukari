@@ -1,8 +1,8 @@
-import { Wallet, Hourglass, Users, ListChecks, ClipboardList, FileText, GraduationCap } from "lucide-react";
+import { Wallet, Hourglass, Users, ListChecks, ClipboardList, FileText, GraduationCap, HelpCircle, CheckCircle2 } from "lucide-react";
 import { Section, StepList, PipeTableOrText } from "@/components/DetailSections";
 import { KeyValueRow } from "@/components/KeyValueRow";
 import { formatCurrency } from "@/lib/utils";
-import type { VacancyBreakdown, AgeLimitRow, AgeRelaxationRow } from "@/lib/types";
+import type { VacancyBreakdown, AgeLimitRow, AgeRelaxationRow, FaqItem } from "@/lib/types";
 
 export type SectionTranslator = (key: string, values?: Record<string, string | number>) => string;
 
@@ -215,6 +215,33 @@ export function DocumentsRequiredSection({ documentsRequired, t }: { documentsRe
   return (
     <Section title={t("documentsRequired")} icon={<FileText size={16} />} accent="neutral">
       <PipeTableOrText text={documentsRequired} />
+    </Section>
+  );
+}
+
+export function FaqsSection({ faqs, t }: { faqs?: FaqItem[]; t: SectionTranslator }) {
+  if (!Array.isArray(faqs) || faqs.length === 0) return null;
+  return (
+    <Section title={t("faqs")} icon={<HelpCircle size={16} />} accent="pink">
+      <div className="divide-y divide-[var(--color-border)]">
+        {faqs.map((faq, i) => (
+          <div key={i} className={i === 0 ? "pb-4" : "py-4"}>
+            <p className="text-sm font-semibold text-[var(--color-text-primary)]">{faq.question}</p>
+            <p className="mt-1.5 border-l-2 border-[var(--color-accent-pink-tint)] pl-3 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+              {faq.answer}
+            </p>
+          </div>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+export function ConclusionSection({ conclusion, t }: { conclusion?: string; t: SectionTranslator }) {
+  if (!conclusion) return null;
+  return (
+    <Section title={t("conclusion")} icon={<CheckCircle2 size={16} />} accent="green">
+      <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{conclusion}</p>
     </Section>
   );
 }

@@ -1,10 +1,11 @@
 import { Fragment } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
-import { Calendar, ExternalLink, FileText, HelpCircle, Link2, ListChecks, CheckCircle2 } from "lucide-react";
+import { Calendar, ExternalLink, FileText, ListChecks } from "lucide-react";
 import { ResultItem } from "@/lib/types";
 import { formatDate, isSourceSiteUrl, documentViewerHref } from "@/lib/utils";
 import { resolveSectionOrder, parseGenericKey } from "@/lib/sectionOrder";
 import { Section, StepList, PipeTableOrText, GenericSection } from "@/components/DetailSections";
+import { ImportantLinksCard, AtAGlanceCard } from "@/components/detail/DetailSidebar";
 import {
   ApplicationFeeSection,
   AgeLimitSection,
@@ -13,14 +14,14 @@ import {
   SelectionProcessSection,
   ExamPatternSection,
   DocumentsRequiredSection,
+  FaqsSection,
+  ConclusionSection,
   SectionTranslator,
 } from "@/components/RichSections";
-import { ButtonLink } from "@/components/Button";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
 import { KeyValueRow } from "@/components/KeyValueRow";
-import SourceVerified from "@/components/SourceVerified";
 
 const RESULT_DEFAULT_ORDER = [
   "importantDatesRaw",
@@ -139,69 +140,37 @@ export async function ResultDetailBody({ result }: { result: ResultItem }) {
             });
           })()}
 
-          {Array.isArray(result.faqs) && result.faqs.length > 0 && (
-            <Section title={t("faqs")} icon={<HelpCircle size={16} />} accent="pink">
-              <div className="divide-y divide-[var(--color-border)]">
-                {result.faqs.map((faq, i) => (
-                  <div key={i} className={i === 0 ? "pb-4" : "py-4"}>
-                    <p className="text-sm font-semibold text-[var(--color-text-primary)]">{faq.question}</p>
-                    <p className="mt-1.5 border-l-2 border-[var(--color-accent-pink-tint)] pl-3 text-sm leading-relaxed text-[var(--color-text-secondary)]">
-                      {faq.answer}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </Section>
-          )}
-
-          {result.conclusion && (
-            <Section title={t("conclusion")} icon={<CheckCircle2 size={16} />} accent="green">
-              <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{result.conclusion}</p>
-            </Section>
-          )}
+          <FaqsSection faqs={result.faqs} t={t} />
+          <ConclusionSection conclusion={result.conclusion} t={t} />
         </div>
 
         <aside className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-24 lg:h-fit">
-          <Card>
-            <p className="mb-3 flex items-center gap-2 text-base font-bold text-[var(--color-text-primary)]">
-              <Link2 size={17} /> {t("importantLinks")}
-            </p>
-            {sourceLinks.length > 0 ? (
-              sourceLinks.map((link, i) => (
-                <ButtonLink
-                  key={`${link.label}-${i}`}
-                  href={documentViewerHref(link.url, link.label)}
-                  target="_blank"
-                  variant="secondary"
-                  className={i === 0 ? "w-full" : "mt-2 w-full"}
-                >
-                  {link.label} <ExternalLink size={14} />
-                </ButtonLink>
-              ))
-            ) : hasRealOfficialLink ? (
-              <ButtonLink href={documentViewerHref(result.officialLink, t("viewOfficialResult"))} target="_blank" className="w-full">
-                {t("viewOfficialResult")} <ExternalLink size={14} />
-              </ButtonLink>
-            ) : (
-              <p className="text-sm text-[var(--color-text-secondary)]">
-                {t("noOfficialLinkResult")}
-              </p>
-            )}
-            <div className="mt-3">
-              <SourceVerified sourceUrl={result.sourceUrl} />
-            </div>
-          </Card>
+          <ImportantLinksCard
+            title={t("importantLinks")}
+            sourceLinks={sourceLinks}
+            noLinkMessage={t("noOfficialLinkResult")}
+            sourceUrl={result.sourceUrl}
+            officialButtons={
+              hasRealOfficialLink
+                ? [
+                    {
+                      href: documentViewerHref(result.officialLink, t("viewOfficialResult")),
+                      label: t("viewOfficialResult"),
+                      trailingIcon: <ExternalLink size={14} />,
+                    },
+                  ]
+                : []
+            }
+          />
 
-          <Card>
-            <p className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
-              {t("atAGlance")}
-            </p>
-            <div className="mt-3 space-y-2.5">
-              <KeyValueRow label={t("organization")} value={result.organization} />
-              <KeyValueRow label={t("category")} value={result.category} />
-              <KeyValueRow label={t("resultDeclared")} value={formatDate(result.resultDate)} />
-            </div>
-          </Card>
+          <AtAGlanceCard
+            title={t("atAGlance")}
+            rows={[
+              { label: t("organization"), value: result.organization },
+              { label: t("category"), value: result.category },
+              { label: t("resultDeclared"), value: formatDate(result.resultDate) },
+            ]}
+          />
         </aside>
       </div>
     </div>
