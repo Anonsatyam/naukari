@@ -16,15 +16,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { jobTitle, organization, sourceUrl, draftType, extractedFields } = body;
-  if (!jobTitle?.trim() || !organization?.trim() || !sourceUrl?.trim()) {
-    return NextResponse.json(
-      { error: "jobTitle, organization and sourceUrl are required" },
-      { status: 400 }
-    );
+  const { jobTitle, draftType, extractedFields } = body;
+  const organization = body.organization?.trim() ?? "";
+  const sourceUrl = body.sourceUrl?.trim() ?? "";
+  if (!jobTitle?.trim()) {
+    return NextResponse.json({ error: "jobTitle is required" }, { status: 400 });
   }
 
-  if (await draftExistsForSource(sourceUrl)) {
+  // Nothing meaningful to dedupe against once the source link is left blank.
+  if (sourceUrl && (await draftExistsForSource(sourceUrl))) {
     return NextResponse.json(
       { error: "A draft or published post already exists for this exact link." },
       { status: 409 }
@@ -34,8 +34,8 @@ export async function POST(request: NextRequest) {
   try {
     const draft = await createDraft({
       jobTitle: jobTitle.trim(),
-      organization: organization.trim(),
-      sourceUrl: sourceUrl.trim(),
+      organization,
+      sourceUrl,
       confidence: "high",
       draftType: draftType ?? "job",
       origin: "manual",

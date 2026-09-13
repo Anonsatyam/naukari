@@ -36,7 +36,7 @@ const dateRowSchema = z.object({ label: z.string(), date: z.string() });
 const createPostSchema = z.object({
   draftType: z.enum(["job", "result", "admit_card"]),
   title: z.string().trim().min(1),
-  organization: z.string().trim().min(1),
+  organization: z.string(),
   category: z.string(),
   tags: z.array(z.string()),
   subtitle: z.string(),
@@ -167,7 +167,7 @@ export default function CreatePostPage() {
     },
     () => {
       previewTabHandle?.close();
-      toast.error("Title and Organization are required before you can preview.");
+      toast.error("Title is required before you can preview.");
     }
   );
 
@@ -183,10 +183,6 @@ export default function CreatePostPage() {
   const onCreate = handleSubmit(
     async (values) => {
       const primaryLink = values.importantLinksRows.find((r) => r.url.trim())?.url.trim();
-      if (!primaryLink) {
-        toast.error("Add at least one Important Link — the first one becomes this post's official reference link.");
-        return;
-      }
       setSubmitting(true);
       try {
         const res = await fetch("/api/admin/drafts/create", {
@@ -195,7 +191,7 @@ export default function CreatePostPage() {
           body: JSON.stringify({
             jobTitle: values.title.trim(),
             organization: values.organization.trim(),
-            sourceUrl: primaryLink,
+            sourceUrl: primaryLink ?? "",
             draftType: values.draftType,
             extractedFields: buildExtractedFields(values),
           }),
@@ -209,16 +205,12 @@ export default function CreatePostPage() {
         setSubmitting(false);
       }
     },
-    () => toast.error("Title and Organization are required.")
+    () => toast.error("Title is required.")
   );
 
   const onPublish = handleSubmit(
     async (values) => {
       const primaryLink = values.importantLinksRows.find((r) => r.url.trim())?.url.trim();
-      if (!primaryLink) {
-        toast.error("Add at least one Important Link — the first one becomes this post's official reference link.");
-        return;
-      }
       setPublishing(true);
       try {
         const res = await fetch("/api/admin/drafts/publish", {
@@ -227,7 +219,7 @@ export default function CreatePostPage() {
           body: JSON.stringify({
             jobTitle: values.title.trim(),
             organization: values.organization.trim(),
-            sourceUrl: primaryLink,
+            sourceUrl: primaryLink ?? "",
             draftType: values.draftType,
             extractedFields: buildExtractedFields(values),
           }),
@@ -242,7 +234,7 @@ export default function CreatePostPage() {
         setPublishing(false);
       }
     },
-    () => toast.error("Title and Organization are required.")
+    () => toast.error("Title is required.")
   );
 
   if (published) {

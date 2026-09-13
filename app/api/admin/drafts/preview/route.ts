@@ -17,15 +17,15 @@ export async function POST(request: NextRequest) {
   }
 
   const { jobTitle, organization, sourceUrl, draftType, extractedFields } = body;
-  if (!jobTitle?.trim() || !organization?.trim()) {
-    return NextResponse.json({ error: "jobTitle and organization are required" }, { status: 400 });
+  if (!jobTitle?.trim()) {
+    return NextResponse.json({ error: "jobTitle is required" }, { status: 400 });
   }
 
   try {
     const preview = await previewDraftEntity(
       {
         jobTitle: jobTitle.trim(),
-        organization: organization.trim(),
+        organization: organization?.trim() ?? "",
         sourceUrl: sourceUrl?.trim() || "",
         draftType: draftType ?? "job",
         extractedFields: extractedFields ?? {},
