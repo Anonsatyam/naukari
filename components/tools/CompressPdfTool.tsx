@@ -11,9 +11,9 @@ import { pdfBytesToBlob } from "@/lib/pdfRender";
 import { downloadBlob, formatBytes } from "@/lib/image-tools";
 
 const QUALITY_OPTIONS = [
-  { value: 0.7, maxDim: 2000, labelKey: "qualityHigh" as const },
-  { value: 0.5, maxDim: 1600, labelKey: "qualityMedium" as const },
-  { value: 0.3, maxDim: 1200, labelKey: "qualityLow" as const },
+  { value: 0.8, maxDim: 2200, labelKey: "qualityHigh" as const },
+  { value: 0.45, maxDim: 1400, labelKey: "qualityMedium" as const },
+  { value: 0.12, maxDim: 800, labelKey: "qualityLow" as const },
 ];
 
 async function recompressEmbeddedJpegs(
