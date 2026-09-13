@@ -40,10 +40,12 @@ export default function Footer() {
 
         <div className="mt-8 flex flex-col gap-2 border-t border-white/20 pt-6 text-xs text-white/70 sm:flex-row sm:items-center sm:justify-between">
           <p>{t("footer.credit")}</p>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4">
             <Link href="/about" className={linkClass}>{t("footer.about")}</Link>
             <Link href="/about#disclaimer" className={linkClass}>{t("footer.disclaimer")}</Link>
             <Link href="/about#contact" className={linkClass}>{t("footer.contact")}</Link>
+            <Link href="/privacy" className={linkClass}>{t("footer.privacy")}</Link>
+            <Link href="/terms" className={linkClass}>{t("footer.terms")}</Link>
           </div>
         </div>
       </div>
