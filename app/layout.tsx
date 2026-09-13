@@ -1,17 +1,21 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Noto_Sans_Devanagari } from "next/font/google";
+import { Roboto, Poppins } from "next/font/google";
 import "./globals.css";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
-const inter = Inter({
+const roboto = Roboto({
   subsets: ["latin"],
-  variable: "--font-inter",
+  weight: "variable",
+  variable: "--font-roboto",
   display: "swap",
 });
 
-const notoSansDevanagari = Noto_Sans_Devanagari({
+// Poppins (by Indian Type Foundry) ships a native Devanagari subset, so it
+// covers Hindi directly rather than falling back to another family.
+const poppinsHindi = Poppins({
   subsets: ["devanagari"],
-  variable: "--font-noto-devanagari",
+  weight: ["400", "500", "600", "700", "900"],
+  variable: "--font-poppins-hindi",
   display: "swap",
 });
 
@@ -49,7 +53,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
-      <body className={`${inter.variable} ${notoSansDevanagari.variable} antialiased`}>
+      <body className={`${roboto.variable} ${poppinsHindi.variable} antialiased`}>
         {children}
         <ServiceWorkerRegister />
       </body>
