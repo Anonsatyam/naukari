@@ -20,6 +20,7 @@ export default function AdmitCardsExplorer() {
   const [query, setQuery] = useState("");
   const [admitCards, setAdmitCards] = useState<AdmitCardItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [everHadData, setEverHadData] = useState(false);
 
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -29,12 +30,19 @@ export default function AdmitCardsExplorer() {
       setLoading(true);
       fetch(`/api/admit-cards?${params.toString()}`)
         .then((res) => res.json())
-        .then((data: { admitCards: AdmitCardItem[] }) => setAdmitCards(data.admitCards))
+        .then((data: { admitCards: AdmitCardItem[] }) => {
+          setAdmitCards(data.admitCards);
+          if (data.admitCards.length > 0) setEverHadData(true);
+        })
         .finally(() => setLoading(false));
     }, 250);
 
     return () => clearTimeout(handle);
   }, [query]);
+
+  // Once we've ever seen data, keep the search bar around (even through a
+  // 0-result search) — only hide it before we know whether any data exists.
+  const showSearch = everHadData || admitCards.length > 0 || query.trim() !== "";
 
   return (
     <div className="container-page py-8">
@@ -49,12 +57,14 @@ export default function AdmitCardsExplorer() {
         </h1>
       </div>
 
-      <SearchInput
-        value={query}
-        onChange={setQuery}
-        placeholder={t("searchPlaceholder")}
-        className="mt-4 sm:max-w-md"
-      />
+      {showSearch && (
+        <SearchInput
+          value={query}
+          onChange={setQuery}
+          placeholder={t("searchPlaceholder")}
+          className="mt-4 sm:max-w-md"
+        />
+      )}
 
       {loading ? (
         <Card padding="p-10" className="mt-6 text-center">

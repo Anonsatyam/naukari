@@ -33,6 +33,7 @@ export default function JobsExplorer() {
 
   const [filtered, setFiltered] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [everHadData, setEverHadData] = useState(false);
 
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -46,7 +47,10 @@ export default function JobsExplorer() {
       setLoading(true);
       fetch(`/api/jobs?${params.toString()}`)
         .then((res) => res.json())
-        .then((data: { jobs: Job[] }) => setFiltered(data.jobs))
+        .then((data: { jobs: Job[] }) => {
+          setFiltered(data.jobs);
+          if (data.jobs.length > 0) setEverHadData(true);
+        })
         .finally(() => setLoading(false));
     }, 250);
 
@@ -54,6 +58,10 @@ export default function JobsExplorer() {
   }, [query, category, department, qualification, state]);
 
   const activeFilterCount = category.length + department.length + qualification.length + state.length;
+
+  // Once we've ever seen data, keep the search bar around (even through a
+  // 0-result search) — only hide it before we know whether any data exists.
+  const showSearch = everHadData || filtered.length > 0 || query.trim() !== "" || activeFilterCount > 0;
 
   const resetFilters = () => {
     setCategory([]);
@@ -88,12 +96,14 @@ export default function JobsExplorer() {
       </div>
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <SearchInput
-          value={query}
-          onChange={setQuery}
-          placeholder={t("searchPlaceholder")}
-          className="flex-1"
-        />
+        {showSearch && (
+          <SearchInput
+            value={query}
+            onChange={setQuery}
+            placeholder={t("searchPlaceholder")}
+            className="flex-1 sm:max-w-md"
+          />
+        )}
         <button
           onClick={() => setFiltersOpen((v) => !v)}
           className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm font-medium text-[var(--color-text-primary)] lg:hidden"
