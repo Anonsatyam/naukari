@@ -1,20 +1,82 @@
 "use client";
 
 import { useState } from "react";
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, PDFName, PDFRawStream } from "pdf-lib";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Download } from "lucide-react";
 import FileDropzone from "./FileDropzone";
 import { Button } from "@/components/Button";
-import { loadPdfDocument, renderPageToCanvas, pdfBytesToBlob } from "@/lib/pdfRender";
-import { canvasToBlob, downloadBlob, formatBytes } from "@/lib/image-tools";
+import { pdfBytesToBlob } from "@/lib/pdfRender";
+import { downloadBlob, formatBytes } from "@/lib/image-tools";
 
 const QUALITY_OPTIONS = [
-  { value: 0.5, scale: 1.5, labelKey: "qualityHigh" as const },
-  { value: 0.3, scale: 1.15, labelKey: "qualityMedium" as const },
-  { value: 0.15, scale: 0.9, labelKey: "qualityLow" as const },
+  { value: 0.7, maxDim: 2000, labelKey: "qualityHigh" as const },
+  { value: 0.5, maxDim: 1600, labelKey: "qualityMedium" as const },
+  { value: 0.3, maxDim: 1200, labelKey: "qualityLow" as const },
 ];
+
+async function recompressEmbeddedJpegs(
+  pdfDoc: PDFDocument,
+  quality: number,
+  maxDim: number
+): Promise<number> {
+  const objects = pdfDoc.context.enumerateIndirectObjects();
+  let recompressedCount = 0;
+
+  for (const [ref, obj] of objects) {
+    if (!(obj instanceof PDFRawStream)) continue;
+    const dict = obj.dict;
+    const subtype = dict.get(PDFName.of("Subtype"));
+    if (!subtype || subtype.toString() !== "/Image") continue;
+    const filter = dict.get(PDFName.of("Filter"));
+    // Only JPEGs are handled — the safest, highest-value case (scans/photos).
+    // Everything else (PNG/Flate, CCITT fax, JPX, indexed palettes, etc.) is
+    // left completely untouched rather than risk corrupting an unfamiliar format.
+    if (filter?.toString() !== "/DCTDecode") continue;
+
+    try {
+      const rawBytes = obj.getContents();
+      const bitmap = await createImageBitmap(new Blob([new Uint8Array(rawBytes)], { type: "image/jpeg" }));
+      const { width, height } = bitmap;
+      if (width <= 0 || height <= 0) continue;
+
+      const scale = Math.min(1, maxDim / Math.max(width, height));
+      const targetWidth = Math.max(1, Math.round(width * scale));
+      const targetHeight = Math.max(1, Math.round(height * scale));
+
+      const canvas = document.createElement("canvas");
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) continue;
+      ctx.drawImage(bitmap, 0, 0, targetWidth, targetHeight);
+
+      const newBlob = await new Promise<Blob>((resolve, reject) =>
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob failed"))), "image/jpeg", quality)
+      );
+      const newBytes = new Uint8Array(await newBlob.arrayBuffer());
+
+      if (newBytes.length >= rawBytes.length) continue;
+
+      const newDict = dict.clone(pdfDoc.context);
+      newDict.set(PDFName.of("Width"), pdfDoc.context.obj(targetWidth));
+      newDict.set(PDFName.of("Height"), pdfDoc.context.obj(targetHeight));
+      newDict.set(PDFName.of("Filter"), PDFName.of("DCTDecode"));
+      newDict.set(PDFName.of("ColorSpace"), PDFName.of("DeviceRGB"));
+      newDict.set(PDFName.of("BitsPerComponent"), pdfDoc.context.obj(8));
+      newDict.delete(PDFName.of("DecodeParms"));
+      newDict.delete(PDFName.of("Decode"));
+      pdfDoc.context.assign(ref, PDFRawStream.of(newDict, newBytes));
+      recompressedCount++;
+    } catch {
+      // Skip this image on any failure — never risk corrupting the PDF.
+      continue;
+    }
+  }
+
+  return recompressedCount;
+}
 
 export default function CompressPdfTool() {
   const t = useTranslations("compressPdfPage");
@@ -37,19 +99,17 @@ export default function CompressPdfTool() {
     try {
       const opt = QUALITY_OPTIONS[qualityIndex];
       const bytes = await file.arrayBuffer();
-      const pdfDoc = await loadPdfDocument(bytes.slice(0));
-      const outDoc = await PDFDocument.create();
+      const pdfDoc = await PDFDocument.load(bytes);
+      const recompressedCount = await recompressEmbeddedJpegs(pdfDoc, opt.value, opt.maxDim);
 
-      for (let i = 1; i <= pdfDoc.numPages; i++) {
-        const canvas = await renderPageToCanvas(pdfDoc, i, opt.scale);
-        const blob = await canvasToBlob(canvas, "image/jpeg", opt.value);
-        const imgBytes = await blob.arrayBuffer();
-        const embedded = await outDoc.embedJpg(imgBytes);
-        const page = outDoc.addPage([canvas.width, canvas.height]);
-        page.drawImage(embedded, { x: 0, y: 0, width: canvas.width, height: canvas.height });
+      if (recompressedCount === 0) {
+        downloadBlob(file, file.name);
+        setResult({ originalSize: file.size, newSize: file.size, kept: true });
+        toast.success(t("alreadyOptimizedMessage"));
+        return;
       }
 
-      const outBytes = await outDoc.save();
+      const outBytes = await pdfDoc.save();
       const outBlob = pdfBytesToBlob(outBytes);
 
       if (outBlob.size >= file.size) {
