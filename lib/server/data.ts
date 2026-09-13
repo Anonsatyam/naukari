@@ -345,6 +345,18 @@ export async function setJobStatus(id: string, status: Job["status"]): Promise<J
   return data ? rowToJob(data) : undefined;
 }
 
+export async function deleteJob(id: string): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase.from("jobs").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteJobs(ids: string[]): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase.from("jobs").delete().in("id", ids);
+  if (error) throw error;
+}
+
 export async function getAllDrafts(): Promise<Draft[]> {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase.from("drafts").select("*").order("detected_at", { ascending: false });
