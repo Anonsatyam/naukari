@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
-import { Menu, X, Landmark, Wrench, Languages } from "lucide-react";
+import { Menu, X, Landmark, Languages } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -69,11 +69,7 @@ export default function Header() {
             </Link>
           ))}
 
-          <Link
-            href={toolsLink.href}
-            className={cn("flex items-center gap-1.5", navLinkClass(isActive(toolsLink.href)))}
-          >
-            <Wrench size={14} />
+          <Link href={toolsLink.href} className={navLinkClass(isActive(toolsLink.href))}>
             {toolsLink.label}
           </Link>
         </nav>
@@ -138,9 +134,8 @@ export default function Header() {
           <Link
             href={toolsLink.href}
             onClick={() => setOpen(false)}
-            className={cn("flex items-center gap-1.5", mobileLinkClass(isActive(toolsLink.href)))}
+            className={mobileLinkClass(isActive(toolsLink.href))}
           >
-            <Wrench size={14} />
             {toolsLink.label}
           </Link>
 
