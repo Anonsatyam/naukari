@@ -10,6 +10,7 @@ import Breadcrumb from "@/components/Breadcrumb";
 import ListItemCard from "@/components/ListItemCard";
 import SearchInput from "@/components/SearchInput";
 import Card from "@/components/Card";
+import { LoadingState } from "@/components/LoadingState";
 
 export default function ResultsExplorer() {
   const locale = useLocale();
@@ -57,7 +58,7 @@ export default function ResultsExplorer() {
 
       {loading ? (
         <Card padding="p-10" className="mt-6 text-center">
-          <p className="text-sm text-[var(--color-text-secondary)]">{t("loading")}</p>
+          <LoadingState label={t("loading")} compact />
         </Card>
       ) : results.length === 0 ? (
         <Card padding="p-10" className="mt-6 border-dashed text-center">

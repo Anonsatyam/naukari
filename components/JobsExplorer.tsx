@@ -8,6 +8,7 @@ import JobCard from "./JobCard";
 import Breadcrumb from "./Breadcrumb";
 import SearchInput from "./SearchInput";
 import Card from "./Card";
+import { LoadingState } from "./LoadingState";
 import { categories, departments, qualifications, states, taxonomyLabel } from "@/lib/taxonomy";
 import { Job } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -185,7 +186,7 @@ export default function JobsExplorer() {
         <div>
           {loading ? (
             <Card padding="p-10" className="text-center">
-              <p className="text-sm text-[var(--color-text-secondary)]">{t("loading")}</p>
+              <LoadingState label={t("loading")} compact />
             </Card>
           ) : filtered.length === 0 ? (
             <Card padding="p-10" className="border-dashed text-center">

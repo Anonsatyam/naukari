@@ -10,6 +10,7 @@ import JobCard from "@/components/JobCard";
 import Breadcrumb from "@/components/Breadcrumb";
 import SearchInput from "@/components/SearchInput";
 import Card from "@/components/Card";
+import { LoadingState } from "@/components/LoadingState";
 
 export default function ClosingSoonExplorer() {
   const locale = useLocale();
@@ -63,7 +64,7 @@ export default function ClosingSoonExplorer() {
 
       {loading ? (
         <Card padding="p-10" className="mt-8 text-center">
-          <p className="text-sm text-[var(--color-text-secondary)]">{t("loading")}</p>
+          <LoadingState label={t("loading")} compact />
         </Card>
       ) : closingSoonJobs.length === 0 ? (
         <Card padding="p-10" className="mt-8 border-dashed text-center">

@@ -7,6 +7,7 @@ import { qualifications, qualificationRank, classifyQualification, taxonomyLabel
 import { Job } from "@/lib/types";
 import { Button } from "./Button";
 import Card from "./Card";
+import { LoadingState } from "./LoadingState";
 import { SelectField, TextField, CheckboxField } from "./FormField";
 import { cn } from "@/lib/utils";
 
@@ -117,7 +118,7 @@ export default function EligibilityChecker({ initialJobId }: { initialJobId?: st
   if (loading) {
     return (
       <Card padding="p-10" className="text-center">
-        <p className="text-sm text-[var(--color-text-secondary)]">{t("loading")}</p>
+        <LoadingState label={t("loading")} compact />
       </Card>
     );
   }

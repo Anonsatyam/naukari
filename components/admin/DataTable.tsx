@@ -2,6 +2,7 @@
 
 import { flexRender, Table } from "@tanstack/react-table";
 import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { LoadingState } from "@/components/LoadingState";
 
 /**
  * Thin renderer around a TanStack `Table` instance — a real <table>, styled
@@ -60,8 +61,8 @@ export function DataTable<T>({
         <tbody className="divide-y divide-[var(--color-border)]">
           {loading ? (
             <tr>
-              <td colSpan={columnCount} className="p-4 text-sm text-[var(--color-text-secondary)]">
-                {loadingMessage}
+              <td colSpan={columnCount}>
+                <LoadingState label={loadingMessage} />
               </td>
             </tr>
           ) : rows.length === 0 ? (
