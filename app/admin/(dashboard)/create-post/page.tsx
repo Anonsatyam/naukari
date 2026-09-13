@@ -16,7 +16,7 @@ import { TYPE_LABELS, RowsEditor, SectionDivider } from "@/components/admin/Draf
 import { ChipInput } from "@/components/admin/ChipInput";
 import { states } from "@/lib/taxonomy";
 import { IconButton } from "@/components/admin/IconButton";
-import { openPreviewWindow } from "@/lib/adminPreview";
+import { openPreviewTab, fillPreviewTab } from "@/lib/adminPreview";
 import {
   DynamicSectionsEditor,
   DynamicSectionDraft,
@@ -53,6 +53,11 @@ const createPostSchema = z.object({
 });
 
 type FormValues = z.infer<typeof createPostSchema>;
+
+// Module-level (not a React ref) so the handleSubmit callbacks below can
+// close over it without tripping react-hooks/refs — this page only ever has
+// one mounted instance, so a plain variable is safe here.
+let previewTabHandle: Window | null = null;
 
 const defaultValues: FormValues = {
   draftType: "job",
@@ -152,15 +157,28 @@ export default function CreatePostPage() {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || "Could not build a preview.");
-        openPreviewWindow(data);
+        fillPreviewTab(previewTabHandle, data);
       } catch (err) {
+        previewTabHandle?.close();
         toast.error(err instanceof Error ? err.message : "Could not build a preview. Please try again.");
       } finally {
         setPreviewing(false);
       }
     },
-    () => toast.error("Title and Organization are required before you can preview.")
+    () => {
+      previewTabHandle?.close();
+      toast.error("Title and Organization are required before you can preview.");
+    }
   );
+
+  // react-hook-form's handleSubmit runs its (async, zod-based) validation
+  // before calling the callback above, so by the time we'd reach it any
+  // window.open() is no longer tied to this click and gets popup-blocked.
+  // Open the tab here instead, synchronously on the actual click.
+  const handlePreviewClick = () => {
+    previewTabHandle = openPreviewTab();
+    onPreview();
+  };
 
   const onCreate = handleSubmit(
     async (values) => {
@@ -281,7 +299,7 @@ export default function CreatePostPage() {
         <Button
           type="button"
           variant="secondary"
-          onClick={onPreview}
+          onClick={handlePreviewClick}
           disabled={previewing || submitting || publishing}
           title="See how this post will look on the public site before creating it"
         >
@@ -471,7 +489,7 @@ export default function CreatePostPage() {
           <Button
             type="button"
             variant="secondary"
-            onClick={onPreview}
+            onClick={handlePreviewClick}
             disabled={previewing || submitting || publishing}
             className="flex-1"
           >
