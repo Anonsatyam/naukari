@@ -11,10 +11,13 @@ const roboto = Roboto({
 });
 
 // Poppins (by Indian Type Foundry) ships a native Devanagari subset, so it
-// covers Hindi directly rather than falling back to another family.
+// covers Hindi directly rather than falling back to another family. Weight
+// 900 is deliberately excluded — the only font-black usage on the site
+// (IndiaHeading's "India") is hardcoded Latin text, rendered via Roboto, so
+// a Poppins-900 file would never actually be used by any Devanagari text.
 const poppinsHindi = Poppins({
   subsets: ["devanagari"],
-  weight: ["400", "500", "600", "700", "900"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-poppins-hindi",
   display: "swap",
 });
