@@ -7,7 +7,7 @@ import { ExternalLink, CheckCircle2, XCircle, Eye, FileText, TriangleAlert } fro
 import { Draft, AdditionalSection } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { deepDecodeEntities } from "@/lib/entities";
-import { offerPreview } from "@/lib/adminPreview";
+import { openPreviewTab, fillPreviewTab } from "@/lib/adminPreview";
 import { TABLE_SEP, deriveAgeRange, deriveSalaryRange, parseFaqLines } from "@/lib/pipeTables";
 import { Button } from "@/components/Button";
 import Badge from "@/components/Badge";
@@ -341,6 +341,7 @@ export default function ManualDraftReviewPage({
   };
 
   const handlePreview = async () => {
+    const tab = openPreviewTab();
     setPreviewing(true);
     try {
       const res = await fetch(`/api/admin/drafts/${id}/preview`, {
@@ -350,8 +351,9 @@ export default function ManualDraftReviewPage({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Could not build a preview.");
-      offerPreview(data);
+      fillPreviewTab(tab, data);
     } catch (err) {
+      tab?.close();
       toast.error(err instanceof Error ? err.message : "Could not build a preview. Please try again.");
     } finally {
       setPreviewing(false);

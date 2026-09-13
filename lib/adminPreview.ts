@@ -1,32 +1,48 @@
-import { toast } from "sonner";
-
 export const PREVIEW_STORAGE_KEY = "admin_preview_entity";
 
 /**
- * Stores the built preview and prompts the admin to open it via a toast
- * action button, rather than a speculative window.open() timed around the
- * fetch. A window.open() tied to the ORIGINAL click only stays "trusted" by
- * the browser for a very short, inconsistent window — some browsers (and
- * popup-blocking extensions) reject it the moment any async gap passes,
- * even a single microtask, which is exactly what a network round trip is.
- * The toast button's click is a brand-new, guaranteed-safe user gesture, so
- * this works regardless of how long the preview took to build.
+ * Opens a blank tab. Must be called synchronously inside the click handler,
+ * before any `await` — once an async gap passes, browsers no longer treat a
+ * later window.open() as tied to the user gesture and silently block it.
+ * Severs `tab.opener` (reverse-tabnabbing mitigation) while keeping our own
+ * reference so we can still navigate it once the preview data is ready.
  */
-export function offerPreview(payload: unknown): void {
+export function openPreviewTab(): Window | null {
+  const tab = window.open("about:blank", "_blank");
+  if (tab) {
+    try {
+      tab.opener = null;
+    } catch {
+      // ignore — some browsers make this read-only
+    }
+  }
+  return tab;
+}
+
+/** Fills the already-open tab (from openPreviewTab) with preview data. */
+export function fillPreviewTab(tab: Window | null, payload: unknown): void {
   try {
     window.localStorage.setItem(PREVIEW_STORAGE_KEY, JSON.stringify(payload));
   } catch {
-    toast.error("Could not prepare the preview.");
+    tab?.close();
     return;
   }
-  toast.success("Preview ready", {
-    description: "Click below to open it in a new tab.",
-    duration: 15000,
-    action: {
-      label: "Open Preview",
-      onClick: () => {
-        window.open("/admin/preview", "_blank");
-      },
-    },
-  });
+  if (tab && !tab.closed) {
+    tab.location.href = "/admin/preview";
+  } else {
+    // Fallback: the synchronous open above was itself blocked (rare, strict
+    // settings). This one won't have a user-gesture either, but it's better
+    // than silently doing nothing.
+    window.open("/admin/preview", "_blank");
+  }
+}
+
+/** @deprecated kept for compatibility; prefer openPreviewTab + fillPreviewTab so the tab opens synchronously with the click. */
+export function openPreviewWindow(payload: unknown): void {
+  try {
+    window.localStorage.setItem(PREVIEW_STORAGE_KEY, JSON.stringify(payload));
+  } catch {
+    return;
+  }
+  window.open("/admin/preview", "_blank", "noopener");
 }

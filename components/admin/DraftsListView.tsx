@@ -6,7 +6,7 @@ import { createColumnHelper, getCoreRowModel, useReactTable } from "@tanstack/re
 import { ArrowUpRight, CheckCircle2, XCircle, Eye, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { Draft } from "@/lib/types";
-import { offerPreview } from "@/lib/adminPreview";
+import { openPreviewTab, fillPreviewTab } from "@/lib/adminPreview";
 import { useServerTableData } from "@/lib/useServerTableData";
 import { Button } from "@/components/Button";
 import { IconButton } from "@/components/admin/IconButton";
@@ -97,6 +97,7 @@ export function DraftsListView() {
   };
 
   const handlePreview = async (id: string) => {
+    const tab = openPreviewTab();
     setPreviewingId(id);
     try {
       const res = await fetch(`/api/admin/drafts/${id}/preview`, {
@@ -106,8 +107,9 @@ export function DraftsListView() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Could not build a preview.");
-      offerPreview(data);
+      fillPreviewTab(tab, data);
     } catch (err) {
+      tab?.close();
       toast.error(err instanceof Error ? err.message : "Could not build a preview for this draft.");
     } finally {
       setPreviewingId(null);
