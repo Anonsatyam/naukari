@@ -111,8 +111,8 @@
   --color-accent-pink: var(--color-accent-pink);
   --color-accent-pink-tint: var(--color-accent-pink-tint);
 
-  --font-sans: var(--font-system);
-  --font-display: var(--font-system);
+  --font-sans: var(--font-inter), var(--font-noto-devanagari), var(--font-system);
+  --font-display: var(--font-inter), var(--font-noto-devanagari), var(--font-system);
 }
 
 html {
