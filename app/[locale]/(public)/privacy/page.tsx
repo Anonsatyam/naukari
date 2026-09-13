@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
-import { Mail } from "lucide-react";
+import { Mail, ShieldAlert } from "lucide-react";
 import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
 
@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description: "What information Sarkari Naukri collects, how it's used, and the choices available to you.",
 };
 
-const SECTION_COUNT = 12;
+const SECTION_COUNT = 14;
 
 export default async function PrivacyPage() {
   const t = await getTranslations("privacyPage");
@@ -38,6 +38,20 @@ export default async function PrivacyPage() {
             <p className="mt-1.5 text-sm leading-relaxed text-[var(--color-text-secondary)]">{t(`s${n}Body`)}</p>
           </div>
         ))}
+      </Card>
+
+      <Card padding="p-6" className="mt-6">
+        <h2 className="font-display flex items-center gap-2 text-lg font-bold text-[var(--color-text-primary)]">
+          <ShieldAlert size={18} /> {t("grievanceTitle")}
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">{t("grievanceBody")}</p>
+        <div className="mt-3 rounded-[var(--radius-control)] border border-[var(--color-border)] bg-[var(--color-background)] p-3 text-sm">
+          <p className="font-semibold text-[var(--color-text-primary)]">{t("grievanceName")}</p>
+          <p className="text-[var(--color-text-secondary)]">{t("grievanceDesignation", { brand })}</p>
+          <a href="mailto:hello@sarkarinaukri.example" className="font-medium text-[var(--color-primary)]">
+            hello@sarkarinaukri.example
+          </a>
+        </div>
       </Card>
 
       <Card padding="p-6" className="mt-6">

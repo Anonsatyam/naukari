@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description: "The terms that apply to using Sarkari Naukri's listings and free tools.",
 };
 
-const SECTION_COUNT = 11;
+const SECTION_COUNT = 13;
 
 export default async function TermsPage() {
   const t = await getTranslations("termsPage");

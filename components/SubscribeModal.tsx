@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Mail, X, CheckCircle2 } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 
 const DISMISSED_KEY = "subscribeModalDismissed";
 const SCROLL_TRIGGER_RATIO = 0.5;
@@ -19,6 +20,8 @@ export default function SubscribeModal() {
   const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
   const [sameOnWhatsapp, setSameOnWhatsapp] = useState(false);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
+  const [ageTouched, setAgeTouched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -75,11 +78,14 @@ export default function SubscribeModal() {
   const mobileError =
     trimmedMobile.length > 0 && !MOBILE_PATTERN.test(trimmedMobile) ? t("errorMobileInvalid") : null;
 
+  const ageError = ageTouched && !ageConfirmed ? t("errorAgeConfirmRequired") : null;
+
   const canSubmit =
     trimmedName.length >= MIN_NAME_LENGTH &&
     NAME_PATTERN.test(trimmedName) &&
     EMAIL_PATTERN.test(trimmedEmail) &&
-    (trimmedMobile.length === 0 || MOBILE_PATTERN.test(trimmedMobile));
+    (trimmedMobile.length === 0 || MOBILE_PATTERN.test(trimmedMobile)) &&
+    ageConfirmed;
 
   const handleMobileChange = (value: string) => {
     setMobile(value);
@@ -90,6 +96,7 @@ export default function SubscribeModal() {
     e.preventDefault();
     setError(null);
     setNameTouched(true);
+    setAgeTouched(true);
 
     if (!canSubmit) return;
 
@@ -201,6 +208,26 @@ export default function SubscribeModal() {
                     {t("whatsappSameLabel")}
                   </label>
                 )}
+              </div>
+
+              <div>
+                <label className="flex items-start gap-2 text-xs text-[var(--color-text-secondary)]">
+                  <input
+                    type="checkbox"
+                    checked={ageConfirmed}
+                    onChange={(e) => setAgeConfirmed(e.target.checked)}
+                    onBlur={() => setAgeTouched(true)}
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded accent-[var(--color-primary)]"
+                  />
+                  <span>
+                    {t("ageConfirmLabel")}{" "}
+                    <Link href="/privacy" target="_blank" className="font-medium text-[var(--color-primary)] underline">
+                      {t("privacyLinkLabel")}
+                    </Link>
+                    .
+                  </span>
+                </label>
+                {ageError && <p className="mt-1 text-xs text-[var(--color-danger)]">{ageError}</p>}
               </div>
 
               {error && <p className="text-xs text-[var(--color-danger)]">{error}</p>}
