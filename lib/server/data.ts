@@ -26,6 +26,7 @@ import { deepDecodeEntities, decodeHtmlEntities } from "@/lib/entities";
 import { parsePipeTables, PipeTable, firstNumber, deriveAgeRange, deriveSalaryRange, TOTAL_ROW_LABEL, parseFaqLines } from "@/lib/pipeTables";
 import { classifyQualification } from "@/lib/taxonomy";
 import { isSourceSiteUrl } from "@/lib/utils";
+import { clampPageSize, escapeIlikeTerm } from "@/lib/pagination";
 
 export { deriveAgeRange, deriveSalaryRange };
 
@@ -319,11 +320,50 @@ export async function getLatestActivityAt(): Promise<string | null> {
 }
 
 
-export async function getAllJobsAdmin(): Promise<Job[]> {
+export interface PageQueryOptions {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  sortBy?: string;
+  sortDir?: "asc" | "desc";
+}
+
+const JOB_SORT_COLUMNS: Record<string, string> = {
+  title: "title",
+  totalVacancies: "total_vacancies",
+  updatedAt: "updated_at",
+  status: "status",
+};
+
+export async function getJobsPage(
+  opts: PageQueryOptions = {}
+): Promise<{ jobs: Job[]; total: number; page: number; pageSize: number }> {
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase.from("jobs").select("*").order("updated_at", { ascending: false });
+  const pageSize = clampPageSize(opts.pageSize);
+  const sortColumn = JOB_SORT_COLUMNS[opts.sortBy ?? ""] ?? "updated_at";
+  const ascending = opts.sortDir === "asc";
+  const term = opts.search?.trim();
+  const escaped = term ? escapeIlikeTerm(term) : undefined;
+
+  // Resolve the total count (and clamp the requested page to it) BEFORE
+  // running the ranged query — Postgres/PostgREST throws PGRST103
+  // ("Requested range not satisfiable") rather than returning an empty page
+  // when the offset is past the last row, e.g. navigating to a page that no
+  // longer exists after rows were deleted.
+  let countQuery = supabase.from("jobs").select("id", { count: "exact", head: true });
+  if (escaped) countQuery = countQuery.or(`title.ilike.%${escaped}%,organization.ilike.%${escaped}%`);
+  const { count, error: countError } = await countQuery;
+  if (countError) throw countError;
+
+  const total = count ?? 0;
+  const page = Math.min(Math.max(1, opts.page ?? 1), Math.max(1, Math.ceil(total / pageSize)));
+  const from = (page - 1) * pageSize;
+
+  let query = supabase.from("jobs").select("*");
+  if (escaped) query = query.or(`title.ilike.%${escaped}%,organization.ilike.%${escaped}%`);
+  const { data, error } = await query.order(sortColumn, { ascending }).range(from, from + pageSize - 1);
   if (error) throw error;
-  return (data ?? []).map(rowToJob);
+  return { jobs: (data ?? []).map(rowToJob), total, page, pageSize };
 }
 
 export async function getJobByIdAdmin(id: string): Promise<Job | undefined> {
@@ -357,12 +397,43 @@ export async function deleteJobs(ids: string[]): Promise<void> {
   if (error) throw error;
 }
 
-export async function getAllDrafts(): Promise<Draft[]> {
+const DRAFT_SORT_COLUMNS: Record<string, string> = {
+  jobTitle: "job_title",
+  draftType: "draft_type",
+  detectedAt: "detected_at",
+  confidence: "confidence",
+  status: "status",
+};
+
+export async function getDraftsPage(
+  opts: PageQueryOptions = {}
+): Promise<{ drafts: Draft[]; total: number; page: number; pageSize: number }> {
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase.from("drafts").select("*").order("detected_at", { ascending: false });
+  const pageSize = clampPageSize(opts.pageSize);
+  const sortColumn = DRAFT_SORT_COLUMNS[opts.sortBy ?? ""] ?? "detected_at";
+  const ascending = opts.sortDir === "asc";
+  const term = opts.search?.trim();
+  const escaped = term ? escapeIlikeTerm(term) : undefined;
+
+  // See getJobsPage for why the count is resolved (and the page clamped to
+  // it) before the ranged query — PostgREST throws rather than returning an
+  // empty page when the offset is past the last row.
+  let countQuery = supabase.from("drafts").select("id", { count: "exact", head: true });
+  if (escaped) countQuery = countQuery.or(`job_title.ilike.%${escaped}%,organization.ilike.%${escaped}%`);
+  const { count, error: countError } = await countQuery;
+  if (countError) throw countError;
+
+  const total = count ?? 0;
+  const page = Math.min(Math.max(1, opts.page ?? 1), Math.max(1, Math.ceil(total / pageSize)));
+  const from = (page - 1) * pageSize;
+
+  let query = supabase.from("drafts").select("*");
+  if (escaped) query = query.or(`job_title.ilike.%${escaped}%,organization.ilike.%${escaped}%`);
+  const { data, error } = await query.order(sortColumn, { ascending }).range(from, from + pageSize - 1);
   if (error) throw error;
-  return (data ?? []).map(rowToDraft);
+  return { drafts: (data ?? []).map(rowToDraft), total, page, pageSize };
 }
+
 
 export async function getDraftById(id: string): Promise<Draft | undefined> {
   const supabase = getSupabaseAdmin();

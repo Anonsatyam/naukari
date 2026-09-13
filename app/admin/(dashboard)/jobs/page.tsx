@@ -1,49 +1,51 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { createColumnHelper, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { ExternalLink, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Job } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
-import { useTextFilter } from "@/lib/useTextFilter";
+import { useServerTableData } from "@/lib/useServerTableData";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
 import SearchInput from "@/components/SearchInput";
 import { Button } from "@/components/Button";
 import { IconButton } from "@/components/admin/IconButton";
+import { DataTable } from "@/components/admin/DataTable";
+import { PaginationBar } from "@/components/admin/PaginationBar";
+
+const columnHelper = createColumnHelper<Job>();
 
 export default function AdminJobsPage() {
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const loadJobs = useCallback(() => {
-    fetch("/api/admin/jobs")
-      .then((res) => res.json())
-      .then((data: { jobs: Job[] }) => setJobs(data.jobs))
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    loadJobs();
-  }, [loadJobs]);
-
-  const getSearchableText = useCallback((j: Job) => `${j.title} ${j.organization}`, []);
-  const { query, setQuery, filtered } = useTextFilter(jobs, getSearchableText);
+  const {
+    rows: jobs,
+    total,
+    loading,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    search,
+    setSearch,
+    sorting,
+    setSorting,
+    totalPages,
+    reload,
+  } = useServerTableData<Job>("/api/admin/jobs", "jobs", [{ id: "updatedAt", desc: true }]);
 
   const toggleStatus = async (job: Job) => {
     setPendingId(job.id);
     const action = job.status === "published" ? "unpublish" : "publish";
     try {
       const res = await fetch(`/api/admin/jobs/${job.id}/${action}`, { method: "POST" });
-      if (res.ok) {
-        const data: { job: Job } = await res.json();
-        setJobs((prev) => prev.map((j) => (j.id === job.id ? data.job : j)));
-      }
+      if (res.ok) reload();
     } finally {
       setPendingId(null);
     }
@@ -55,12 +57,12 @@ export default function AdminJobsPage() {
     try {
       const res = await fetch(`/api/admin/jobs/${job.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Delete failed");
-      setJobs((prev) => prev.filter((j) => j.id !== job.id));
       setSelectedIds((prev) => {
         const next = new Set(prev);
         next.delete(job.id);
         return next;
       });
+      reload();
     } catch {
       toast.error("Could not delete this job.");
     } finally {
@@ -77,12 +79,12 @@ export default function AdminJobsPage() {
     });
   };
 
-  const filteredIds = useMemo(() => filtered.map((j) => j.id), [filtered]);
-  const allSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedIds.has(id));
+  const pageIds = useMemo(() => jobs.map((j) => j.id), [jobs]);
+  const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
   const someSelected = selectedIds.size > 0;
 
   const toggleAll = () => {
-    setSelectedIds(allSelected ? new Set() : new Set(filteredIds));
+    setSelectedIds(allSelected ? new Set() : new Set(pageIds));
   };
 
   const handleBulkDelete = async () => {
@@ -97,14 +99,120 @@ export default function AdminJobsPage() {
         body: JSON.stringify({ ids }),
       });
       if (!res.ok) throw new Error("Bulk delete failed");
-      setJobs((prev) => prev.filter((j) => !selectedIds.has(j.id)));
       setSelectedIds(new Set());
+      reload();
     } catch {
       toast.error("Could not delete the selected jobs.");
     } finally {
       setBulkDeleting(false);
     }
   };
+
+  const columns = useMemo(
+    () => [
+      columnHelper.display({
+        id: "select",
+        header: () => (
+          <input
+            type="checkbox"
+            checked={allSelected}
+            onChange={toggleAll}
+            disabled={pageIds.length === 0}
+            aria-label="Select all jobs on this page"
+            className="h-4 w-4 cursor-pointer accent-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-40"
+          />
+        ),
+        cell: ({ row }) => (
+          <input
+            type="checkbox"
+            checked={selectedIds.has(row.original.id)}
+            onChange={() => toggleOne(row.original.id)}
+            aria-label={`Select ${row.original.title}`}
+            className="h-4 w-4 cursor-pointer accent-[var(--color-primary)]"
+          />
+        ),
+        enableSorting: false,
+      }),
+      columnHelper.accessor("title", {
+        id: "title",
+        header: "Job",
+        cell: ({ row }) => (
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-[var(--color-text-primary)]">{row.original.title}</p>
+            <p className="text-xs text-[var(--color-text-secondary)]">{row.original.organization}</p>
+          </div>
+        ),
+      }),
+      columnHelper.accessor("totalVacancies", {
+        id: "totalVacancies",
+        header: "Vacancies",
+        cell: ({ getValue }) => (
+          <span className="text-sm text-[var(--color-text-secondary)]">
+            {getValue() ? getValue().toLocaleString("en-IN") : "—"}
+          </span>
+        ),
+      }),
+      columnHelper.accessor("updatedAt", {
+        id: "updatedAt",
+        header: "Updated",
+        cell: ({ getValue }) => <span className="text-sm text-[var(--color-text-secondary)]">{formatDate(getValue())}</span>,
+      }),
+      columnHelper.accessor("status", {
+        id: "status",
+        header: "Status",
+        cell: ({ getValue }) => <Badge tone={getValue() === "published" ? "success" : "neutral"}>{getValue()}</Badge>,
+      }),
+      columnHelper.display({
+        id: "actions",
+        header: () => <span className="block text-right">Actions</span>,
+        cell: ({ row }) => {
+          const job = row.original;
+          return (
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => toggleStatus(job)}
+                disabled={pendingId === job.id}
+                className="text-xs font-semibold text-[var(--color-primary)] disabled:opacity-50"
+              >
+                {pendingId === job.id ? "Saving…" : job.status === "published" ? "Unpublish" : "Publish"}
+              </button>
+              <a
+                href={`/jobs/${job.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
+                aria-label="View public page"
+                title="View public page"
+              >
+                <ExternalLink size={14} />
+              </a>
+              <IconButton
+                icon={<Trash2 size={14} />}
+                label="Delete this job"
+                tone="danger"
+                size="sm"
+                onClick={() => handleDelete(job)}
+                disabled={deletingId === job.id}
+              />
+            </div>
+          );
+        },
+        enableSorting: false,
+      }),
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedIds, allSelected, pageIds.length, pendingId, deletingId]
+  );
+
+  const table = useReactTable({
+    data: jobs,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    manualSorting: true,
+    getCoreRowModel: getCoreRowModel(),
+    getRowId: (row) => row.id,
+  });
 
   return (
     <div>
@@ -137,94 +245,22 @@ export default function AdminJobsPage() {
       </div>
 
       <SearchInput
-        value={query}
-        onChange={setQuery}
-        placeholder="Search jobs..."
+        value={search}
+        onChange={setSearch}
+        placeholder="Search jobs by title or organization..."
         className="mt-4 sm:max-w-sm"
       />
 
       <Card padding="p-0" className="mt-4 overflow-hidden">
-        <div className="hidden grid-cols-[28px_1fr_120px_140px_100px_120px] gap-4 border-b border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)] md:grid">
-          <input
-            type="checkbox"
-            checked={allSelected}
-            onChange={toggleAll}
-            disabled={filteredIds.length === 0}
-            aria-label="Select all jobs"
-            className="h-4 w-4 cursor-pointer accent-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-40"
-          />
-          <span>Job</span>
-          <span>Vacancies</span>
-          <span>Updated</span>
-          <span>Status</span>
-          <span>Actions</span>
-        </div>
-        {loading ? (
-          <p className="p-4 text-sm text-[var(--color-text-secondary)]">Loading jobs…</p>
-        ) : filtered.length === 0 ? (
-          <p className="p-4 text-sm text-[var(--color-text-secondary)]">No jobs match your search.</p>
-        ) : (
-          <div className="divide-y divide-[var(--color-border)]">
-            {filtered.map((job) => (
-              <div
-                key={job.id}
-                className="grid grid-cols-[28px_1fr] gap-2 px-4 py-4 md:grid-cols-[28px_1fr_120px_140px_100px_120px] md:items-center md:gap-4"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedIds.has(job.id)}
-                  onChange={() => toggleOne(job.id)}
-                  aria-label={`Select ${job.title}`}
-                  className="h-4 w-4 cursor-pointer accent-[var(--color-primary)]"
-                />
-                <div className="col-start-2 min-w-0 md:col-start-auto">
-                  <p className="truncate text-sm font-semibold text-[var(--color-text-primary)]">{job.title}</p>
-                  <p className="text-xs text-[var(--color-text-secondary)]">{job.organization}</p>
-                </div>
-                <span className="col-start-2 text-sm text-[var(--color-text-secondary)] md:col-start-auto">
-                  {job.totalVacancies ? job.totalVacancies.toLocaleString("en-IN") : "—"}
-                </span>
-                <span className="col-start-2 text-sm text-[var(--color-text-secondary)] md:col-start-auto">
-                  {formatDate(job.updatedAt)}
-                </span>
-                <span className="col-start-2 md:col-start-auto">
-                  <Badge tone={job.status === "published" ? "success" : "neutral"}>{job.status}</Badge>
-                </span>
-                <div className="col-start-2 flex items-center gap-3 md:col-start-auto">
-                  <button
-                    onClick={() => toggleStatus(job)}
-                    disabled={pendingId === job.id}
-                    className="text-xs font-semibold text-[var(--color-primary)] disabled:opacity-50"
-                  >
-                    {pendingId === job.id
-                      ? "Saving…"
-                      : job.status === "published"
-                      ? "Unpublish"
-                      : "Publish"}
-                  </button>
-                  <a
-                    href={`/jobs/${job.slug}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
-                    aria-label="View public page"
-                    title="View public page"
-                  >
-                    <ExternalLink size={14} />
-                  </a>
-                  <IconButton
-                    icon={<Trash2 size={14} />}
-                    label="Delete this job"
-                    tone="danger"
-                    size="sm"
-                    onClick={() => handleDelete(job)}
-                    disabled={deletingId === job.id}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <DataTable table={table} loading={loading} loadingMessage="Loading jobs…" emptyMessage="No jobs match your search." />
+        <PaginationBar
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
       </Card>
     </div>
   );

@@ -1,26 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  ArrowUpRight,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  CheckCircle2,
-  XCircle,
-  Eye,
-  Trash2,
-} from "lucide-react";
+import { createColumnHelper, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { ArrowUpRight, CheckCircle2, XCircle, Eye, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { Draft } from "@/lib/types";
 import { openPreviewTab, fillPreviewTab } from "@/lib/adminPreview";
+import { useServerTableData } from "@/lib/useServerTableData";
 import { Button } from "@/components/Button";
 import { IconButton } from "@/components/admin/IconButton";
+import { DataTable } from "@/components/admin/DataTable";
+import { PaginationBar } from "@/components/admin/PaginationBar";
 import { toast } from "sonner";
 import Badge from "@/components/Badge";
 import Card from "@/components/Card";
 import Breadcrumb from "@/components/Breadcrumb";
+import SearchInput from "@/components/SearchInput";
 
 const TYPE_LABELS: Record<Draft["draftType"], string> = {
   job: "Job",
@@ -46,99 +42,31 @@ const STATUS_TONES: Record<Draft["status"], "warning" | "success" | "danger"> = 
   rejected: "danger",
 };
 
-const CONFIDENCE_RANK: Record<Draft["confidence"], number> = { low: 0, medium: 1, high: 2 };
-const TYPE_RANK: Record<Draft["draftType"], number> = { job: 0, result: 1, admit_card: 2 };
-const STATUS_RANK: Record<Draft["status"], number> = { pending: 0, approved: 1, rejected: 2 };
-
-type SortColumn = "type" | "confidence" | "status";
-type SortDirection = "asc" | "desc";
-
-function SortableHeader({
-  label,
-  column,
-  activeColumn,
-  direction,
-  onSort,
-}: {
-  label: string;
-  column: SortColumn;
-  activeColumn: SortColumn | null;
-  direction: SortDirection;
-  onSort: (column: SortColumn) => void;
-}) {
-  const isActive = activeColumn === column;
-  return (
-    <button
-      type="button"
-      onClick={() => onSort(column)}
-      className="flex items-center gap-1 text-left hover:text-[var(--color-text-primary)]"
-    >
-      {label}
-      {isActive ? (
-        direction === "asc" ? (
-          <ArrowUp size={12} />
-        ) : (
-          <ArrowDown size={12} />
-        )
-      ) : (
-        <ArrowUpDown size={12} className="opacity-40" />
-      )}
-    </button>
-  );
-}
+const columnHelper = createColumnHelper<Draft>();
 
 export function DraftsListView() {
-  const title = "Drafts";
-  const description = "Posts you created from scratch — edit, preview, publish, or delete them here.";
-  const breadcrumbLabel = "Drafts";
-
-  const [drafts, setDrafts] = useState<Draft[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [bulkPending, setBulkPending] = useState(false);
   const [previewingId, setPreviewingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const loadDrafts = useCallback(() => {
-    fetch("/api/admin/drafts")
-      .then((res) => res.json())
-      .then((data: { drafts: Draft[] }) => setDrafts(data.drafts))
-      .finally(() => setLoading(false));
-  }, []);
+  const {
+    rows: drafts,
+    total,
+    loading,
+    page,
+    pageSize,
+    setPage,
+    setPageSize,
+    search,
+    setSearch,
+    sorting,
+    setSorting,
+    totalPages,
+    reload,
+  } = useServerTableData<Draft>("/api/admin/drafts", "drafts", [{ id: "detectedAt", desc: true }]);
 
-  useEffect(() => {
-    loadDrafts();
-  }, [loadDrafts]);
-
-  const handleSort = (column: SortColumn) => {
-    if (sortColumn === column) {
-      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortColumn(column);
-      setSortDirection("asc");
-    }
-  };
-
-  const sortRank = useCallback((draft: Draft, column: SortColumn): number => {
-    if (column === "type") return TYPE_RANK[draft.draftType];
-    if (column === "confidence") return CONFIDENCE_RANK[draft.confidence];
-    return STATUS_RANK[draft.status];
-  }, []);
-
-  const sortedDrafts = useMemo(() => {
-    if (!sortColumn) return drafts;
-    return [...drafts].sort((a, b) => {
-      const diff = sortRank(a, sortColumn) - sortRank(b, sortColumn);
-      return sortDirection === "asc" ? diff : -diff;
-    });
-  }, [drafts, sortColumn, sortDirection, sortRank]);
-
-  const selectableIds = useMemo(
-    () => sortedDrafts.filter((d) => d.status === "pending").map((d) => d.id),
-    [sortedDrafts]
-  );
+  const selectableIds = useMemo(() => drafts.filter((d) => d.status === "pending").map((d) => d.id), [drafts]);
   const allSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedIds.has(id));
   const someSelected = selectedIds.size > 0;
 
@@ -160,11 +88,9 @@ export function DraftsListView() {
     if (ids.length === 0) return;
     setBulkPending(true);
     try {
-      await Promise.allSettled(
-        ids.map((id) => fetch(`/api/admin/drafts/${id}/${action}`, { method: "POST" }))
-      );
+      await Promise.allSettled(ids.map((id) => fetch(`/api/admin/drafts/${id}/${action}`, { method: "POST" })));
       setSelectedIds(new Set());
-      loadDrafts();
+      reload();
     } finally {
       setBulkPending(false);
     }
@@ -196,7 +122,12 @@ export function DraftsListView() {
     try {
       const res = await fetch(`/api/admin/drafts/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Delete failed");
-      loadDrafts();
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      reload();
     } catch {
       toast.error("Could not delete this draft.");
     } finally {
@@ -204,14 +135,112 @@ export function DraftsListView() {
     }
   };
 
+  const columns = useMemo(
+    () => [
+      columnHelper.display({
+        id: "select",
+        header: () => (
+          <input
+            type="checkbox"
+            checked={allSelected}
+            onChange={toggleAll}
+            disabled={selectableIds.length === 0}
+            aria-label="Select all pending drafts on this page"
+            className="h-4 w-4 cursor-pointer accent-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-40"
+          />
+        ),
+        cell: ({ row }) => (
+          <input
+            type="checkbox"
+            checked={selectedIds.has(row.original.id)}
+            onChange={() => toggleOne(row.original.id)}
+            disabled={row.original.status !== "pending"}
+            aria-label={`Select ${row.original.jobTitle}`}
+            className="h-4 w-4 cursor-pointer accent-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-40"
+          />
+        ),
+        enableSorting: false,
+      }),
+      columnHelper.accessor("jobTitle", {
+        id: "jobTitle",
+        header: "Title",
+        cell: ({ row }) => (
+          <Link href={`/admin/my-drafts/${row.original.id}`} className="block min-w-0 hover:opacity-80">
+            <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--color-text-primary)]">
+              {row.original.jobTitle}
+              <ArrowUpRight size={13} className="shrink-0 text-[var(--color-text-muted)]" />
+            </p>
+            <p className="text-xs text-[var(--color-text-secondary)]">{row.original.organization}</p>
+          </Link>
+        ),
+      }),
+      columnHelper.accessor("draftType", {
+        id: "draftType",
+        header: "Type",
+        cell: ({ getValue }) => <Badge tone={TYPE_TONES[getValue()]}>{TYPE_LABELS[getValue()]}</Badge>,
+      }),
+      columnHelper.accessor("detectedAt", {
+        id: "detectedAt",
+        header: "Created",
+        cell: ({ getValue }) => <span className="text-sm text-[var(--color-text-secondary)]">{formatDate(getValue())}</span>,
+      }),
+      columnHelper.accessor("confidence", {
+        id: "confidence",
+        header: "Confidence",
+        cell: ({ getValue }) => <Badge tone={CONFIDENCE_TONES[getValue()]}>{getValue()}</Badge>,
+      }),
+      columnHelper.accessor("status", {
+        id: "status",
+        header: "Status",
+        cell: ({ getValue }) => <Badge tone={STATUS_TONES[getValue()]}>{getValue()}</Badge>,
+      }),
+      columnHelper.display({
+        id: "actions",
+        header: () => <span className="block text-right">Actions</span>,
+        cell: ({ row }) => (
+          <div className="flex items-center justify-end gap-1">
+            <IconButton
+              icon={<Eye size={15} />}
+              label="Preview this post"
+              onClick={() => handlePreview(row.original.id)}
+              disabled={previewingId === row.original.id}
+            />
+            <IconButton
+              icon={<Trash2 size={15} />}
+              label="Delete this draft"
+              tone="danger"
+              onClick={() => handleDelete(row.original.id)}
+              disabled={deletingId === row.original.id}
+            />
+          </div>
+        ),
+        enableSorting: false,
+      }),
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedIds, allSelected, selectableIds.length, previewingId, deletingId]
+  );
+
+  const table = useReactTable({
+    data: drafts,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    manualSorting: true,
+    getCoreRowModel: getCoreRowModel(),
+    getRowId: (row) => row.id,
+  });
+
   return (
     <div>
-      <Breadcrumb items={[{ label: breadcrumbLabel }]} />
+      <Breadcrumb items={[{ label: "Drafts" }]} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-xl font-bold text-[var(--color-text-primary)]">{title}</h1>
-          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{description}</p>
+          <h1 className="font-display text-xl font-bold text-[var(--color-text-primary)]">Drafts</h1>
+          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+            Posts you created from scratch — edit, preview, publish, or delete them here.
+          </p>
         </div>
 
         {someSelected && (
@@ -241,99 +270,23 @@ export function DraftsListView() {
         )}
       </div>
 
-      <Card padding="p-0" className="mt-5 overflow-hidden">
-        <div className="hidden items-center gap-4 border-b border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)] md:grid md:grid-cols-[28px_1fr_90px_120px_120px_100px_90px]">
-          <input
-            type="checkbox"
-            checked={allSelected}
-            onChange={toggleAll}
-            disabled={selectableIds.length === 0}
-            aria-label="Select all pending drafts"
-            className="h-4 w-4 cursor-pointer accent-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-40"
-          />
-          <span>Title</span>
-          <SortableHeader
-            label="Type"
-            column="type"
-            activeColumn={sortColumn}
-            direction={sortDirection}
-            onSort={handleSort}
-          />
-          <span>Created</span>
-          <SortableHeader
-            label="Confidence"
-            column="confidence"
-            activeColumn={sortColumn}
-            direction={sortDirection}
-            onSort={handleSort}
-          />
-          <SortableHeader
-            label="Status"
-            column="status"
-            activeColumn={sortColumn}
-            direction={sortDirection}
-            onSort={handleSort}
-          />
-          <span className="text-right">Actions</span>
-        </div>
+      <SearchInput
+        value={search}
+        onChange={setSearch}
+        placeholder="Search drafts by title or organization..."
+        className="mt-4 sm:max-w-sm"
+      />
 
-        {loading ? (
-          <p className="p-4 text-sm text-[var(--color-text-secondary)]">Loading drafts…</p>
-        ) : sortedDrafts.length === 0 ? (
-          <p className="p-4 text-sm text-[var(--color-text-secondary)]">No drafts yet.</p>
-        ) : (
-          <div className="divide-y divide-[var(--color-border)]">
-            {sortedDrafts.map((draft) => (
-              <div
-                key={draft.id}
-                className="grid grid-cols-[28px_1fr] gap-2 px-4 py-4 md:grid-cols-[28px_1fr_90px_120px_120px_100px_90px] md:items-center md:gap-4"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedIds.has(draft.id)}
-                  onChange={() => toggleOne(draft.id)}
-                  disabled={draft.status !== "pending"}
-                  aria-label={`Select ${draft.jobTitle}`}
-                  className="h-4 w-4 cursor-pointer accent-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-40"
-                />
-                <Link href={`/admin/my-drafts/${draft.id}`} className="min-w-0 hover:opacity-80">
-                  <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-[var(--color-text-primary)]">
-                    {draft.jobTitle}
-                    <ArrowUpRight size={13} className="shrink-0 text-[var(--color-text-muted)]" />
-                  </p>
-                  <p className="text-xs text-[var(--color-text-secondary)]">{draft.organization}</p>
-                </Link>
-                <span className="col-start-2 md:col-start-auto">
-                  <Badge tone={TYPE_TONES[draft.draftType]}>{TYPE_LABELS[draft.draftType]}</Badge>
-                </span>
-                <span className="col-start-2 text-xs text-[var(--color-text-secondary)] md:col-start-auto md:text-sm">
-                  {formatDate(draft.detectedAt)}
-                </span>
-                <span className="col-start-2 md:col-start-auto">
-                  <Badge tone={CONFIDENCE_TONES[draft.confidence]}>{draft.confidence}</Badge>
-                </span>
-                <span className="col-start-2 md:col-start-auto">
-                  <Badge tone={STATUS_TONES[draft.status]}>{draft.status}</Badge>
-                </span>
-                <span className="col-start-2 flex items-center gap-1 md:col-start-auto md:justify-end">
-                  <IconButton
-                    icon={<Eye size={15} />}
-                    label="Preview this post"
-                    onClick={() => handlePreview(draft.id)}
-                    disabled={previewingId === draft.id}
-                  />
-                  <IconButton
-                    icon={<Trash2 size={15} />}
-                    label="Delete this draft"
-                    tone="danger"
-                    onClick={() => handleDelete(draft.id)}
-                    disabled={deletingId === draft.id}
-                  />
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+      <Card padding="p-0" className="mt-4 overflow-hidden">
+        <DataTable table={table} loading={loading} loadingMessage="Loading drafts…" emptyMessage="No drafts yet." />
+        <PaginationBar
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
       </Card>
     </div>
   );
