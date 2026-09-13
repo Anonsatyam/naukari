@@ -11,7 +11,7 @@ function ensureWorker() {
 
 export async function loadPdfDocument(bytes: ArrayBuffer): Promise<PDFDocumentProxy> {
   ensureWorker();
-  return pdfjsLib.getDocument({ data: bytes }).promise;
+  return pdfjsLib.getDocument({ data: bytes, fontExtraProperties: true }).promise;
 }
 
 export async function renderPageToCanvas(

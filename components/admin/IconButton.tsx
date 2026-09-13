@@ -1,6 +1,6 @@
 "use client";
 
-import { cloneElement, isValidElement, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
@@ -44,8 +44,6 @@ export function IconButton({
   };
   const hideTooltip = () => setTooltipPos(null);
 
-  const filledIcon = isValidElement<{ fill?: string }>(icon) ? cloneElement(icon, { fill: "currentColor" }) : icon;
-
   return (
     <>
       <button
@@ -65,7 +63,7 @@ export function IconButton({
           className
         )}
       >
-        {filledIcon}
+        {icon}
       </button>
       {tooltipPos &&
         createPortal(
