@@ -169,7 +169,7 @@ export default function ManualDraftReviewPage({
           const dateFields: Record<string, string> = {};
           for (const { key, label } of JOB_DATE_FIELDS) {
             const found = importantDates.find((d) => d.label === label);
-            if (found) dateFields[key] = found.date;
+            dateFields[key] = found?.date ?? "";
           }
 
           const derivedAge = deriveAgeRange(ex.ageLimit);

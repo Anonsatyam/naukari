@@ -1,11 +1,13 @@
-export function isoToDmy(iso: string): string {
+export function isoToDmy(iso: string | undefined | null): string {
+  if (!iso) return "";
   const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!match) return "";
   const [, y, m, d] = match;
   return `${d}/${m}/${y}`;
 }
 
-export function dmyToIso(dmy: string): string {
+export function dmyToIso(dmy: string | undefined | null): string {
+  if (!dmy) return "";
   const match = dmy.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (!match) return "";
   const [, d, m, y] = match;
@@ -15,8 +17,8 @@ export function dmyToIso(dmy: string): string {
   return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
 }
 
-export function autoFormatDmy(input: string): string {
-  const digits = input.replace(/[^\d]/g, "").slice(0, 8);
+export function autoFormatDmy(input: string | undefined | null): string {
+  const digits = (input ?? "").replace(/[^\d]/g, "").slice(0, 8);
   const parts = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean);
   return parts.join("/");
 }
