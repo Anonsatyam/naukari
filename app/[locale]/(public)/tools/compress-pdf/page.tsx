@@ -30,7 +30,7 @@ export default async function CompressPdfPage() {
       </h1>
       <p className="mt-1 max-w-xl text-sm text-[var(--color-text-secondary)]">{t("body")}</p>
 
-      <div className="mt-6 max-w-lg">
+      <div className="mt-6">
         <CompressPdfTool />
       </div>
     </div>
